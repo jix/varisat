@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "varisat",
+]
+
+[profile.release]
+debug = true # Enables profiling
