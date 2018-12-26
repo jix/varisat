@@ -41,7 +41,7 @@ impl Var {
     }
 
     /// The 0-based index representing this variable.
-    pub fn index(self) -> usize {
+    pub const fn index(self) -> usize {
         self.index as usize
     }
 
@@ -49,7 +49,7 @@ impl Var {
     ///
     /// This is less than the backing integer type supports. This enables storing a variable index
     /// and additional bits (as in `Lit`) or sentinel values in a single word.
-    pub fn max_var() -> Var {
+    pub const fn max_var() -> Var {
         // Allow for sign or tag bits
         Var {
             index: LitIdx::max_value() >> 4,
@@ -173,6 +173,7 @@ impl fmt::Display for Lit {
 
 /// Shortcut for tests
 #[cfg(test)]
+#[allow(unused_macros)]
 macro_rules! lit {
     ($x:expr) => {
         $crate::lit::Lit::from_dimacs($x)
@@ -181,6 +182,7 @@ macro_rules! lit {
 
 /// Shortcut for tests
 #[cfg(test)]
+#[allow(unused_macros)]
 macro_rules! var {
     ($x:expr) => {
         $crate::lit::Var::from_dimacs($x)
@@ -189,6 +191,7 @@ macro_rules! var {
 
 /// Shortcut for tests
 #[cfg(test)]
+#[allow(unused_macros)]
 macro_rules! lits {
     ( $( $x:expr ),* ) => { [ $( lit!( $x ) ),* ] };
     ( $( $x:expr ),* , ) => { lits! [ $( $ x),* ] };
@@ -196,6 +199,7 @@ macro_rules! lits {
 
 /// Shortcut for tests
 #[cfg(test)]
+#[allow(unused_macros)]
 macro_rules! vars {
     ( $( $x:expr ),* ) => { [ $( var!( $x ) ),* ] };
     ( $( $x:expr ),* , ) => { vars! [ $( $ x),* ] };
@@ -203,6 +207,7 @@ macro_rules! vars {
 
 /// Shortcut for tests
 #[cfg(test)]
+#[allow(unused_macros)]
 macro_rules! cnf {
     ( $( $( $x:expr ),* );* ) => { [ $( &[ $( lit!( $x ) ),* ] as &[$crate::lit::Lit] ),* ] };
     ( $( $( $x:expr ),* );* ; ) => { [ $( &[ $( lit!( $x ) ),* ] as &[$crate::lit::Lit] ),* ] };
