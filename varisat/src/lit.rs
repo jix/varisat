@@ -213,6 +213,13 @@ macro_rules! cnf {
     ( $( $( $x:expr ),* );* ; ) => { [ $( &[ $( lit!( $x ) ),* ] as &[$crate::lit::Lit] ),* ] };
 }
 
+/// Shortcut for tests
+#[cfg(test)]
+#[allow(unused_macros)]
+macro_rules! cnf_formula {
+    ( $( $t:tt )* ) => { $crate::cnf::CnfFormula::from(cnf![ $($t)* ].iter().cloned()) };
+}
+
 #[cfg(test)]
 pub mod strategy {
     use super::*;
