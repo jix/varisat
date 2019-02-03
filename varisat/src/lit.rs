@@ -1,3 +1,4 @@
+//! Literals and variables.
 use std::{fmt, ops};
 
 /// The backing type used to represent literals and variables.
@@ -209,6 +210,19 @@ macro_rules! vars {
 #[cfg(test)]
 #[allow(unused_macros)]
 macro_rules! cnf {
-    ( $( $( $x:expr ),* );* ) => { [ $( &[ $( lit!( $x ) ),* ] as &[$crate::lit::Lit] ),* ] };
     ( $( $( $x:expr ),* );* ; ) => { [ $( &[ $( lit!( $x ) ),* ] as &[$crate::lit::Lit] ),* ] };
+}
+
+#[cfg(test)]
+pub mod strategy {
+    use super::*;
+    use proptest::{prelude::*, *};
+
+    pub fn var(index: impl Strategy<Value = usize>) -> impl Strategy<Value = Var> {
+        index.prop_map(|index| Var::from_index(index))
+    }
+
+    pub fn lit(index: impl Strategy<Value = usize>) -> impl Strategy<Value = Lit> {
+        (var(index), bool::ANY).prop_map(|(var, negative)| Lit::from_var(var, negative))
+    }
 }
