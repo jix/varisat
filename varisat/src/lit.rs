@@ -56,6 +56,13 @@ impl Var {
             index: LitIdx::max_value() >> 4,
         }
     }
+
+    /// Largest number of variables supported.
+    ///
+    /// This is exactly `Var::max_var().index() + 1`.
+    pub const fn max_count() -> usize {
+        Self::max_var().index() + 1
+    }
 }
 
 /// Uses the 1-based DIMACS CNF encoding.

@@ -159,8 +159,8 @@ impl DimacsParser {
                     self.in_lit = true;
                     let digit = (byte - b'0') as usize;
 
-                    const CAN_OVERFLOW: usize = (Var::max_var().index() + 1) / 10;
-                    const OVERFLOW_DIGIT: usize = (Var::max_var().index() + 1) % 10;
+                    const CAN_OVERFLOW: usize = Var::max_count() / 10;
+                    const OVERFLOW_DIGIT: usize = Var::max_count() % 10;
 
                     // Overflow check that is fast but still works if LitIdx has the same size as
                     // usize
@@ -312,7 +312,7 @@ impl DimacsParser {
             Some(value) => value,
         };
 
-        if var_count > Var::max_var().index() + 1 {
+        if var_count > Var::max_count() {
             self.error = true;
             return Err(ParserError::LiteralTooLarge {
                 line: self.line_number,
