@@ -2,3 +2,5 @@
 pub mod lit;
 pub mod cnf;
 pub mod dimacs;
+
+mod clause;

@@ -13,6 +13,7 @@ pub type LitIdx = u32;
 /// Creating a variable with an index larger than `Var::max_var().index()` is unsupported. This
 /// might panic or be interpreted as a different variable.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
 pub struct Var {
     index: LitIdx,
 }
@@ -92,6 +93,7 @@ impl fmt::Display for Var {
 ///
 /// The restriction on the range of allowed indices for `Var` also applies to `Lit`.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
 pub struct Lit {
     code: LitIdx,
 }
