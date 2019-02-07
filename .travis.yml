@@ -1,0 +1,36 @@
+language: rust
+cache: cargo
+rust:
+  - stable
+  - beta
+  - nightly
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+script:
+  - cargo build --verbose --all
+  - cargo test --verbose --all
+  - cargo doc --document-private-items --no-deps
+
+before_cache: |
+  if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
+    RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin -f
+  fi
+
+after_success: |
+  if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
+      curl -Ls 'https://gist.github.com/jix/4342dd522a7125a2803c6edeedd8735c/raw' > $HOME/.cargo/bin/rustc-proptest-fix
+      chmod 755 $HOME/.cargo/bin/rustc-proptest-fix
+
+      RUSTC=rustc-proptest-fix cargo tarpaulin --ignore-tests --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
+  fi
+
+deploy:
+  provider: pages
+  skip-cleanup: true
+  local-dir: target/doc
+  github-token: $GITHUB_TOKEN
+  on:
+    branch: master
+    rust: stable
