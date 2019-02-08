@@ -4,3 +4,4 @@ pub mod cnf;
 pub mod dimacs;
 
 mod clause;
+mod context;

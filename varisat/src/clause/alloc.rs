@@ -20,6 +20,13 @@ type ClauseOffset = u32;
 /// remaind valid when the buffer is grown. Clauses are aligned and the offset represents a multiple
 /// of the alignment size. This allows using 32-bit offsets while still supporting up to 16GB of
 /// clauses.
+///
+/// **Safety**: Using the safe methods is always memory safe, even if invariants of the clause
+/// storage are violated. An example invariant is using only ClauseRef's produced by the same
+/// ClauseAlloc. Some places in this codebase use the unsafe methods and expect users of the safe
+/// methods to not violate these invariants. It is important that this does not leak through the
+/// public API, i.e. crate external code using safe methods must be unable to violate invariants
+/// expected for internal unsafe code.
 #[derive(Default)]
 pub struct ClauseAlloc {
     buffer: Vec<LitIdx>,
@@ -70,34 +77,32 @@ impl ClauseAlloc {
     }
 
     /// Access the header of a clause.
-    pub fn clause_header(&self, cref: ClauseRef) -> &ClauseHeader {
+    pub fn header(&self, cref: ClauseRef) -> &ClauseHeader {
         let offset = cref.offset as usize;
         assert!(
             offset as usize + HEADER_LEN <= self.buffer.len(),
             "ClauseRef out of bounds"
         );
-        unsafe { self.clause_header_unchecked(cref) }
+        unsafe { self.header_unchecked(cref) }
     }
 
     /// Mutate the header of a clause.
-    ///
-    /// Marked as unsafe because other unsafe code may rely on clause headers being consistent.
-    pub unsafe fn clause_header_mut(&mut self, cref: ClauseRef) -> &mut ClauseHeader {
+    pub fn header_mut(&mut self, cref: ClauseRef) -> &mut ClauseHeader {
         let offset = cref.offset as usize;
         assert!(
             offset as usize + HEADER_LEN <= self.buffer.len(),
             "ClauseRef out of bounds"
         );
-        self.clause_header_unchecked_mut(cref)
+        unsafe { self.header_unchecked_mut(cref) }
     }
 
-    unsafe fn clause_header_unchecked(&self, cref: ClauseRef) -> &ClauseHeader {
+    unsafe fn header_unchecked(&self, cref: ClauseRef) -> &ClauseHeader {
         let offset = cref.offset as usize;
         let header_pointer = self.buffer.as_ptr().add(offset) as *const ClauseHeader;
         &*header_pointer
     }
 
-    unsafe fn clause_header_unchecked_mut(&mut self, cref: ClauseRef) -> &mut ClauseHeader {
+    unsafe fn header_unchecked_mut(&mut self, cref: ClauseRef) -> &mut ClauseHeader {
         let offset = cref.offset as usize;
         let header_pointer = self.buffer.as_mut_ptr().add(offset) as *mut ClauseHeader;
         &mut *header_pointer
@@ -105,7 +110,7 @@ impl ClauseAlloc {
 
     /// Access a clause.
     pub fn clause(&self, cref: ClauseRef) -> &Clause {
-        let header = self.clause_header(cref);
+        let header = self.header(cref);
         let len = header.len();
 
         let lit_offset = cref.offset as usize + HEADER_LEN;
@@ -115,16 +120,14 @@ impl ClauseAlloc {
     }
 
     /// Mutate a clause.
-    ///
-    /// Marked as unsafe because other unsafe code may rely on clause headers being consistent.
-    pub unsafe fn clause_mut(&mut self, cref: ClauseRef) -> &mut Clause {
-        let header = self.clause_header(cref);
+    pub fn clause_mut(&mut self, cref: ClauseRef) -> &mut Clause {
+        let header = self.header(cref);
         let len = header.len();
 
         let lit_offset = cref.offset as usize + HEADER_LEN;
         let lit_end = lit_offset + len;
         assert!(lit_end <= self.buffer.len(), "ClauseRef out of bounds");
-        self.clause_with_len_unchecked_mut(cref, len)
+        unsafe { self.clause_with_len_unchecked_mut(cref, len) }
     }
 
     unsafe fn clause_with_len_unchecked(&self, cref: ClauseRef, len: usize) -> &Clause {
@@ -147,7 +150,7 @@ impl ClauseAlloc {
 /// Compact reference to a clause.
 ///
 /// Used with [`ClauseAlloc`] to access the clause.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct ClauseRef {
     offset: ClauseOffset,
 }
@@ -198,18 +201,14 @@ mod tests {
             }
 
             for &cref in clause_refs.iter() {
-                unsafe {
-                    let clause = clause_alloc.clause_mut(cref);
-                    clause.lits_mut().reverse();
-                }
+                let clause = clause_alloc.clause_mut(cref);
+                clause.lits_mut().reverse();
             }
 
             for &cref in clause_refs.iter() {
-                unsafe {
-                    let clause_len = clause_alloc.clause(cref).lits().len();
-                    if clause_len > 3 {
-                        clause_alloc.clause_header_mut(cref).set_len(clause_len - 1);
-                    }
+                let clause_len = clause_alloc.clause(cref).lits().len();
+                if clause_len > 3 {
+                    clause_alloc.header_mut(cref).set_len(clause_len - 1);
                 }
             }
 

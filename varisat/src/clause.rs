@@ -1,54 +1,17 @@
 //! Clause storage.
 use std::slice;
 
-use crate::lit::{Lit, LitIdx, Var};
+use crate::lit::{Lit, LitIdx};
 
 pub mod alloc;
+pub mod db;
+pub mod header;
 
-pub use alloc::ClauseAlloc;
+pub use alloc::{ClauseAlloc, ClauseRef};
+pub use db::{ClauseDb, Tier};
+pub use header::ClauseHeader;
 
-/// Length of a [`ClauseHeader`] in multiples of [`LitIdx`]
-const HEADER_LEN: usize = 1;
-
-/// Metadata for a clause.
-///
-/// This is stored in a [`ClauseAlloc`] and thus must have a representation compatible with slice of
-/// [`LitIdx`] values.
-#[repr(transparent)]
-pub struct ClauseHeader {
-    data: [LitIdx; HEADER_LEN],
-}
-
-impl ClauseHeader {
-    /// Create a new clause header with default entries.
-    pub fn new() -> ClauseHeader {
-        Self::default()
-    }
-
-    /// Length of the clause.
-    pub fn len(&self) -> usize {
-        self.data[HEADER_LEN - 1] as usize
-    }
-
-    /// Set the length of the clause.
-    ///
-    /// Must be `<= Var::max_count()` as each variable may only be present once per clause.
-    pub fn set_len(&mut self, length: usize) {
-        debug_assert!(length <= Var::max_count());
-
-        self.data[HEADER_LEN - 1] = length as LitIdx;
-    }
-}
-
-impl Default for ClauseHeader {
-    fn default() -> ClauseHeader {
-        let length = 0;
-
-        ClauseHeader {
-            data: [length as LitIdx],
-        }
-    }
-}
+use header::HEADER_LEN;
 
 /// A clause.
 ///
