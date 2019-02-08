@@ -21,7 +21,8 @@ after_success: |
       # While this not recommended anymore, the version mismatch shouldn't cause problems here.
       bash <(curl -sL https://raw.githubusercontent.com/xd009642/tarpaulin/master/travis-install.sh)
 
-      RUSTC=rustc-proptest-fix cargo tarpaulin --ignore-tests --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
+      RUSTC=rustc-proptest-fix cargo tarpaulin --ignore-tests --out Xml
+      bash <(curl -s https://codecov.io/bash)
   fi
 
 deploy:
