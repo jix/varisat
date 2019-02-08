@@ -13,15 +13,13 @@ script:
   - cargo test --verbose --all
   - cargo doc --document-private-items --no-deps
 
-before_cache: |
-  if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
-    RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin -f
-  fi
-
 after_success: |
   if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
       curl -Ls 'https://gist.github.com/jix/4342dd522a7125a2803c6edeedd8735c/raw' > $HOME/.cargo/bin/rustc-proptest-fix
       chmod 755 $HOME/.cargo/bin/rustc-proptest-fix
+
+      # While this not recommended anymore, the version mismatch shouldn't cause problems here.
+      bash <(curl -sL https://raw.githubusercontent.com/xd009642/tarpaulin/master/travis-install.sh)
 
       RUSTC=rustc-proptest-fix cargo tarpaulin --ignore-tests --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
   fi
@@ -33,4 +31,4 @@ deploy:
   github-token: $GITHUB_TOKEN
   on:
     branch: master
-    rust: stable
+    rust: nightly # Change to stable when intra rustdoc links landed
