@@ -18,7 +18,7 @@ const DELETED_OFFSET: usize = 2;
 /// This is stored in a [`ClauseAlloc`](super::ClauseAlloc) and thus must have a representation
 /// compatible with slice of [`LitIdx`] values.
 #[repr(transparent)]
-#[derive(Default)]
+#[derive(Copy, Clone, Default)]
 pub struct ClauseHeader {
     pub(super) data: [LitIdx; HEADER_LEN],
 }

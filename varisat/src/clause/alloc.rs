@@ -38,6 +38,13 @@ impl ClauseAlloc {
         ClauseAlloc::default()
     }
 
+    /// Create a clause allocator with preallocated capacity.
+    pub fn with_capacity(capacity: usize) -> ClauseAlloc {
+        ClauseAlloc {
+            buffer: Vec::with_capacity(capacity),
+        }
+    }
+
     /// Allocate space for and add a new clause.
     ///
     /// Clauses have a minimal size of 3, as binary and unit clauses are handled separately. This is
@@ -144,6 +151,11 @@ impl ClauseAlloc {
             self.buffer.as_mut_ptr().add(offset),
             len + HEADER_LEN,
         ))
+    }
+
+    /// Current buffer size in multiples of [`LitIdx`].
+    pub fn buffer_size(&self) -> usize {
+        self.buffer.len()
     }
 }
 

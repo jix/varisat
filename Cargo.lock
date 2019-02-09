@@ -120,15 +120,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "partial_ref"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "partial_ref_derive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "partial_ref_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "partial_ref_derive"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "quote 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -397,7 +397,7 @@ version = "0.2.0"
 dependencies = [
  "failure 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "itoa 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "partial_ref 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "partial_ref 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.8.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -447,8 +447,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a374c89b9db55895453a74c1e38861d9deec0b01b405a82516e9d5de4820dea1"
 "checksum libc 0.2.45 (registry+https://github.com/rust-lang/crates.io-index)" = "2d2857ec59fadc0773853c664d2d18e7198e83883e7060b63c924cb077bd5c74"
 "checksum num-traits 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "0b3a5d7cc97d6d30d8b9bc8fa19bf45349ffe46241e8816f50f62f6d6aaabee1"
-"checksum partial_ref 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "23dae06b2cc8524fa274a683bac61460389c68ddc6c4973afaec8424beea7d28"
-"checksum partial_ref_derive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "40d60d18d73049c3b6703edc04dc97170464fa3ae3e919263f82d6ab4c4cb21a"
+"checksum partial_ref 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f56be97a7dd30a4fe752f5dc0d786eb59fa1f71e579b7adbbc459c20a023a70e"
+"checksum partial_ref_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "82f10c6f918c97f97c3bdc82122cd8817f58a871b0b3e105ae78a2681513a77f"
 "checksum proc-macro2 0.4.24 (registry+https://github.com/rust-lang/crates.io-index)" = "77619697826f31a02ae974457af0b29b723e5619e113e9397b8b82c6bd253f09"
 "checksum proptest 0.8.7 (registry+https://github.com/rust-lang/crates.io-index)" = "926d0604475349f463fe44130aae73f2294b5309ab2ca0310b998bd334ef191f"
 "checksum quick-error 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "9274b940887ce9addde99c4eee6b5c44cc494b182b97e73dc8ffdcb3397fd3f0"

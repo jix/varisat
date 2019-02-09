@@ -1,7 +1,7 @@
 //! Database for long clauses.
 use partial_ref::{partial, PartialRef};
 
-use super::{ClauseHeader, ClauseRef};
+use super::{header::HEADER_LEN, ClauseAlloc, ClauseHeader, ClauseRef};
 
 use crate::context::{ClauseAllocP, ClauseDbP, Context};
 use crate::lit::Lit;
@@ -48,6 +48,8 @@ pub struct ClauseDb {
     by_tier: [Vec<ClauseRef>; Tier::count()],
     /// These counts should always be up to date
     count_by_tier: [usize; Tier::count()],
+    /// Size of deleted but not collected clauses
+    garbage_size: usize,
 }
 
 impl ClauseDb {
@@ -109,11 +111,60 @@ impl ClauseDb {
         header.set_deleted(true);
 
         db.count_by_tier[header.tier() as usize] -= 1;
+
+        db.garbage_size += header.len() + HEADER_LEN;
     }
 
     /// The number of long clauses of a given tier.
     pub fn count_by_tier(&self, tier: Tier) -> usize {
         self.count_by_tier[tier as usize]
+    }
+
+    /// Perform a garbage collection of long clauses if necessary.
+    pub fn collect_garbage(mut ctx: partial!(Context, mut ClauseDbP, mut ClauseAllocP)) {
+        let alloc = ctx.part(ClauseAllocP);
+        let db = ctx.part(ClauseDbP);
+
+        // Collecting when a fixed fraction of the allocation is garbage amortizes collection costs.
+        if db.garbage_size * 2 > alloc.buffer_size() {
+            Self::collect_garbage_now(ctx.borrow());
+        }
+    }
+
+    /// Unconditionally perform a garbage collection of long clauses.
+    pub fn collect_garbage_now(mut ctx: partial!(Context, mut ClauseDbP, mut ClauseAllocP)) {
+        let (db, mut ctx) = ctx.split_part_mut(ClauseDbP);
+        let alloc = ctx.part(ClauseAllocP);
+
+        assert!(
+            db.garbage_size <= alloc.buffer_size(),
+            "Inconsistent garbage tracking in ClauseDb"
+        );
+        let current_size = alloc.buffer_size() - db.garbage_size;
+
+        // Allocating just the current size would lead to an immediate growing when new clauses are
+        // learned, overallocating here avoids that.
+        let mut new_alloc = ClauseAlloc::with_capacity(current_size * 2);
+
+        let mut new_clauses = vec![];
+        let mut new_by_tier: [Vec<_>; Tier::count()] = Default::default();
+
+        // TODO Optimize order of clauses (benchmark this)
+
+        for &cref in db.clauses.iter() {
+            let clause = alloc.clause(cref);
+            let header = clause.header().clone();
+
+            let new_cref = new_alloc.add_clause(header, clause.lits());
+
+            new_clauses.push(new_cref);
+            new_by_tier[header.tier() as usize].push(new_cref);
+        }
+
+        *ctx.part_mut(ClauseAllocP) = new_alloc;
+        db.clauses = new_clauses;
+        db.by_tier = new_by_tier;
+        db.garbage_size = 0;
     }
 }
 
@@ -122,6 +173,9 @@ mod tests {
     use super::*;
 
     use partial_ref::IntoPartialRefMut;
+    use proptest::*;
+
+    use crate::cnf::strategy::*;
 
     #[test]
     fn set_tiers_and_deletes() {
@@ -172,4 +226,43 @@ mod tests {
         assert_eq!(ctx.part(ClauseDbP).count_by_tier(Tier::Local), 1);
     }
 
+    proptest! {
+        #[test]
+        fn garbage_collection(
+            input_a in cnf_formula(1..100usize, 500..1000, 3..30),
+            input_b in cnf_formula(1..100usize, 0..500, 3..30),
+        ) {
+            let mut ctx = Context::default();
+            let mut ctx = ctx.into_partial_ref_mut();
+
+            let mut crefs_a = vec![];
+            let mut crefs_b = vec![];
+
+            for lits in input_a.iter() {
+                let header = ClauseHeader::new();
+                let cref = ClauseDb::add_clause(ctx.borrow(), header, lits);
+                crefs_a.push(cref);
+            }
+
+            for lits in input_b.iter() {
+                let header = ClauseHeader::new();
+                let cref = ClauseDb::add_clause(ctx.borrow(), header, lits);
+                crefs_b.push(cref);
+            }
+
+            for cref in crefs_a {
+                ClauseDb::delete_clause(ctx.borrow(), cref);
+                prop_assert!(ctx.part(ClauseDbP).garbage_size > 0);
+                ClauseDb::collect_garbage(ctx.borrow());
+            }
+
+            prop_assert!(
+                ctx.part(ClauseDbP).garbage_size * 2 < ctx.part(ClauseAllocP).buffer_size()
+            );
+
+            for (lits, &cref) in input_b.iter().zip(crefs_b.iter()) {
+                prop_assert_eq!(ctx.part(ClauseAllocP).clause(cref).lits(), lits);
+            }
+        }
+    }
 }
