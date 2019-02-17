@@ -5,3 +5,6 @@ members = [
 
 [profile.release]
 debug = true # Enables profiling
+
+[profile.bench]
+debug = true # Enables profiling
