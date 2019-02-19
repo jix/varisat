@@ -4,6 +4,8 @@ use partial_ref::{part, partial, PartialRef, PartialRefTarget};
 use crate::binary::BinaryClauses;
 use crate::clause::{ClauseAlloc, ClauseDb};
 use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
+use crate::state::SolverState;
+use crate::tmp::TmpData;
 
 /// Part declarations for the [`Context`] struct.
 mod parts {
@@ -14,6 +16,8 @@ mod parts {
     part!(pub ClauseAllocP: ClauseAlloc);
     part!(pub ClauseDbP: ClauseDb);
     part!(pub ImplGraphP: ImplGraph);
+    part!(pub SolverStateP: SolverState);
+    part!(pub TmpDataP: TmpData);
     part!(pub TrailP: Trail);
     part!(pub WatchlistsP: Watchlists);
 }
@@ -38,6 +42,10 @@ pub struct Context {
     clause_db: ClauseDb,
     #[part = "ImplGraphP"]
     impl_graph: ImplGraph,
+    #[part = "SolverStateP"]
+    solver_state: SolverState,
+    #[part = "TmpDataP"]
+    tmp_data: TmpData,
     #[part = "TrailP"]
     trail: Trail,
     #[part = "WatchlistsP"]

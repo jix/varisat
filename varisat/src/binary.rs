@@ -27,4 +27,9 @@ impl BinaryClauses {
     pub fn implied(&self, lit: Lit) -> &[Lit] {
         &self.by_lit[lit.code()]
     }
+
+    /// Number of binary clauses.
+    pub fn count(&self) -> usize {
+        self.count
+    }
 }
