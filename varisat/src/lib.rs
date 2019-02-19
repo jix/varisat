@@ -6,5 +6,6 @@ pub mod dimacs;
 mod binary;
 mod clause;
 mod context;
+mod prop;
 
 mod vec_mut_scan;
