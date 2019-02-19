@@ -5,6 +5,7 @@ use crate::lit::{Lit, LitIdx};
 
 pub mod alloc;
 pub mod db;
+pub mod gc;
 pub mod header;
 
 pub use alloc::{ClauseAlloc, ClauseRef};

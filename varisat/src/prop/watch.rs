@@ -45,10 +45,20 @@ pub struct Watch {
 }
 
 /// Watchlists to detect clauses that became unit.
-#[derive(Default)]
 pub struct Watchlists {
     /// Contains only valid data for indices of assigned variables.
     watches: Vec<Vec<Watch>>,
+    /// Whether watchlists are present
+    enabled: bool,
+}
+
+impl Default for Watchlists {
+    fn default() -> Watchlists {
+        Watchlists {
+            watches: vec![],
+            enabled: true,
+        }
+    }
 }
 
 impl Watchlists {
@@ -61,12 +71,16 @@ impl Watchlists {
     ///
     /// `lits` have to be the first two literals of the given clause.
     pub fn watch_clause(&mut self, cref: ClauseRef, lits: [Lit; 2]) {
+        if !self.enabled {
+            return;
+        }
+
         for i in 0..2 {
             let watch = Watch {
                 cref: cref,
                 blocking: lits[i ^ 1],
             };
-            self.watches[(!lits[i]).code()].push(watch);
+            self.add_watch(!lits[i], watch);
         }
     }
 
@@ -78,5 +92,15 @@ impl Watchlists {
     /// Make a literal watch a clause.
     pub fn add_watch(&mut self, lit: Lit, watch: Watch) {
         self.watches[lit.code()].push(watch)
+    }
+
+    /// Are watchlists enabled.
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    /// Clear and disable watchlists.
+    pub fn disable(&mut self) {
+        self.enabled = false;
     }
 }

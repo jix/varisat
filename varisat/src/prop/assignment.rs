@@ -50,6 +50,11 @@ impl Trail {
     pub fn queue_head(&self) -> Option<Lit> {
         self.trail.get(self.queue_head_pos).cloned()
     }
+
+    /// Assigned literals in assignment order.
+    pub fn trail(&self) -> &[Lit] {
+        &self.trail
+    }
 }
 
 /// Enqueues the assignment of true to a literal.

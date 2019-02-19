@@ -13,6 +13,9 @@ const TIER_MASK: u32 = 0b11;
 const DELETED_WORD: usize = HEADER_LEN - 2;
 const DELETED_OFFSET: usize = 2;
 
+const MARK_WORD: usize = HEADER_LEN - 2;
+const MARK_OFFSET: usize = 3;
+
 /// Metadata for a clause.
 ///
 /// This is stored in a [`ClauseAlloc`](super::ClauseAlloc) and thus must have a representation
@@ -63,6 +66,22 @@ impl ClauseHeader {
     pub fn set_tier(&mut self, tier: Tier) {
         let word = &mut self.data[TIER_WORD];
         *word = (*word & !(TIER_MASK << TIER_OFFSET)) | ((tier as u32) << TIER_OFFSET);
+    }
+
+    /// Whether the clause is marked.
+    ///
+    /// The mark is a temporary bit that can be set by various routines, but should always be reset
+    /// to false.
+    pub fn mark(&self) -> bool {
+        (self.data[MARK_WORD] >> MARK_OFFSET) & 1 != 0
+    }
+
+    /// Mark or unmark the clause.
+    ///
+    /// Make sure to clear the mark after use.
+    pub fn set_mark(&mut self, mark: bool) {
+        let word = &mut self.data[MARK_WORD];
+        *word = (*word & !(1 << MARK_OFFSET)) | ((mark as LitIdx) << MARK_OFFSET);
     }
 }
 

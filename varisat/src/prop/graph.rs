@@ -1,6 +1,6 @@
 //! The implication graph.
 use crate::clause::ClauseRef;
-use crate::lit::{Lit, LitIdx};
+use crate::lit::{Lit, LitIdx, Var};
 
 /// Assignments that caused a propagation.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -45,5 +45,19 @@ impl ImplGraph {
                 level: 0,
             },
         );
+    }
+
+    /// Get the reason for an assigned variable.
+    ///
+    /// Returns stale data if the variable isn't assigned.
+    pub fn reason(&self, var: Var) -> &Reason {
+        &self.nodes[var.index()].reason
+    }
+
+    /// Updates the reason for an assigned variable.
+    ///
+    /// Make sure the reason vars are in front of the assigned variable in the trail.
+    pub fn update_reason(&mut self, var: Var, reason: Reason) {
+        self.nodes[var.index()].reason = reason
     }
 }
