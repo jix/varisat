@@ -10,4 +10,5 @@ itoa = "0.4.3"
 partial_ref = "0.1.1"
 
 [dev-dependencies]
-proptest = "0.8.7"
+proptest = "0.9.1"
+rand = "0.6.5"

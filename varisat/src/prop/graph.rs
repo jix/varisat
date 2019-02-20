@@ -11,6 +11,7 @@ pub enum Reason {
 }
 
 /// Propagation that resulted in a conflict.
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Conflict {
     Unit([Lit; 1]),
     Binary([Lit; 2]),

@@ -167,6 +167,16 @@ impl ops::Not for Lit {
     }
 }
 
+impl ops::BitXor<bool> for Lit {
+    type Output = Lit;
+
+    fn bitxor(self, rhs: bool) -> Lit {
+        Lit {
+            code: self.code ^ (rhs as LitIdx),
+        }
+    }
+}
+
 /// Uses the 1-based DIMACS CNF encoding.
 impl fmt::Debug for Lit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

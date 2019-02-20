@@ -137,19 +137,19 @@ pub mod strategy {
         clause_len: impl Into<SizeRange>,
     ) -> impl Strategy<Value = CnfFormula> {
         let clauses = clauses.into();
-        let clause_len: Range<usize> = clause_len.into().into();
+        let clause_len = clause_len.into();
 
-        let clause_lens = collection::vec(clause_len, clauses);
+        let clause_lens = collection::vec(collection::vec(Just(()), clause_len), clauses);
         (vars, clause_lens).prop_flat_map(move |(vars, clause_lens)| {
-            let total_lits: usize = clause_lens.iter().sum();
+            let total_lits: usize = clause_lens.iter().map(|l| l.len()).sum();
             collection::vec(lit(0..vars), total_lits)
                 .prop_map(move |literals| {
                     let mut clause_ranges = Vec::with_capacity(clause_lens.len());
 
                     let mut offset = 0;
                     for len in clause_lens.iter() {
-                        clause_ranges.push(offset..offset + len);
-                        offset += len;
+                        clause_ranges.push(offset..offset + len.len());
+                        offset += len.len();
                     }
 
                     CnfFormula {

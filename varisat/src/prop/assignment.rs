@@ -51,6 +51,11 @@ impl Trail {
         self.trail.get(self.queue_head_pos).cloned()
     }
 
+    pub fn pop_queue(&mut self) {
+        self.queue_head_pos += 1;
+        debug_assert!(self.queue_head_pos <= self.trail.len());
+    }
+
     /// Assigned literals in assignment order.
     pub fn trail(&self) -> &[Lit] {
         &self.trail
