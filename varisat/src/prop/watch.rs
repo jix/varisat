@@ -32,7 +32,10 @@
 //! [handbook-ch4]: https://www.satassociation.org/articles/FAIA185-0131.pdf
 //! [minisat-2.1]: https://www.cril.univ-artois.fr/SAT09/solvers/booklet.pdf
 
-use crate::clause::ClauseRef;
+use partial_ref::{partial, PartialRef};
+
+use crate::clause::{db, ClauseRef};
+use crate::context::{ClauseAllocP, ClauseDbP, Context, WatchlistsP};
 use crate::lit::Lit;
 
 /// A watch on a long clause.
@@ -100,7 +103,30 @@ impl Watchlists {
     }
 
     /// Clear and disable watchlists.
+    ///
+    /// Actual clearing of the watchlists is done on re-enabling of the watchlists.
     pub fn disable(&mut self) {
         self.enabled = false;
+    }
+}
+
+/// Enable and rebuild watchlists.
+pub fn enable_watchlists(mut ctx: partial!(Context, mut WatchlistsP, ClauseAllocP, ClauseDbP)) {
+    let (watchlists, mut ctx) = ctx.split_part_mut(WatchlistsP);
+    if watchlists.enabled {
+        return;
+    }
+
+    for watchlist in watchlists.watches.iter_mut() {
+        watchlist.clear();
+    }
+
+    watchlists.enabled = true;
+
+    let alloc = ctx.part(ClauseAllocP);
+
+    for cref in db::clauses_iter(ctx.borrow()) {
+        let lits = alloc.clause(cref).lits();
+        watchlists.watch_clause(cref, [lits[0], lits[1]]);
     }
 }

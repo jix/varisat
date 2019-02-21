@@ -2,7 +2,7 @@
 use partial_ref::{partial, PartialRef};
 
 use crate::context::{
-    AssignmentP, BinaryClausesP, ClauseAllocP, Context, ImplGraphP, TrailP, WatchlistsP,
+    AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, TrailP, WatchlistsP,
 };
 
 pub mod assignment;
@@ -13,7 +13,7 @@ pub mod watch;
 
 pub use assignment::{enqueue_assignment, Assignment, Trail};
 pub use graph::{Conflict, ImplGraph, ImplNode, Reason};
-pub use watch::{Watch, Watchlists};
+pub use watch::{enable_watchlists, Watch, Watchlists};
 
 /// Propagate enqueued assignments.
 ///
@@ -31,8 +31,11 @@ pub fn propagate(
         mut TrailP,
         mut WatchlistsP,
         BinaryClausesP,
+        ClauseDbP,
     ),
 ) -> Result<(), Conflict> {
+    enable_watchlists(ctx.borrow());
+
     while let Some(lit) = ctx.part(TrailP).queue_head() {
         binary::propagate_binary(ctx.borrow(), lit)?;
         long::propagate_long(ctx.borrow(), lit)?;
@@ -45,6 +48,8 @@ pub fn propagate(
 mod tests {
     use super::*;
 
+    use std::cmp::max;
+
     use proptest::{prelude::*, *};
 
     use rand::distributions::Bernoulli;
@@ -52,7 +57,8 @@ mod tests {
 
     use partial_ref::IntoPartialRefMut;
 
-    use crate::cnf::CnfFormula;
+    use crate::clause::{db, gc};
+    use crate::cnf::{strategy::*, CnfFormula};
     use crate::context::{set_var_count, Context, SolverStateP};
     use crate::lit::{Lit, Var};
     use crate::load::load_clause;
@@ -187,6 +193,58 @@ mod tests {
             prop_assert!(prop_result.is_err());
 
             // TODO check that the reported clause is in conflict
+        }
+
+        #[test]
+        fn propagation_no_conflict_after_gc(
+            tmp_formula in cnf_formula(3..30usize, 30..100, 3..30),
+            (mut lits, formula) in prop_formula(
+                2..30usize,
+                0..10usize,
+                0..20usize,
+                0.1..0.9
+            ),
+        ) {
+            let mut ctx = Context::default();
+            let mut ctx = ctx.into_partial_ref_mut();
+
+            set_var_count(ctx.borrow(), max(tmp_formula.var_count(), formula.var_count()));
+
+            for clause in tmp_formula.iter() {
+                // Only add long clauses here
+                let mut lits = clause.to_owned();
+                lits.sort();
+                lits.dedup();
+                if lits.len() >= 3 {
+                    load_clause(ctx.borrow(), clause);
+                }
+            }
+
+            let tmp_crefs: Vec<_> = db::clauses_iter(ctx.borrow()).collect();
+
+            for clause in formula.iter() {
+                load_clause(ctx.borrow(), clause);
+            }
+
+            for cref in tmp_crefs {
+                db::delete_clause(ctx.borrow(), cref);
+            }
+
+            gc::collect_garbage(ctx.borrow());
+
+            prop_assert_eq!(ctx.part(SolverStateP).sat_state, SatState::Unknown);
+
+            let prop_result = propagate(ctx.borrow());
+
+            prop_assert_eq!(prop_result, Ok(()));
+
+            lits.sort();
+
+            let mut prop_lits = ctx.part(TrailP).trail().to_owned();
+
+            prop_lits.sort();
+
+            prop_assert_eq!(prop_lits, lits);
         }
     }
 }

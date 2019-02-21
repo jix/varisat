@@ -127,6 +127,20 @@ pub fn delete_clause(
     db.garbage_size += header.len() + HEADER_LEN;
 }
 
+/// Iterator over all long clauses.
+///
+/// This filters deleted but not collected clauses on the fly.
+pub fn clauses_iter<'a>(
+    mut ctx: partial!('a Context, ClauseAllocP, ClauseDbP),
+) -> impl Iterator<Item = ClauseRef> + 'a {
+    let alloc = ctx.part(ClauseAllocP);
+    ctx.part(ClauseDbP)
+        .clauses
+        .iter()
+        .cloned()
+        .filter(move |&cref| !alloc.header(cref).deleted())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

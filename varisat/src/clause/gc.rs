@@ -153,8 +153,8 @@ mod tests {
             for cref in crefs_a {
                 db::delete_clause(ctx.borrow(), cref);
                 prop_assert!(ctx.part(ClauseDbP).garbage_size > 0);
-                collect_garbage(ctx.borrow());
             }
+            collect_garbage(ctx.borrow());
 
             prop_assert!(
                 ctx.part(ClauseDbP).garbage_size * 2 < ctx.part(ClauseAllocP).buffer_size()
