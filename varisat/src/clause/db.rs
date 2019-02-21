@@ -53,78 +53,78 @@ pub struct ClauseDb {
 }
 
 impl ClauseDb {
-    /// Add a long clause to the database.
-    pub fn add_clause(
-        mut ctx: partial!(Context, mut ClauseAllocP, mut ClauseDbP, mut WatchlistsP),
-        header: ClauseHeader,
-        lits: &[Lit],
-    ) -> ClauseRef {
-        let tier = header.tier();
-
-        let cref = ctx.part_mut(ClauseAllocP).add_clause(header, lits);
-
-        ctx.part_mut(WatchlistsP)
-            .watch_clause(cref, [lits[0], lits[1]]);
-
-        let db = ctx.part_mut(ClauseDbP);
-
-        db.clauses.push(cref);
-        db.by_tier[tier as usize].push(cref);
-        db.count_by_tier[tier as usize] += 1;
-
-        cref
-    }
-
-    /// Change the tier of a long clause.
-    ///
-    /// This is a noop for a clause already of the specified tier.
-    pub fn set_tier(
-        mut ctx: partial!(Context, mut ClauseDbP, mut ClauseAllocP),
-        cref: ClauseRef,
-        tier: Tier,
-    ) {
-        let (alloc, mut ctx) = ctx.split_part_mut(ClauseAllocP);
-        let db = ctx.part_mut(ClauseDbP);
-
-        let old_tier = alloc.header(cref).tier();
-        if old_tier != tier {
-            db.count_by_tier[old_tier as usize] -= 1;
-            db.count_by_tier[tier as usize] += 1;
-
-            alloc.header_mut(cref).set_tier(tier);
-            db.by_tier[tier as usize].push(cref);
-        }
-    }
-
-    /// Delete a long clause from the database.
-    pub fn delete_clause(
-        mut ctx: partial!(Context, mut ClauseDbP, mut ClauseAllocP, mut WatchlistsP),
-        cref: ClauseRef,
-    ) {
-        // TODO Don't force a rebuild of all watchlists here
-        ctx.part_mut(WatchlistsP).disable();
-
-        let (alloc, mut ctx) = ctx.split_part_mut(ClauseAllocP);
-        let db = ctx.part_mut(ClauseDbP);
-
-        let header = alloc.header_mut(cref);
-
-        debug_assert!(
-            !header.deleted(),
-            "delete_clause for already deleted clause"
-        );
-
-        header.set_deleted(true);
-
-        db.count_by_tier[header.tier() as usize] -= 1;
-
-        db.garbage_size += header.len() + HEADER_LEN;
-    }
-
     /// The number of long clauses of a given tier.
     pub fn count_by_tier(&self, tier: Tier) -> usize {
         self.count_by_tier[tier as usize]
     }
+}
+
+/// Add a long clause to the database.
+pub fn add_clause(
+    mut ctx: partial!(Context, mut ClauseAllocP, mut ClauseDbP, mut WatchlistsP),
+    header: ClauseHeader,
+    lits: &[Lit],
+) -> ClauseRef {
+    let tier = header.tier();
+
+    let cref = ctx.part_mut(ClauseAllocP).add_clause(header, lits);
+
+    ctx.part_mut(WatchlistsP)
+        .watch_clause(cref, [lits[0], lits[1]]);
+
+    let db = ctx.part_mut(ClauseDbP);
+
+    db.clauses.push(cref);
+    db.by_tier[tier as usize].push(cref);
+    db.count_by_tier[tier as usize] += 1;
+
+    cref
+}
+
+/// Change the tier of a long clause.
+///
+/// This is a noop for a clause already of the specified tier.
+pub fn set_clause_tier(
+    mut ctx: partial!(Context, mut ClauseAllocP, mut ClauseDbP),
+    cref: ClauseRef,
+    tier: Tier,
+) {
+    let (alloc, mut ctx) = ctx.split_part_mut(ClauseAllocP);
+    let db = ctx.part_mut(ClauseDbP);
+
+    let old_tier = alloc.header(cref).tier();
+    if old_tier != tier {
+        db.count_by_tier[old_tier as usize] -= 1;
+        db.count_by_tier[tier as usize] += 1;
+
+        alloc.header_mut(cref).set_tier(tier);
+        db.by_tier[tier as usize].push(cref);
+    }
+}
+
+/// Delete a long clause from the database.
+pub fn delete_clause(
+    mut ctx: partial!(Context, mut ClauseAllocP, mut ClauseDbP, mut WatchlistsP),
+    cref: ClauseRef,
+) {
+    // TODO Don't force a rebuild of all watchlists here
+    ctx.part_mut(WatchlistsP).disable();
+
+    let (alloc, mut ctx) = ctx.split_part_mut(ClauseAllocP);
+    let db = ctx.part_mut(ClauseDbP);
+
+    let header = alloc.header_mut(cref);
+
+    debug_assert!(
+        !header.deleted(),
+        "delete_clause for already deleted clause"
+    );
+
+    header.set_deleted(true);
+
+    db.count_by_tier[header.tier() as usize] -= 1;
+
+    db.garbage_size += header.len() + HEADER_LEN;
 }
 
 #[cfg(test)]
@@ -158,12 +158,12 @@ mod tests {
         for (clause, &tier) in clauses.iter().zip(tiers.iter()) {
             let mut header = ClauseHeader::new();
             header.set_tier(tier);
-            let cref = ClauseDb::add_clause(ctx.borrow(), header, clause);
+            let cref = add_clause(ctx.borrow(), header, clause);
             crefs.push(cref);
         }
 
         for (&cref, &tier) in crefs.iter().rev().zip(new_tiers.iter().rev()) {
-            ClauseDb::set_tier(ctx.borrow(), cref, tier);
+            set_clause_tier(ctx.borrow(), cref, tier);
         }
 
         // We only check presence, as deletion from these lists is delayed
@@ -177,8 +177,8 @@ mod tests {
         assert_eq!(ctx.part(ClauseDbP).count_by_tier(Tier::Mid), 0);
         assert_eq!(ctx.part(ClauseDbP).count_by_tier(Tier::Local), 2);
 
-        ClauseDb::delete_clause(ctx.borrow(), crefs[0]);
-        ClauseDb::delete_clause(ctx.borrow(), crefs[2]);
+        delete_clause(ctx.borrow(), crefs[0]);
+        delete_clause(ctx.borrow(), crefs[2]);
 
         assert_eq!(ctx.part(ClauseDbP).count_by_tier(Tier::Irred), 0);
         assert_eq!(ctx.part(ClauseDbP).count_by_tier(Tier::Core), 1);

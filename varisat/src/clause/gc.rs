@@ -112,7 +112,7 @@ mod tests {
     use partial_ref::IntoPartialRefMut;
     use proptest::*;
 
-    use crate::clause::{ClauseDb, ClauseHeader};
+    use crate::clause::{db, ClauseHeader};
     use crate::cnf::strategy::*;
     use crate::context::{set_var_count, AssignmentP};
     use crate::lit::Lit;
@@ -134,13 +134,13 @@ mod tests {
 
             for lits in input_a.iter() {
                 let header = ClauseHeader::new();
-                let cref = ClauseDb::add_clause(ctx.borrow(), header, lits);
+                let cref = db::add_clause(ctx.borrow(), header, lits);
                 crefs_a.push(cref);
             }
 
             for lits in input_b.iter() {
                 let header = ClauseHeader::new();
-                let cref = ClauseDb::add_clause(ctx.borrow(), header, lits);
+                let cref = db::add_clause(ctx.borrow(), header, lits);
                 crefs_b.push(cref);
 
                 if ctx.part(AssignmentP).lit_value(lits[0]) == None {
@@ -151,7 +151,7 @@ mod tests {
             }
 
             for cref in crefs_a {
-                ClauseDb::delete_clause(ctx.borrow(), cref);
+                db::delete_clause(ctx.borrow(), cref);
                 prop_assert!(ctx.part(ClauseDbP).garbage_size > 0);
                 collect_garbage(ctx.borrow());
             }

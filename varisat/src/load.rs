@@ -1,7 +1,7 @@
 //! Loading a formula into the solver.
 use partial_ref::{partial, PartialRef};
 
-use crate::clause::{ClauseDb, ClauseHeader, Tier};
+use crate::clause::{db, ClauseHeader, Tier};
 use crate::context::{
     AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, SolverStateP,
     TmpDataP, TrailP, WatchlistsP,
@@ -79,7 +79,7 @@ pub fn load_clause(
             let mut header = ClauseHeader::new();
             header.set_tier(Tier::Irred);
 
-            ClauseDb::add_clause(ctx.borrow(), header, lits);
+            db::add_clause(ctx.borrow(), header, lits);
         }
     }
 }
