@@ -1,0 +1,44 @@
+test_task:
+  matrix:
+    - container:
+        image: rust:latest
+    - allow_failures: true
+      container:
+        image: rustlang/rust:nightly
+  env:
+    SSH_PUBKEY: ENCRYPTED[9efa1a1c2fa12fd1e08ffdda21108230076c9dd7c7a8d1334e5db973e3d30e57bee05bcecf9f64d585d416a36dc4f165]
+    SSH_PRIVKEY: ENCRYPTED[216656b08e709b0852c8006597075532ceb97eef0c718a75ca0485a739d51ac16106880f92f5eacbc6147748957d0a59]
+    CODECOV_TOKEN: cf6d16b8-3327-4bc2-9113-03602da0987a
+  cargo_cache:
+    folder: $CARGO_HOME/registry
+    fingerprint_script: cat Cargo.lock
+  build_script: cargo build --verbose --all
+  test_script: cargo test --verbose --all
+  doc_script: |
+    if rustup show active-toolchain | grep -q nightly; then
+      cargo doc --document-private-items --no-deps
+      cd target/doc
+      git config --global user.name "CI Deploy"
+      git config --global user.email "ci@example.com"
+      git init
+      git add .
+      git commit -m 'Deploy developer documentation from CI'
+      git remote add origin git@github.com:jix/varisat.git
+      mkdir -p ~/.ssh
+      ssh-keyscan github.com >> ~/.ssh/known_hosts
+      echo "$SSH_PRIVKEY" > ~/.ssh/id_ed25519
+      echo "$SSH_PUBKEY" > ~/.ssh/id_ed25519.pub
+      chmod -R go= ~/.ssh
+      git push -f origin master:gh-pages
+    fi
+  coverage_script: |
+    if rustup show active-toolchain | grep -q nightly; then
+      curl -Ls 'https://gist.github.com/jix/4342dd522a7125a2803c6edeedd8735c/raw' > $CARGO_HOME/bin/rustc-proptest-fix
+      chmod 755 $CARGO_HOME/bin/rustc-proptest-fix
+
+      RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
+
+      RUSTC=rustc-proptest-fix cargo tarpaulin --ignore-tests --out Xml
+      bash <(curl -s https://codecov.io/bash)
+    fi
+  before_cache_script: rm -rf $CARGO_HOME/registry/index
