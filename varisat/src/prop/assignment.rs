@@ -17,6 +17,11 @@ impl Assignment {
         self.assignment.resize(count, None);
     }
 
+    /// Current partial assignment as slice.
+    pub fn assignment(&self) -> &[Option<bool>] {
+        &self.assignment
+    }
+
     pub fn lit_value(&self, lit: Lit) -> Option<bool> {
         self.assignment[lit.index()].map(|b| b ^ lit.is_negative())
     }
@@ -60,6 +65,18 @@ impl Trail {
     pub fn trail(&self) -> &[Lit] {
         &self.trail
     }
+
+    /// Start a new decision level.
+    ///
+    /// Does not enqueue the decision itself.
+    pub fn new_decision_level(&mut self) {
+        self.decisions.push(self.trail.len() as LitIdx)
+    }
+
+    /// Current decision level.
+    pub fn current_level(&self) -> usize {
+        self.decisions.len()
+    }
 }
 
 /// Enqueues the assignment of true to a literal.
@@ -83,4 +100,26 @@ pub fn enqueue_assignment(
     let node = &mut ctx.part_mut(ImplGraphP).nodes[lit.index()];
     node.reason = reason;
     node.level = trail.decisions.len() as LitIdx;
+}
+
+/// Undo all assignments in decision levels deeper than the given level.
+pub fn backtrack(mut ctx: partial!(Context, mut AssignmentP, mut TrailP), level: usize) {
+    let (assignment, mut ctx) = ctx.split_part_mut(AssignmentP);
+    let trail = ctx.part_mut(TrailP);
+
+    if level == trail.decisions.len() {
+        return;
+    }
+
+    let new_trail_len = trail.decisions[level] as usize;
+
+    trail.queue_head_pos = new_trail_len;
+    trail.decisions.truncate(level);
+
+    let trail_end = &trail.trail[new_trail_len..];
+    for &lit in trail_end {
+        assignment.assignment[lit.index()] = None;
+        // TODO phase saving
+    }
+    trail.trail.truncate(new_trail_len);
 }

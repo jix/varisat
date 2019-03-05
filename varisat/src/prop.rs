@@ -11,7 +11,7 @@ pub mod graph;
 pub mod long;
 pub mod watch;
 
-pub use assignment::{enqueue_assignment, Assignment, Trail};
+pub use assignment::{backtrack, enqueue_assignment, Assignment, Trail};
 pub use graph::{Conflict, ImplGraph, ImplNode, Reason};
 pub use watch::{enable_watchlists, Watch, Watchlists};
 
@@ -192,7 +192,13 @@ mod tests {
 
             prop_assert!(prop_result.is_err());
 
-            // TODO check that the reported clause is in conflict
+            let conflict = prop_result.unwrap_err();
+
+            let conflict_lits = conflict.lits(ctx.borrow()).to_owned();
+
+            for &lit in conflict_lits.iter() {
+                prop_assert!(ctx.part(AssignmentP).lit_is_false(lit));
+            }
         }
 
         #[test]

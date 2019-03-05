@@ -1,5 +1,9 @@
 //! The implication graph.
+
+use partial_ref::{partial, PartialRef};
+
 use crate::clause::ClauseRef;
+use crate::context::{ClauseAllocP, Context};
 use crate::lit::{Lit, LitIdx, Var};
 
 /// Assignments that caused a propagation.
@@ -10,12 +14,35 @@ pub enum Reason {
     Long(ClauseRef),
 }
 
+impl Reason {
+    /// The literals that caused the propagation.
+    pub fn lits<'a>(&'a self, mut ctx: partial!('a Context, ClauseAllocP)) -> &'a [Lit] {
+        match self {
+            Reason::Unit => &[],
+            Reason::Binary(lit) => lit,
+            // The propagated literal is always kept at position 0
+            Reason::Long(cref) => &ctx.part(ClauseAllocP).clause(*cref).lits()[1..],
+        }
+    }
+}
+
 /// Propagation that resulted in a conflict.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Conflict {
     Unit([Lit; 1]),
     Binary([Lit; 2]),
     Long(ClauseRef),
+}
+
+impl Conflict {
+    /// The literals that caused the conflict.
+    pub fn lits<'a>(&'a self, mut ctx: partial!('a Context, ClauseAllocP)) -> &'a [Lit] {
+        match self {
+            Conflict::Unit(lit) => lit,
+            Conflict::Binary(lits) => lits,
+            Conflict::Long(cref) => ctx.part(ClauseAllocP).clause(*cref).lits(),
+        }
+    }
 }
 
 /// Node and incoming edges of the implication graph.
@@ -53,6 +80,13 @@ impl ImplGraph {
     /// Returns stale data if the variable isn't assigned.
     pub fn reason(&self, var: Var) -> &Reason {
         &self.nodes[var.index()].reason
+    }
+
+    /// Get the decision level of an assigned variable.
+    ///
+    /// Returns stale data if the variable isn't assigned.
+    pub fn level(&self, var: Var) -> usize {
+        self.nodes[var.index()].level as usize
     }
 
     /// Updates the reason for an assigned variable.

@@ -1,6 +1,7 @@
 //! Central solver data structure.
 use partial_ref::{part, partial, PartialRef, PartialRefTarget};
 
+use crate::analyze_conflict::AnalyzeConflict;
 use crate::binary::BinaryClauses;
 use crate::clause::{ClauseAlloc, ClauseDb};
 use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
@@ -11,6 +12,7 @@ use crate::tmp::TmpData;
 mod parts {
     use super::*;
 
+    part!(pub AnalyzeConflictP: AnalyzeConflict);
     part!(pub AssignmentP: Assignment);
     part!(pub BinaryClausesP: BinaryClauses);
     part!(pub ClauseAllocP: ClauseAlloc);
@@ -32,6 +34,8 @@ pub use parts::*;
 /// references.
 #[derive(PartialRefTarget, Default)]
 pub struct Context {
+    #[part = "AnalyzeConflictP"]
+    analyze_conflict: AnalyzeConflict,
     #[part = "AssignmentP"]
     assignment: Assignment,
     #[part = "BinaryClausesP"]
@@ -56,6 +60,7 @@ pub struct Context {
 pub fn set_var_count(
     mut ctx: partial!(
         Context,
+        mut AnalyzeConflictP,
         mut AssignmentP,
         mut BinaryClausesP,
         mut ImplGraphP,
@@ -63,6 +68,7 @@ pub fn set_var_count(
     ),
     count: usize,
 ) {
+    ctx.part_mut(AnalyzeConflictP).set_var_count(count);
     ctx.part_mut(AssignmentP).set_var_count(count);
     ctx.part_mut(BinaryClausesP).set_var_count(count);
     ctx.part_mut(ImplGraphP).set_var_count(count);
