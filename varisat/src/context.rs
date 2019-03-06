@@ -74,3 +74,20 @@ pub fn set_var_count(
     ctx.part_mut(ImplGraphP).set_var_count(count);
     ctx.part_mut(WatchlistsP).set_var_count(count);
 }
+
+/// Increases the variable count to at least the given value.
+pub fn ensure_var_count(
+    mut ctx: partial!(
+        Context,
+        mut AnalyzeConflictP,
+        mut AssignmentP,
+        mut BinaryClausesP,
+        mut ImplGraphP,
+        mut WatchlistsP,
+    ),
+    count: usize,
+) {
+    if count > ctx.part_mut(AssignmentP).assignment().len() {
+        set_var_count(ctx.borrow(), count)
+    }
+}
