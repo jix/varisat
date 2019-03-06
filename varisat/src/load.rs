@@ -7,7 +7,7 @@ use crate::context::{
     TmpDataP, TrailP, WatchlistsP,
 };
 use crate::lit::Lit;
-use crate::prop::{assignment, Reason};
+use crate::prop::{assignment, backtrack, Reason};
 use crate::state::SatState;
 
 /// Adds a clause to the current formula.
@@ -32,9 +32,19 @@ pub fn load_clause(
     ),
     lits: &[Lit],
 ) {
-    if ctx.part(SolverStateP).sat_state == SatState::Unsat {
-        return;
+    match ctx.part(SolverStateP).sat_state {
+        SatState::Unsat => return,
+        SatState::Sat => {
+            ctx.part_mut(SolverStateP).sat_state = SatState::Unknown;
+        }
+        _ => {}
     }
+
+    // Restart the search when the user adds new clauses
+    backtrack(ctx.borrow(), 0);
+    // Also make sure to repropagate all unit clauses
+    // TODO alternatively simplify the clause using unit clauses
+    ctx.part_mut(TrailP).reset_queue();
 
     if lits.is_empty() {
         ctx.part_mut(SolverStateP).sat_state = SatState::Unsat;

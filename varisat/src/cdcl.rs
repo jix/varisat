@@ -269,5 +269,30 @@ mod tests {
                 prop_assert!(clause.iter().any(|&lit| ctx.part(AssignmentP).lit_is_true(lit)));
             }
         }
+
+        #[test]
+        fn sgen_unsat_incremetal_clauses(formula in sgen_unsat_formula(1..7usize)) {
+            let mut ctx = Context::default();
+            let mut ctx = ctx.into_partial_ref_mut();
+
+            set_var_count(ctx.borrow(), formula.var_count());
+
+            let mut last_state = SatState::Sat;
+
+            for clause in formula.iter() {
+                load_clause(ctx.borrow(), clause);
+                while ctx.part(SolverStateP).sat_state == SatState::Unknown {
+                    conflict_step(ctx.borrow());
+                }
+
+                if ctx.part(SolverStateP).sat_state != last_state {
+                    prop_assert_eq!(ctx.part(SolverStateP).sat_state, SatState::Unsat);
+                    prop_assert_eq!(last_state, SatState::Sat);
+                    last_state = ctx.part(SolverStateP).sat_state;
+                }
+            }
+
+            prop_assert_eq!(last_state, SatState::Unsat);
+        }
     }
 }

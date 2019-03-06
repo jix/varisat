@@ -56,9 +56,15 @@ impl Trail {
         self.trail.get(self.queue_head_pos).cloned()
     }
 
+    /// Removes the head of the propagation queue.
     pub fn pop_queue(&mut self) {
         self.queue_head_pos += 1;
         debug_assert!(self.queue_head_pos <= self.trail.len());
+    }
+
+    /// Re-enqueue all assigned literals.
+    pub fn reset_queue(&mut self) {
+        self.queue_head_pos = 0;
     }
 
     /// Assigned literals in assignment order.
