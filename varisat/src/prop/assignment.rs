@@ -1,7 +1,8 @@
 use partial_ref::{partial, PartialRef};
 
-use crate::context::{AssignmentP, Context, ImplGraphP, TrailP};
-use crate::lit::{Lit, LitIdx};
+use crate::context::{AssignmentP, Context, ImplGraphP, TrailP, VsidsP};
+use crate::decision::make_available;
+use crate::lit::{Lit, LitIdx, Var};
 
 use super::Reason;
 
@@ -22,6 +23,12 @@ impl Assignment {
         &self.assignment
     }
 
+    /// Value assigned to a variable.
+    pub fn var_value(&self, var: Var) -> Option<bool> {
+        self.assignment[var.index()]
+    }
+
+    /// Value assigned to a literal.
     pub fn lit_value(&self, lit: Lit) -> Option<bool> {
         self.assignment[lit.index()].map(|b| b ^ lit.is_negative())
     }
@@ -109,9 +116,12 @@ pub fn enqueue_assignment(
 }
 
 /// Undo all assignments in decision levels deeper than the given level.
-pub fn backtrack(mut ctx: partial!(Context, mut AssignmentP, mut TrailP), level: usize) {
+pub fn backtrack(
+    mut ctx: partial!(Context, mut AssignmentP, mut TrailP, mut VsidsP),
+    level: usize,
+) {
     let (assignment, mut ctx) = ctx.split_part_mut(AssignmentP);
-    let trail = ctx.part_mut(TrailP);
+    let (trail, mut ctx) = ctx.split_part_mut(TrailP);
 
     if level == trail.decisions.len() {
         return;
@@ -124,6 +134,7 @@ pub fn backtrack(mut ctx: partial!(Context, mut AssignmentP, mut TrailP), level:
 
     let trail_end = &trail.trail[new_trail_len..];
     for &lit in trail_end {
+        make_available(ctx.borrow(), lit.var());
         assignment.assignment[lit.index()] = None;
         // TODO phase saving
     }

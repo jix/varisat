@@ -3,7 +3,7 @@ use std::mem::swap;
 
 use partial_ref::{partial, split_borrow, PartialRef};
 
-use crate::context::{AnalyzeConflictP, ClauseAllocP, Context, ImplGraphP, TrailP};
+use crate::context::{AnalyzeConflictP, ClauseAllocP, Context, ImplGraphP, TrailP, VsidsP};
 use crate::lit::{Lit, Var};
 use crate::prop::Conflict;
 
@@ -39,6 +39,7 @@ pub fn analyze_conflict(
     mut ctx: partial!(
         Context,
         mut AnalyzeConflictP,
+        mut VsidsP,
         ClauseAllocP,
         ImplGraphP,
         TrailP,
@@ -122,16 +123,28 @@ pub fn analyze_conflict(
         }
     }
 
+    ctx.part_mut(VsidsP).decay();
+
     backtrack_to
 }
 
 /// Add a literal to the current clause.
-fn add_literal(mut ctx: partial!(Context, mut AnalyzeConflictP, ImplGraphP, TrailP), lit: Lit) {
+fn add_literal(
+    mut ctx: partial!(
+        Context,
+        mut AnalyzeConflictP,
+        mut VsidsP,
+        ImplGraphP,
+        TrailP
+    ),
+    lit: Lit,
+) {
     let (analyze, mut ctx) = ctx.split_part_mut(AnalyzeConflictP);
     let lit_level = ctx.part(ImplGraphP).level(lit.var());
     // No need to add literals that are set by unit clauses or already present
     if lit_level > 0 && !analyze.var_flags[lit.index()] {
-        // TODO update var stats
+        ctx.part_mut(VsidsP).bump(lit.var());
+
         analyze.var_flags[lit.index()] = true;
         if lit_level == ctx.part(TrailP).current_level() {
             analyze.current_level_count += 1;

@@ -4,6 +4,7 @@ use partial_ref::{part, partial, PartialRef, PartialRefTarget};
 use crate::analyze_conflict::AnalyzeConflict;
 use crate::binary::BinaryClauses;
 use crate::clause::{ClauseAlloc, ClauseDb};
+use crate::decision::vsids::Vsids;
 use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
 use crate::state::SolverState;
 use crate::tmp::TmpData;
@@ -21,6 +22,7 @@ mod parts {
     part!(pub SolverStateP: SolverState);
     part!(pub TmpDataP: TmpData);
     part!(pub TrailP: Trail);
+    part!(pub VsidsP: Vsids);
     part!(pub WatchlistsP: Watchlists);
 }
 
@@ -52,6 +54,8 @@ pub struct Context {
     tmp_data: TmpData,
     #[part = "TrailP"]
     trail: Trail,
+    #[part = "VsidsP"]
+    vsids: Vsids,
     #[part = "WatchlistsP"]
     watchlists: Watchlists,
 }
@@ -64,6 +68,7 @@ pub fn set_var_count(
         mut AssignmentP,
         mut BinaryClausesP,
         mut ImplGraphP,
+        mut VsidsP,
         mut WatchlistsP,
     ),
     count: usize,
@@ -72,6 +77,7 @@ pub fn set_var_count(
     ctx.part_mut(AssignmentP).set_var_count(count);
     ctx.part_mut(BinaryClausesP).set_var_count(count);
     ctx.part_mut(ImplGraphP).set_var_count(count);
+    ctx.part_mut(VsidsP).set_var_count(count);
     ctx.part_mut(WatchlistsP).set_var_count(count);
 }
 
@@ -83,6 +89,7 @@ pub fn ensure_var_count(
         mut AssignmentP,
         mut BinaryClausesP,
         mut ImplGraphP,
+        mut VsidsP,
         mut WatchlistsP,
     ),
     count: usize,

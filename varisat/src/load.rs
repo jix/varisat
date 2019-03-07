@@ -4,7 +4,7 @@ use partial_ref::{partial, PartialRef};
 use crate::clause::{db, ClauseHeader, Tier};
 use crate::context::{
     AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, SolverStateP,
-    TmpDataP, TrailP, WatchlistsP,
+    TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::lit::Lit;
 use crate::prop::{assignment, backtrack, Reason};
@@ -28,6 +28,7 @@ pub fn load_clause(
         mut SolverStateP,
         mut TmpDataP,
         mut TrailP,
+        mut VsidsP,
         mut WatchlistsP,
     ),
     lits: &[Lit],

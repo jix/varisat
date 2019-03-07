@@ -6,7 +6,7 @@ use crate::analyze_conflict::analyze_conflict;
 use crate::clause::{db, ClauseHeader, Tier};
 use crate::context::{
     AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP,
-    SolverStateP, TrailP, WatchlistsP,
+    SolverStateP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::decision::make_decision;
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
@@ -24,6 +24,7 @@ pub fn conflict_step(
         mut ImplGraphP,
         mut SolverStateP,
         mut TrailP,
+        mut VsidsP,
         mut WatchlistsP,
     ),
 ) {
@@ -80,6 +81,7 @@ pub fn find_conflict(
         mut ClauseAllocP,
         mut ImplGraphP,
         mut TrailP,
+        mut VsidsP,
         mut WatchlistsP,
         BinaryClausesP,
         ClauseDbP,
