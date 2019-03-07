@@ -15,7 +15,8 @@ usable state yet.
 ## Developer Documentation
 
 The internal APIs are documented using rustdoc. It can be generated using
-`cargo doc  --document-private-items` or [viewed online (master)][dev-docs].
+`cargo doc --document-private-items --all --exclude varisat-cli` or [viewed
+online (master)][dev-docs].
 
 You can also read [a series of blog posts about the development of
 varisat][blog-series].

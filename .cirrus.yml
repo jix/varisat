@@ -22,7 +22,7 @@ test_task:
   test_script: cargo test --verbose --all
   doc_script: |
     if rustup show active-toolchain | grep -q nightly; then
-      cargo doc --document-private-items --no-deps
+      cargo doc --document-private-items --no-deps --all --exclude varisat-cli
       cd target/doc
       rm -rf .git
       git config --global user.name "CI Deploy"
