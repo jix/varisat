@@ -26,7 +26,10 @@ pub fn make_decision(
         .filter(|&var| ctx.part(AssignmentP).var_value(var).is_none())
         .next()
     {
-        let decision = Lit::from_var(decision_var, false);
+        let decision = Lit::from_var(
+            decision_var,
+            !ctx.part(AssignmentP).last_var_value(decision_var),
+        );
 
         ctx.part_mut(TrailP).new_decision_level();
 

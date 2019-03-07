@@ -10,12 +10,14 @@ use super::Reason;
 #[derive(Default)]
 pub struct Assignment {
     assignment: Vec<Option<bool>>,
+    last_value: Vec<bool>,
 }
 
 impl Assignment {
     /// Update structures for a new variable count.
     pub fn set_var_count(&mut self, count: usize) {
         self.assignment.resize(count, None);
+        self.last_value.resize(count, false);
     }
 
     /// Current partial assignment as slice.
@@ -26,6 +28,14 @@ impl Assignment {
     /// Value assigned to a variable.
     pub fn var_value(&self, var: Var) -> Option<bool> {
         self.assignment[var.index()]
+    }
+
+    /// Value last assigned to a variable.
+    ///
+    /// If the variable is currently assigned this returns the previously assigned value. If the
+    /// variable was never assigned this returns false.
+    pub fn last_var_value(&self, var: Var) -> bool {
+        self.last_value[var.index()]
     }
 
     /// Value assigned to a literal.
@@ -135,8 +145,9 @@ pub fn backtrack(
     let trail_end = &trail.trail[new_trail_len..];
     for &lit in trail_end {
         make_available(ctx.borrow(), lit.var());
-        assignment.assignment[lit.index()] = None;
-        // TODO phase saving
+        let var_assignment = &mut assignment.assignment[lit.index()];
+        assignment.last_value[lit.index()] = (*var_assignment == Some(true));
+        *var_assignment = None;
     }
     trail.trail.truncate(new_trail_len);
 }
