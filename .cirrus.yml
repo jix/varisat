@@ -46,7 +46,7 @@ test_task:
 
       which cargo-tarpaulin || RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
 
-      RUSTC=rustc-proptest-fix cargo tarpaulin --ignore-tests --out Xml
+      RUSTC=rustc-proptest-fix cargo tarpaulin --ignore-tests --all --exclude varisat-cli --out Xml
       bash <(curl -s https://codecov.io/bash)
     fi
   before_cache_script: rm -rf $CARGO_HOME/registry/index

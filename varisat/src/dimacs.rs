@@ -276,6 +276,16 @@ impl DimacsParser {
         self.header
     }
 
+    /// Number of clauses parsed.
+    pub fn clause_count(&self) -> usize {
+        self.clause_count
+    }
+
+    /// Number of variables in the parsed formula.
+    pub fn var_count(&self) -> usize {
+        self.formula.var_count()
+    }
+
     fn finish_literal(&mut self) {
         if self.in_lit {
             if self.partial_lit == 0 {

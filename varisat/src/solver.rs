@@ -1,10 +1,15 @@
 //! Boolean satisfiability solver.
+use std::io;
 
 use partial_ref::{IntoPartialRef, IntoPartialRefMut, PartialRef};
+
+use failure::Error;
+use log::info;
 
 use crate::cdcl::conflict_step;
 use crate::cnf::CnfFormula;
 use crate::context::{ensure_var_count, AssignmentP, Context, SolverStateP};
+use crate::dimacs::{DimacsHeader, DimacsParser};
 use crate::lit::{Lit, Var};
 use crate::load::load_clause;
 use crate::state::SatState;
@@ -28,6 +33,39 @@ impl Solver {
         for clause in formula.iter() {
             load_clause(ctx.borrow(), clause);
         }
+    }
+
+    /// Reads and adds a formula in DIMACS CNF format.
+    ///
+    /// Using this avoids creating a temporary [`CnfFormula`].
+    pub fn add_dimacs_cnf(&mut self, input: impl io::Read) -> Result<(), Error> {
+        use io::BufRead;
+
+        let mut buffer = io::BufReader::new(input);
+        let mut parser = DimacsParser::new();
+
+        loop {
+            let data = buffer.fill_buf()?;
+            if data.is_empty() {
+                break;
+            }
+            parser.parse_chunk(data)?;
+            let len = data.len();
+            buffer.consume(len);
+
+            self.add_formula(&parser.take_formula());
+        }
+        parser.eof()?;
+        self.add_formula(&parser.take_formula());
+        parser.check_header()?;
+
+        info!(
+            "Parsed formula with {} variables and {} clauses",
+            parser.var_count(),
+            parser.clause_count()
+        );
+
+        Ok(())
     }
 
     /// Check the satisfiability of the current formula.
@@ -70,6 +108,7 @@ mod tests {
     use proptest::prelude::*;
 
     use crate::cnf::CnfFormula;
+    use crate::dimacs::write_dimacs;
 
     use crate::test::{sat_formula, sgen_unsat_formula};
 
@@ -88,6 +127,25 @@ mod tests {
             let mut solver = Solver::new();
 
             solver.add_formula(&formula);
+
+            prop_assert_eq!(solver.solve(), Some(true));
+
+            let model = solver.model().unwrap();
+
+            for clause in formula.iter() {
+                prop_assert!(clause.iter().any(|lit| model.contains(lit)));
+            }
+        }
+
+        #[test]
+        fn sat_via_dimacs(formula in sat_formula(4..20usize, 10..100usize, 0.05..0.2, 0.9..1.0)) {
+            let mut solver = Solver::new();
+
+            let mut dimacs = vec![];
+
+            write_dimacs(&mut dimacs, &formula).unwrap();
+
+            solver.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
 
             prop_assert_eq!(solver.solve(), Some(true));
 
