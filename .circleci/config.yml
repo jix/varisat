@@ -1,0 +1,46 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: jixone/rust-ci:master
+    branches:
+      ignore: gh-pages
+    steps:
+      - checkout
+
+      - run:
+          name: Build
+          command: cargo build --verbose --all
+
+      - run:
+          name: Run tests
+          command: cargo test --verbose --all
+
+      - run:
+          name: Publish developer docs
+          command: |
+            if [[ $CIRCLE_BRANCH == "master" ]]; then
+              cargo +nightly doc --document-private-items --no-deps --all --exclude varisat-cli
+              cd target/doc
+              git config --global user.name "CI Deploy"
+              git config --global user.email "ci@example.com"
+              git init
+              git add .
+              git commit -m 'Deploy developer documentation from CI'
+              git remote add origin git@github.com:jix/varisat.git
+              echo "$SSH_PRIVKEY" | base64 -d > ~/.ssh/id_ed25519
+              echo "$SSH_PUBKEY" > ~/.ssh/id_ed25519.pub
+              chmod -R go= ~/.ssh
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o 'IdentitiesOnly=Yes'" git push -f origin master:gh-pages
+              cd ..
+              rm -rf doc
+            fi
+
+      - run:
+          name: Collect test coverage
+          command: |
+            curl -Ls 'https://gist.github.com/jix/4342dd522a7125a2803c6edeedd8735c/raw' > $CARGO_HOME/bin/rustc-proptest-fix
+            chmod 755 $CARGO_HOME/bin/rustc-proptest-fix
+            RUSTC=rustc-proptest-fix cargo tarpaulin --ignore-tests --all --exclude varisat-cli --out Xml
+            bash <(curl -s https://codecov.io/bash)

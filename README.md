@@ -1,7 +1,7 @@
 # Varisat
 
-[![Build Status](https://api.cirrus-ci.com/github/jix/varisat.svg)](https://cirrus-ci.com/github/jix/varisat)
-[![codecov](https://codecov.io/gh/jix/varisat/branch/master/graph/badge.svg)](https://codecov.io/gh/jix/varisat)
+[![CircleCI branch](https://img.shields.io/circleci/project/github/jix/varisat/master.svg)](https://circleci.com/gh/jix/varisat/tree/master)
+[![codecov](https://img.shields.io/codecov/c/gh/jix/varisat/master.svg)](https://codecov.io/gh/jix/varisat)
 [![Developer Documentation](https://img.shields.io/badge/dev%20docs-master-blue.svg)](https://jix.github.io/varisat/varisat/)
 ![](https://img.shields.io/crates/l/varisat.svg)
 
