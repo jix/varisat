@@ -6,6 +6,7 @@ use log::info;
 use partial_ref::{partial, PartialRef};
 
 use crate::cdcl::conflict_step;
+use crate::clause::reduce::{reduce_locals, reduce_mids};
 use crate::context::{
     AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP,
     ScheduleP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
@@ -50,6 +51,13 @@ pub fn schedule_step(
             restart(ctx.borrow());
             schedule.restarts += 1;
             schedule.next_restart += 128 * schedule.luby.advance();
+        }
+
+        if schedule.conflicts % 15000 == 0 {
+            reduce_locals(ctx.borrow());
+        }
+        if schedule.conflicts % 10000 == 0 {
+            reduce_mids(ctx.borrow());
         }
 
         conflict_step(ctx.borrow());

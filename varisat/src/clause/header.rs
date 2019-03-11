@@ -22,6 +22,9 @@ const GLUE_WORD: usize = HEADER_LEN - 2;
 const GLUE_OFFSET: usize = 4;
 const GLUE_MASK: LitIdx = (1 << 6) - 1;
 
+const ACTIVE_WORD: usize = HEADER_LEN - 2;
+const ACTIVE_OFFSET: usize = 10;
+
 /// Metadata for a clause.
 ///
 /// This is stored in a [`ClauseAlloc`](super::ClauseAlloc) and thus must have a representation
@@ -88,6 +91,19 @@ impl ClauseHeader {
     pub fn set_mark(&mut self, mark: bool) {
         let word = &mut self.data[MARK_WORD];
         *word = (*word & !(1 << MARK_OFFSET)) | ((mark as LitIdx) << MARK_OFFSET);
+    }
+
+    /// The clause's active flag
+    ///
+    /// This is set when a clause was involved in conflict analysis and periodically reset.
+    pub fn active(&self) -> bool {
+        (self.data[ACTIVE_WORD] >> ACTIVE_OFFSET) & 1 != 0
+    }
+
+    /// Set or reset the clause's active flag.
+    pub fn set_active(&mut self, active: bool) {
+        let word = &mut self.data[ACTIVE_WORD];
+        *word = (*word & !(1 << ACTIVE_OFFSET)) | ((active as LitIdx) << ACTIVE_OFFSET);
     }
 
     /// The [glue][crate::glue] level.

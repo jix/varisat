@@ -3,8 +3,9 @@ use partial_ref::{partial, PartialRef};
 
 use super::{header::HEADER_LEN, ClauseHeader, ClauseRef};
 
-use crate::context::{ClauseAllocP, ClauseDbP, Context, WatchlistsP};
+use crate::context::{AssignmentP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, WatchlistsP};
 use crate::lit::Lit;
+use crate::prop::Reason;
 
 use std::mem::transmute;
 
@@ -127,9 +128,33 @@ pub fn delete_clause(
     db.garbage_size += header.len() + HEADER_LEN;
 }
 
+/// Delete a long clause from the database unless it is asserting.
+///
+/// Returns true if the clause was deleted.
+pub fn try_delete_clause(
+    mut ctx: partial!(
+        Context,
+        mut ClauseAllocP,
+        mut ClauseDbP,
+        mut WatchlistsP,
+        ImplGraphP,
+        AssignmentP,
+    ),
+    cref: ClauseRef,
+) -> bool {
+    let initial_lit = ctx.part(ClauseAllocP).clause(cref).lits()[0];
+    let asserting = ctx.part(AssignmentP).lit_is_true(initial_lit)
+        && ctx.part(ImplGraphP).reason(initial_lit.var()) == &Reason::Long(cref);
+
+    if !asserting {
+        delete_clause(ctx.borrow(), cref);
+    }
+    !asserting
+}
+
 /// Iterator over all long clauses.
 ///
-/// This filters deleted but not collected clauses on the fly.
+/// This filters deleted (but uncollected) clauses on the fly.
 pub fn clauses_iter<'a>(
     mut ctx: partial!('a Context, ClauseAllocP, ClauseDbP),
 ) -> impl Iterator<Item = ClauseRef> + 'a {

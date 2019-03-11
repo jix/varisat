@@ -8,6 +8,7 @@ pub mod assess;
 pub mod db;
 pub mod gc;
 pub mod header;
+pub mod reduce;
 
 pub use alloc::{ClauseAlloc, ClauseRef};
 pub use assess::assess_learned_clause;
