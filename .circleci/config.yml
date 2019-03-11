@@ -23,6 +23,7 @@ jobs:
             if [[ $CIRCLE_BRANCH == "master" ]]; then
               cargo +nightly doc --document-private-items --no-deps --all --exclude varisat-cli
               cd target/doc
+              cp -r ../../.circleci .
               git config --global user.name "CI Deploy"
               git config --global user.email "ci@example.com"
               git init
