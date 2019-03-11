@@ -64,25 +64,29 @@ fn collect_garbage_now(
 
     // TODO Optimize order of clauses (benchmark this)
 
-    for &cref in db.clauses.iter() {
+    db.clauses.retain(|&cref| {
         let clause = alloc.clause(cref);
         let mut header = clause.header().clone();
+        if header.deleted() {
+            false
+        } else {
+            let clause_is_asserting = header.mark();
+            header.set_mark(false);
 
-        let clause_is_asserting = header.mark();
-        header.set_mark(false);
+            let new_cref = new_alloc.add_clause(header, clause.lits());
 
-        let new_cref = new_alloc.add_clause(header, clause.lits());
+            new_clauses.push(new_cref);
+            new_by_tier[header.tier() as usize].push(new_cref);
 
-        new_clauses.push(new_cref);
-        new_by_tier[header.tier() as usize].push(new_cref);
+            if clause_is_asserting {
+                let asserted_lit = clause.lits()[0];
 
-        if clause_is_asserting {
-            let asserted_lit = clause.lits()[0];
-
-            debug_assert_eq!(impl_graph.reason(asserted_lit.var()), &Reason::Long(cref));
-            impl_graph.update_reason(asserted_lit.var(), Reason::Long(new_cref));
+                debug_assert_eq!(impl_graph.reason(asserted_lit.var()), &Reason::Long(cref));
+                impl_graph.update_reason(asserted_lit.var(), Reason::Long(new_cref));
+            }
+            true
         }
-    }
+    });
 
     *ctx.part_mut(ClauseAllocP) = new_alloc;
     db.clauses = new_clauses;
@@ -154,10 +158,17 @@ mod tests {
                 db::delete_clause(ctx.borrow(), cref);
                 prop_assert!(ctx.part(ClauseDbP).garbage_size > 0);
             }
+
+            let old_buffer_size = ctx.part(ClauseAllocP).buffer_size();
+
             collect_garbage(ctx.borrow());
 
             prop_assert!(
                 ctx.part(ClauseDbP).garbage_size * 2 < ctx.part(ClauseAllocP).buffer_size()
+            );
+
+            prop_assert!(
+                old_buffer_size > ctx.part(ClauseAllocP).buffer_size()
             );
 
             prop_assert!(!ctx.part(WatchlistsP).enabled());
