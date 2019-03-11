@@ -13,6 +13,7 @@ pub mod reduce;
 pub use alloc::{ClauseAlloc, ClauseRef};
 pub use assess::assess_learned_clause;
 pub use db::{ClauseDb, Tier};
+pub use gc::collect_garbage;
 pub use header::ClauseHeader;
 
 use header::HEADER_LEN;

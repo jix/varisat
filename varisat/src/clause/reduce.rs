@@ -53,16 +53,23 @@ pub fn reduce_locals(
 
     let mut scan = VecMutScan::new(&mut locals);
 
-    while let Some(cref) = scan.next() {
-        ctx.part_mut(ClauseAllocP).header_mut(*cref).set_mark(false);
+    if to_delete > 0 {
+        while let Some(cref) = scan.next() {
+            ctx.part_mut(ClauseAllocP).header_mut(*cref).set_mark(false);
 
-        if try_delete_clause(ctx.borrow(), *cref) {
-            cref.remove();
-            to_delete -= 1;
-            if to_delete == 0 {
-                break;
+            if try_delete_clause(ctx.borrow(), *cref) {
+                cref.remove();
+                to_delete -= 1;
+                if to_delete == 0 {
+                    break;
+                }
             }
         }
+    }
+
+    // Make sure to clear all marks
+    while let Some(cref) = scan.next() {
+        ctx.part_mut(ClauseAllocP).header_mut(*cref).set_mark(false);
     }
 
     drop(scan);

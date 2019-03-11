@@ -7,7 +7,7 @@ use partial_ref::{partial, PartialRef};
 
 use crate::cdcl::conflict_step;
 use crate::clause::reduce::{reduce_locals, reduce_mids};
-use crate::clause::Tier;
+use crate::clause::{collect_garbage, Tier};
 use crate::context::{
     AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP,
     ScheduleP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
@@ -26,6 +26,8 @@ pub struct Schedule {
     next_restart: u64,
     restarts: u64,
     luby: LubySequence,
+    #[cfg(test)]
+    pub test_schedule: bool,
 }
 
 /// Perform one step of the schedule.
@@ -77,6 +79,19 @@ pub fn schedule_step(
         if schedule.conflicts % 10000 == 0 {
             reduce_mids(ctx.borrow());
         }
+
+        #[cfg(test)]
+        {
+            if schedule.test_schedule {
+                if schedule.conflicts == 100 {
+                    reduce_mids(ctx.borrow());
+                } else if schedule.conflicts == 150 {
+                    reduce_locals(ctx.borrow());
+                }
+            }
+        }
+
+        collect_garbage(ctx.borrow());
 
         conflict_step(ctx.borrow());
         schedule.conflicts += 1;

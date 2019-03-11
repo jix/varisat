@@ -99,6 +99,16 @@ impl Solver {
             None
         }
     }
+
+    /// Enables a test schedule that triggers steps early
+    #[cfg(test)]
+    fn enable_test_schedule(&mut self) {
+        use crate::context::ScheduleP;
+        self.ctx
+            .into_partial_ref_mut()
+            .part_mut(ScheduleP)
+            .test_schedule = true;
+    }
 }
 
 #[cfg(test)]
@@ -114,19 +124,33 @@ mod tests {
 
     proptest! {
         #[test]
-        fn sgen_unsat(formula in sgen_unsat_formula(1..7usize)) {
+        fn sgen_unsat(
+            formula in sgen_unsat_formula(1..7usize),
+            test_schedule in proptest::bool::ANY,
+        ) {
             let mut solver = Solver::new();
 
             solver.add_formula(&formula);
+
+            if test_schedule {
+                solver.enable_test_schedule();
+            }
 
             prop_assert_eq!(solver.solve(), Some(false));
         }
 
         #[test]
-        fn sat(formula in sat_formula(4..20usize, 10..100usize, 0.05..0.2, 0.9..1.0)) {
+        fn sat(
+            formula in sat_formula(4..20usize, 10..100usize, 0.05..0.2, 0.9..1.0),
+            test_schedule in proptest::bool::ANY,
+        ) {
             let mut solver = Solver::new();
 
             solver.add_formula(&formula);
+
+            if test_schedule {
+                solver.enable_test_schedule();
+            }
 
             prop_assert_eq!(solver.solve(), Some(true));
 
