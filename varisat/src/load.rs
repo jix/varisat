@@ -7,7 +7,7 @@ use crate::context::{
     TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::lit::Lit;
-use crate::prop::{assignment, backtrack, Reason};
+use crate::prop::{assignment, full_restart, Reason};
 use crate::state::SatState;
 
 /// Adds a clause to the current formula.
@@ -41,8 +41,8 @@ pub fn load_clause(
         _ => {}
     }
 
-    // Restart the search when the user adds new clauses
-    backtrack(ctx.borrow(), 0);
+    // Restart the search when the user adds new clauses.
+    full_restart(ctx.borrow());
     // Also make sure to repropagate all unit clauses
     // TODO alternatively simplify the clause using unit clauses
     ctx.part_mut(TrailP).reset_queue();

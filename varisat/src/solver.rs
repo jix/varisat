@@ -6,12 +6,12 @@ use partial_ref::{IntoPartialRef, IntoPartialRefMut, PartialRef};
 use failure::Error;
 use log::info;
 
-use crate::cdcl::conflict_step;
 use crate::cnf::CnfFormula;
 use crate::context::{ensure_var_count, AssignmentP, Context, SolverStateP};
-use crate::dimacs::{DimacsHeader, DimacsParser};
+use crate::dimacs::DimacsParser;
 use crate::lit::{Lit, Var};
 use crate::load::load_clause;
+use crate::schedule::schedule_step;
 use crate::state::SatState;
 
 /// A boolean satisfiability solver.
@@ -71,9 +71,9 @@ impl Solver {
     /// Check the satisfiability of the current formula.
     pub fn solve(&mut self) -> Option<bool> {
         let mut ctx = self.ctx.into_partial_ref_mut();
-        while ctx.part(SolverStateP).sat_state == SatState::Unknown {
-            conflict_step(ctx.borrow());
-        }
+
+        while schedule_step(ctx.borrow()) {}
+
         match ctx.part(SolverStateP).sat_state {
             SatState::Unknown => None,
             SatState::Sat => Some(true),

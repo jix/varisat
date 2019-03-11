@@ -1,3 +1,4 @@
+//! Partial assignment and backtracking.
 use partial_ref::{partial, PartialRef};
 
 use crate::context::{AssignmentP, Context, ImplGraphP, TrailP, VsidsP};
@@ -146,8 +147,19 @@ pub fn backtrack(
     for &lit in trail_end {
         make_available(ctx.borrow(), lit.var());
         let var_assignment = &mut assignment.assignment[lit.index()];
-        assignment.last_value[lit.index()] = (*var_assignment == Some(true));
+        assignment.last_value[lit.index()] = *var_assignment == Some(true);
         *var_assignment = None;
     }
     trail.trail.truncate(new_trail_len);
+}
+
+/// Undo all decisions and assumptions.
+pub fn full_restart(mut ctx: partial!(Context, mut AssignmentP, mut TrailP, mut VsidsP)) {
+    backtrack(ctx.borrow(), 0);
+}
+
+/// Undo all decisions.
+pub fn restart(mut ctx: partial!(Context, mut AssignmentP, mut TrailP, mut VsidsP)) {
+    // TODO when assumptions are active this should backtrack to level 1 instead of 0
+    backtrack(ctx.borrow(), 0);
 }

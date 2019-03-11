@@ -13,6 +13,7 @@ mod decision;
 mod glue;
 mod load;
 mod prop;
+mod schedule;
 mod state;
 mod tmp;
 

@@ -6,6 +6,7 @@ use crate::binary::BinaryClauses;
 use crate::clause::{ClauseAlloc, ClauseDb};
 use crate::decision::vsids::Vsids;
 use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
+use crate::schedule::Schedule;
 use crate::state::SolverState;
 use crate::tmp::TmpData;
 
@@ -19,6 +20,7 @@ mod parts {
     part!(pub ClauseAllocP: ClauseAlloc);
     part!(pub ClauseDbP: ClauseDb);
     part!(pub ImplGraphP: ImplGraph);
+    part!(pub ScheduleP: Schedule);
     part!(pub SolverStateP: SolverState);
     part!(pub TmpDataP: TmpData);
     part!(pub TrailP: Trail);
@@ -48,6 +50,8 @@ pub struct Context {
     clause_db: ClauseDb,
     #[part = "ImplGraphP"]
     impl_graph: ImplGraph,
+    #[part = "ScheduleP"]
+    schedule: Schedule,
     #[part = "SolverStateP"]
     solver_state: SolverState,
     #[part = "TmpDataP"]
