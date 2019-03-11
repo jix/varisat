@@ -1,6 +1,8 @@
 //! Clause database reduction.
 use std::mem::replace;
 
+use ordered_float::OrderedFloat;
+
 use partial_ref::{partial, PartialRef};
 
 use crate::context::{AssignmentP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, WatchlistsP};
@@ -46,8 +48,12 @@ pub fn reduce_locals(
         vec![],
     );
 
-    // TODO this should be activity not glue, but we don't track activities yet.
-    locals.sort_unstable_by_key(|&cref| -(ctx.part(ClauseAllocP).header(cref).glue() as isize));
+    locals.sort_unstable_by_key(|&cref| {
+        (
+            OrderedFloat(ctx.part(ClauseAllocP).header(cref).activity()),
+            cref,
+        )
+    });
 
     let mut to_delete = locals.len() / 2;
 

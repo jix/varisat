@@ -3,7 +3,7 @@ use partial_ref::{part, partial, PartialRef, PartialRefTarget};
 
 use crate::analyze_conflict::AnalyzeConflict;
 use crate::binary::BinaryClauses;
-use crate::clause::{ClauseAlloc, ClauseDb};
+use crate::clause::{ClauseActivity, ClauseAlloc, ClauseDb};
 use crate::decision::vsids::Vsids;
 use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
 use crate::schedule::Schedule;
@@ -17,6 +17,7 @@ mod parts {
     part!(pub AnalyzeConflictP: AnalyzeConflict);
     part!(pub AssignmentP: Assignment);
     part!(pub BinaryClausesP: BinaryClauses);
+    part!(pub ClauseActivityP: ClauseActivity);
     part!(pub ClauseAllocP: ClauseAlloc);
     part!(pub ClauseDbP: ClauseDb);
     part!(pub ImplGraphP: ImplGraph);
@@ -44,6 +45,8 @@ pub struct Context {
     assignment: Assignment,
     #[part = "BinaryClausesP"]
     binary_clauses: BinaryClauses,
+    #[part = "ClauseActivityP"]
+    clause_activity: ClauseActivity,
     #[part = "ClauseAllocP"]
     clause_alloc: ClauseAlloc,
     #[part = "ClauseDbP"]

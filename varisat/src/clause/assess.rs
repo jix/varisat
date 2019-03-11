@@ -2,11 +2,11 @@
 use partial_ref::{partial, PartialRef};
 
 use crate::clause::{db, ClauseRef};
-use crate::context::{ClauseAllocP, ClauseDbP, Context, ImplGraphP, TmpDataP};
+use crate::context::{ClauseActivityP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, TmpDataP};
 use crate::glue::compute_glue;
 use crate::lit::Lit;
 
-use super::{ClauseHeader, Tier};
+use super::{bump_clause_activity, ClauseHeader, Tier};
 
 /// Assess the newly learned clause and generate a clause header.
 pub fn assess_learned_clause(
@@ -40,6 +40,7 @@ fn select_tier(glue: usize) -> Tier {
 pub fn bump_clause(
     mut ctx: partial!(
         Context,
+        mut ClauseActivityP,
         mut ClauseAllocP,
         mut ClauseDbP,
         mut TmpDataP,
@@ -47,7 +48,8 @@ pub fn bump_clause(
     ),
     cref: ClauseRef,
 ) {
-    // TODO update activity
+    bump_clause_activity(ctx.borrow(), cref);
+
     let clause = ctx.part_mut(ClauseAllocP).clause_mut(cref);
 
     let glue = compute_glue(ctx.borrow(), clause.lits());

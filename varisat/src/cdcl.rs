@@ -3,10 +3,10 @@
 use partial_ref::{partial, PartialRef};
 
 use crate::analyze_conflict::analyze_conflict;
-use crate::clause::{assess_learned_clause, bump_clause, db};
+use crate::clause::{assess_learned_clause, bump_clause, db, decay_clause_activities};
 use crate::context::{
-    AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP,
-    SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
+    AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseActivityP, ClauseAllocP, ClauseDbP,
+    Context, ImplGraphP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::decision::make_decision;
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
@@ -19,6 +19,7 @@ pub fn conflict_step(
         mut AnalyzeConflictP,
         mut AssignmentP,
         mut BinaryClausesP,
+        mut ClauseActivityP,
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ImplGraphP,
@@ -44,6 +45,8 @@ pub fn conflict_step(
     for &cref in ctx.part(AnalyzeConflictP).involved() {
         bump_clause(ctx.borrow(), cref);
     }
+
+    decay_clause_activities(ctx.borrow());
 
     // TODO Handle incremental solving
 

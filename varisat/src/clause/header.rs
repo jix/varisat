@@ -6,7 +6,7 @@ use crate::lit::{LitIdx, Var};
 use super::Tier;
 
 /// Length of a [`ClauseHeader`] in multiples of [`LitIdx`]
-pub(super) const HEADER_LEN: usize = 2;
+pub(super) const HEADER_LEN: usize = 3;
 
 const TIER_WORD: usize = HEADER_LEN - 2;
 const TIER_OFFSET: usize = 0;
@@ -24,6 +24,8 @@ const GLUE_MASK: LitIdx = (1 << 6) - 1;
 
 const ACTIVE_WORD: usize = HEADER_LEN - 2;
 const ACTIVE_OFFSET: usize = 10;
+
+const ACTIVITY_WORD: usize = HEADER_LEN - 3;
 
 /// Metadata for a clause.
 ///
@@ -117,6 +119,16 @@ impl ClauseHeader {
         let word = &mut self.data[GLUE_WORD];
 
         *word = (*word & !(GLUE_MASK << GLUE_OFFSET)) | (glue << GLUE_OFFSET);
+    }
+
+    /// Clause [activity][crate::clause::activity].
+    pub fn activity(&self) -> f32 {
+        f32::from_bits(self.data[ACTIVITY_WORD] as u32)
+    }
+
+    /// Update clause [activity][crate::clause::activity].
+    pub fn set_activity(&mut self, activity: f32) {
+        self.data[ACTIVITY_WORD] = activity.to_bits() as LitIdx;
     }
 }
 

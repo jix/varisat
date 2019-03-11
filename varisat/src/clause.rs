@@ -3,6 +3,7 @@ use std::slice;
 
 use crate::lit::{Lit, LitIdx};
 
+pub mod activity;
 pub mod alloc;
 pub mod assess;
 pub mod db;
@@ -10,6 +11,7 @@ pub mod gc;
 pub mod header;
 pub mod reduce;
 
+pub use activity::{bump_clause_activity, decay_clause_activities, ClauseActivity};
 pub use alloc::{ClauseAlloc, ClauseRef};
 pub use assess::{assess_learned_clause, bump_clause};
 pub use db::{ClauseDb, Tier};
