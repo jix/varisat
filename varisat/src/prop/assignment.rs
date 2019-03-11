@@ -101,6 +101,14 @@ impl Trail {
     pub fn current_level(&self) -> usize {
         self.decisions.len()
     }
+
+    /// The number of assignments at level 0.
+    pub fn top_level_trail_length(&self) -> usize {
+        self.decisions
+            .get(0)
+            .map(|&len| len as usize)
+            .unwrap_or(self.trail.len())
+    }
 }
 
 /// Enqueues the assignment of true to a literal.
