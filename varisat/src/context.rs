@@ -68,6 +68,7 @@ pub fn set_var_count(
         mut AssignmentP,
         mut BinaryClausesP,
         mut ImplGraphP,
+        mut TmpDataP,
         mut VsidsP,
         mut WatchlistsP,
     ),
@@ -77,6 +78,7 @@ pub fn set_var_count(
     ctx.part_mut(AssignmentP).set_var_count(count);
     ctx.part_mut(BinaryClausesP).set_var_count(count);
     ctx.part_mut(ImplGraphP).set_var_count(count);
+    ctx.part_mut(TmpDataP).set_var_count(count);
     ctx.part_mut(VsidsP).set_var_count(count);
     ctx.part_mut(WatchlistsP).set_var_count(count);
 }
@@ -89,6 +91,7 @@ pub fn ensure_var_count(
         mut AssignmentP,
         mut BinaryClausesP,
         mut ImplGraphP,
+        mut TmpDataP,
         mut VsidsP,
         mut WatchlistsP,
     ),

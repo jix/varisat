@@ -10,6 +10,7 @@ mod cdcl;
 mod clause;
 mod context;
 mod decision;
+mod glue;
 mod load;
 mod prop;
 mod state;

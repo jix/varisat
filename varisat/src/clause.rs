@@ -4,11 +4,13 @@ use std::slice;
 use crate::lit::{Lit, LitIdx};
 
 pub mod alloc;
+pub mod assess;
 pub mod db;
 pub mod gc;
 pub mod header;
 
 pub use alloc::{ClauseAlloc, ClauseRef};
+pub use assess::assess_learned_clause;
 pub use db::{ClauseDb, Tier};
 pub use header::ClauseHeader;
 

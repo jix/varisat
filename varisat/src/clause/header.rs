@@ -1,4 +1,6 @@
 //! Metadata stored in the header of each long clause.
+use std::cmp::min;
+
 use crate::lit::{LitIdx, Var};
 
 use super::Tier;
@@ -8,13 +10,17 @@ pub(super) const HEADER_LEN: usize = 2;
 
 const TIER_WORD: usize = HEADER_LEN - 2;
 const TIER_OFFSET: usize = 0;
-const TIER_MASK: u32 = 0b11;
+const TIER_MASK: LitIdx = 0b11;
 
 const DELETED_WORD: usize = HEADER_LEN - 2;
 const DELETED_OFFSET: usize = 2;
 
 const MARK_WORD: usize = HEADER_LEN - 2;
 const MARK_OFFSET: usize = 3;
+
+const GLUE_WORD: usize = HEADER_LEN - 2;
+const GLUE_OFFSET: usize = 4;
+const GLUE_MASK: LitIdx = (1 << 6) - 1;
 
 /// Metadata for a clause.
 ///
@@ -65,7 +71,7 @@ impl ClauseHeader {
     /// Set the current [`Tier`] of the clause.
     pub fn set_tier(&mut self, tier: Tier) {
         let word = &mut self.data[TIER_WORD];
-        *word = (*word & !(TIER_MASK << TIER_OFFSET)) | ((tier as u32) << TIER_OFFSET);
+        *word = (*word & !(TIER_MASK << TIER_OFFSET)) | ((tier as LitIdx) << TIER_OFFSET);
     }
 
     /// Whether the clause is marked.
@@ -82,6 +88,19 @@ impl ClauseHeader {
     pub fn set_mark(&mut self, mark: bool) {
         let word = &mut self.data[MARK_WORD];
         *word = (*word & !(1 << MARK_OFFSET)) | ((mark as LitIdx) << MARK_OFFSET);
+    }
+
+    /// The [glue][crate::glue] level.
+    pub fn glue(&self) -> usize {
+        ((self.data[GLUE_WORD] >> GLUE_OFFSET) & GLUE_MASK) as usize
+    }
+
+    /// Update the [glue][crate::glue] level.
+    pub fn set_glue(&mut self, glue: usize) {
+        let glue = min(glue, GLUE_MASK as usize) as LitIdx;
+        let word = &mut self.data[GLUE_WORD];
+
+        *word = (*word & !(GLUE_MASK << GLUE_OFFSET)) | (glue << GLUE_OFFSET);
     }
 }
 

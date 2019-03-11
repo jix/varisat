@@ -3,10 +3,10 @@
 use partial_ref::{partial, PartialRef};
 
 use crate::analyze_conflict::analyze_conflict;
-use crate::clause::{db, ClauseHeader, Tier};
+use crate::clause::{assess_learned_clause, db};
 use crate::context::{
     AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP,
-    SolverStateP, TrailP, VsidsP, WatchlistsP,
+    SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::decision::make_decision;
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
@@ -23,6 +23,7 @@ pub fn conflict_step(
         mut ClauseDbP,
         mut ImplGraphP,
         mut SolverStateP,
+        mut TmpDataP,
         mut TrailP,
         mut VsidsP,
         mut WatchlistsP,
@@ -58,11 +59,7 @@ pub fn conflict_step(
             Reason::Binary([clause[1]])
         }
         _ => {
-            let mut header = ClauseHeader::new();
-
-            // TODO clause assessment
-            header.set_tier(Tier::Local);
-
+            let header = assess_learned_clause(ctx.borrow(), clause);
             let cref = db::add_clause(ctx.borrow(), header, clause);
             Reason::Long(cref)
         }
