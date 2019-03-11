@@ -3,7 +3,7 @@
 use partial_ref::{partial, PartialRef};
 
 use crate::analyze_conflict::analyze_conflict;
-use crate::clause::{assess_learned_clause, db};
+use crate::clause::{assess_learned_clause, bump_clause, db};
 use crate::context::{
     AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP,
     SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
@@ -40,6 +40,10 @@ pub fn conflict_step(
     };
 
     let backtrack_to = analyze_conflict(ctx.borrow(), conflict);
+
+    for &cref in ctx.part(AnalyzeConflictP).involved() {
+        bump_clause(ctx.borrow(), cref);
+    }
 
     // TODO Handle incremental solving
 

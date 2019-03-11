@@ -3,9 +3,10 @@ use std::mem::swap;
 
 use partial_ref::{partial, split_borrow, PartialRef};
 
+use crate::clause::ClauseRef;
 use crate::context::{AnalyzeConflictP, ClauseAllocP, Context, ImplGraphP, TrailP, VsidsP};
 use crate::lit::{Lit, Var};
-use crate::prop::Conflict;
+use crate::prop::{Conflict, Reason};
 
 /// Temporaries for conflict analysis
 #[derive(Default)]
@@ -18,6 +19,8 @@ pub struct AnalyzeConflict {
     var_flags: Vec<bool>,
     /// Entries to clean in `var_flags`.
     to_clean: Vec<Var>,
+    /// Clauses to bump.
+    involved: Vec<ClauseRef>,
 }
 
 impl AnalyzeConflict {
@@ -29,6 +32,11 @@ impl AnalyzeConflict {
     /// The learned clause.
     pub fn clause(&self) -> &[Lit] {
         &self.clause
+    }
+
+    /// Long clauses involved in the conflict.
+    pub fn involved(&self) -> &[ClauseRef] {
+        &self.involved
     }
 }
 
@@ -51,6 +59,7 @@ pub fn analyze_conflict(
     let analyze = ctx.part_mut(AnalyzeConflictP);
 
     analyze.clause.clear();
+    analyze.involved.clear();
     analyze.current_level_count = 0;
 
     if ctx.part(TrailP).current_level() == 0 {
@@ -65,7 +74,9 @@ pub fn analyze_conflict(
         add_literal(ctx.borrow(), lit);
     }
 
-    // TODO update clause stats
+    if let Conflict::Long(cref) = conflict {
+        ctx.part_mut(AnalyzeConflictP).involved.push(cref);
+    }
 
     // To get rid of all but one literal of the current level, we resolve the clause with the reason
     // for those literals. The correct order for this is reverse chronological.
@@ -93,7 +104,9 @@ pub fn analyze_conflict(
                     add_literal(ctx.borrow(), lit);
                 }
 
-                // TODO update clause stats
+                if let &Reason::Long(cref) = reason {
+                    ctx.part_mut(AnalyzeConflictP).involved.push(cref);
+                }
             }
         }
     }

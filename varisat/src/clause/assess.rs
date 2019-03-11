@@ -1,7 +1,8 @@
 //! Clause assessment.
 use partial_ref::{partial, PartialRef};
 
-use crate::context::{Context, ImplGraphP, TmpDataP};
+use crate::clause::{db, ClauseRef};
+use crate::context::{ClauseAllocP, ClauseDbP, Context, ImplGraphP, TmpDataP};
 use crate::glue::compute_glue;
 use crate::lit::Lit;
 
@@ -32,5 +33,30 @@ fn select_tier(glue: usize) -> Tier {
         Tier::Mid
     } else {
         Tier::Local
+    }
+}
+
+/// Update stats for clauses involved in the conflict.
+pub fn bump_clause(
+    mut ctx: partial!(
+        Context,
+        mut ClauseAllocP,
+        mut ClauseDbP,
+        mut TmpDataP,
+        ImplGraphP
+    ),
+    cref: ClauseRef,
+) {
+    // TODO update activity
+    let clause = ctx.part_mut(ClauseAllocP).clause_mut(cref);
+
+    let glue = compute_glue(ctx.borrow(), clause.lits());
+
+    clause.header_mut().set_active(true);
+
+    if glue < clause.header().glue() {
+        clause.header_mut().set_glue(glue);
+
+        db::set_clause_tier(ctx.borrow(), cref, select_tier(glue));
     }
 }

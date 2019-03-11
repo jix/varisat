@@ -11,7 +11,7 @@ pub mod header;
 pub mod reduce;
 
 pub use alloc::{ClauseAlloc, ClauseRef};
-pub use assess::assess_learned_clause;
+pub use assess::{assess_learned_clause, bump_clause};
 pub use db::{ClauseDb, Tier};
 pub use gc::collect_garbage;
 pub use header::ClauseHeader;
