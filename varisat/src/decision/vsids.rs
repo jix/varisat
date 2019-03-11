@@ -12,7 +12,7 @@
 //! others) by bumping all variables in the conflict clause and all variables resolved on during
 //! conflict analysis.
 
-use ordered_float::NotNan;
+use ordered_float::OrderedFloat;
 
 use crate::lit::Var;
 
@@ -25,15 +25,15 @@ use crate::lit::Var;
 /// activities we can ignore the scaling factor.
 pub struct Vsids {
     /// The activity of each variable.
-    activity: Vec<NotNan<f32>>,
+    activity: Vec<OrderedFloat<f32>>,
     /// A binary heap of the variables.
     heap: Vec<Var>,
     /// The position in the binary heap for each variable.
     position: Vec<Option<usize>>,
     /// The value to add on bumping.
-    bump: NotNan<f32>,
+    bump: f32,
     /// The inverse of the decay factor.
-    inv_decay: NotNan<f32>,
+    inv_decay: f32,
 }
 
 impl Default for Vsids {
@@ -42,8 +42,8 @@ impl Default for Vsids {
             activity: vec![],
             heap: vec![],
             position: vec![],
-            bump: NotNan::new(1.0).unwrap(),
-            inv_decay: NotNan::new(1.0 / 0.95).unwrap(),
+            bump: 1.0,
+            inv_decay: 1.0 / 0.95,
         }
     }
 }
@@ -53,7 +53,7 @@ impl Vsids {
     pub fn set_var_count(&mut self, count: usize) {
         let old_count = self.activity.len();
         debug_assert!(!self.heap.iter().any(|&v| v.index() >= count));
-        self.activity.resize(count, NotNan::new(0.0).unwrap());
+        self.activity.resize(count, OrderedFloat(0.0));
         self.position.resize(count, None);
 
         for i in old_count..count {
@@ -62,23 +62,23 @@ impl Vsids {
     }
 
     /// Rescale activities if any value exceeds this value.
-    fn rescale_limit() -> NotNan<f32> {
-        NotNan::new(std::f32::MAX / 16.0).unwrap()
+    fn rescale_limit() -> f32 {
+        std::f32::MAX / 16.0
     }
 
     /// Change the decay factor.
-    pub fn set_decay(&mut self, decay: NotNan<f32>) {
-        assert!(decay < NotNan::new(1.0).unwrap());
-        assert!(decay > NotNan::new(1.0 / 16.0).unwrap());
-        self.inv_decay = NotNan::new(1.0).unwrap() / decay;
+    pub fn set_decay(&mut self, decay: f32) {
+        assert!(decay < 1.0);
+        assert!(decay > 1.0 / 16.0);
+        self.inv_decay = 1.0 / decay;
     }
 
     /// Bump a variable by increasing its activity.
     pub fn bump(&mut self, var: Var) {
         let rescale = {
             let value = &mut self.activity[var.index()];
-            *value += self.bump;
-            *value >= Self::rescale_limit()
+            value.0 += self.bump;
+            value.0 >= Self::rescale_limit()
         };
         if rescale {
             self.rescale();
@@ -98,9 +98,9 @@ impl Vsids {
 
     /// Rescale all values to avoid an overflow.
     fn rescale(&mut self) {
-        let rescale_factor = NotNan::new(1.0).unwrap() / Self::rescale_limit();
+        let rescale_factor = 1.0 / Self::rescale_limit();
         for activity in &mut self.activity {
-            *activity *= rescale_factor;
+            activity.0 *= rescale_factor;
         }
         self.bump *= rescale_factor;
     }
@@ -202,7 +202,7 @@ mod tests {
     fn rescale_bump() {
         let mut vsids = Vsids::default();
         vsids.set_var_count(4);
-        vsids.set_decay(NotNan::new(1.0 / 8.0).unwrap());
+        vsids.set_decay(1.0 / 8.0);
 
         for _ in 0..4 {
             vsids.next();
@@ -222,22 +222,17 @@ mod tests {
             vsids.bump(var!(4));
         }
 
-        {
-            // Decay is a power of two so these values are exact
-            assert_eq!(vsids.activity[0], NotNan::new(0.0).unwrap());
-            assert_eq!(
-                vsids.activity[2],
-                vsids.activity[1] * NotNan::new(2.0).unwrap()
-            );
-            assert!(vsids.activity[3] > vsids.activity[2]);
-        }
+        // Decay is a power of two so these values are exact
+        assert_eq!(vsids.activity[0].0, 0.0);
+        assert_eq!(vsids.activity[2].0, vsids.activity[1].0 * 2.0);
+        assert!(vsids.activity[3] > vsids.activity[2]);
     }
 
     #[test]
     fn rescale_decay() {
         let mut vsids = Vsids::default();
         vsids.set_var_count(4);
-        vsids.set_decay(NotNan::new(1.0 / 8.0).unwrap());
+        vsids.set_decay(1.0 / 8.0);
 
         for _ in 0..4 {
             vsids.next();
@@ -253,18 +248,10 @@ mod tests {
             vsids.decay();
         }
 
-        {
-            // Decay is a power of two so these values are exact
-            assert_eq!(vsids.activity[0], NotNan::new(0.0).unwrap());
-            assert_eq!(
-                vsids.activity[2],
-                vsids.activity[1] * NotNan::new(2.0).unwrap()
-            );
-            assert_eq!(
-                vsids.activity[3],
-                vsids.activity[1] * NotNan::new(3.0).unwrap()
-            );
-        }
+        // Decay is a power of two so these values are exact
+        assert_eq!(vsids.activity[0].0, 0.0);
+        assert_eq!(vsids.activity[2].0, vsids.activity[1].0 * 2.0);
+        assert_eq!(vsids.activity[3].0, vsids.activity[1].0 * 3.0);
     }
 
     #[test]
@@ -296,7 +283,7 @@ mod tests {
     fn heap_bump() {
         let mut vsids = Vsids::default();
         vsids.set_var_count(8);
-        vsids.set_decay(NotNan::new(1.0 / 8.0).unwrap());
+        vsids.set_decay(1.0 / 8.0);
 
         for _ in 0..8 {
             vsids.next();
