@@ -33,7 +33,6 @@ impl Reason {
 /// Propagation that resulted in a conflict.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Conflict {
-    Unit([Lit; 1]),
     Binary([Lit; 2]),
     Long(ClauseRef),
 }
@@ -46,7 +45,6 @@ impl Conflict {
         'b: 'out,
     {
         match self {
-            Conflict::Unit(lit) => lit,
             Conflict::Binary(lits) => lits,
             Conflict::Long(cref) => ctx.part(ClauseAllocP).clause(*cref).lits(),
         }
