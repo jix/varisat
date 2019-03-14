@@ -14,6 +14,11 @@ pub struct Assignment {
     last_value: Vec<bool>,
 }
 
+/// This compares two `Option<bool>` values as bytes. Workaround for bad code generation.
+pub fn fast_option_eq(a: Option<bool>, b: Option<bool>) -> bool {
+    unsafe { std::mem::transmute::<_, u8>(a) == std::mem::transmute::<_, u8>(b) }
+}
+
 impl Assignment {
     /// Update structures for a new variable count.
     pub fn set_var_count(&mut self, count: usize) {
@@ -45,11 +50,11 @@ impl Assignment {
     }
 
     pub fn lit_is_true(&self, lit: Lit) -> bool {
-        self.assignment[lit.index()] == Some(lit.is_positive())
+        fast_option_eq(self.assignment[lit.index()], Some(lit.is_positive()))
     }
 
     pub fn lit_is_false(&self, lit: Lit) -> bool {
-        self.assignment[lit.index()] == Some(lit.is_negative())
+        fast_option_eq(self.assignment[lit.index()], Some(lit.is_negative()))
     }
 
     pub fn assign_lit(&mut self, lit: Lit) {

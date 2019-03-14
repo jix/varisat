@@ -63,7 +63,7 @@ impl ClauseAlloc {
 
         // TODO Maybe let the caller handle this?
         assert!(
-            offset <= (ClauseOffset::max_value() as usize),
+            offset <= (ClauseRef::max_offset() as usize),
             "Exceeded ClauseAlloc's maximal buffer size"
         );
 
@@ -109,7 +109,8 @@ impl ClauseAlloc {
         &*header_pointer
     }
 
-    unsafe fn header_unchecked_mut(&mut self, cref: ClauseRef) -> &mut ClauseHeader {
+    /// Mutate the header of a clause without bound checks.
+    pub unsafe fn header_unchecked_mut(&mut self, cref: ClauseRef) -> &mut ClauseHeader {
         let offset = cref.offset as usize;
         let header_pointer = self.buffer.as_mut_ptr().add(offset) as *mut ClauseHeader;
         &mut *header_pointer
@@ -119,6 +120,9 @@ impl ClauseAlloc {
     pub fn clause(&self, cref: ClauseRef) -> &Clause {
         let header = self.header(cref);
         let len = header.len();
+
+        // Even on 32 bit systems these additions can't overflow as we never create clause refs with
+        // an offset larger than ClauseRef::max_offset()
 
         let lit_offset = cref.offset as usize + HEADER_LEN;
         let lit_end = lit_offset + len;
@@ -131,10 +135,29 @@ impl ClauseAlloc {
         let header = self.header(cref);
         let len = header.len();
 
+        // Even on 32 bit systems these additions can't overflow as we never create clause refs with
+        // an offset larger than ClauseRef::max_offset()
+
         let lit_offset = cref.offset as usize + HEADER_LEN;
         let lit_end = lit_offset + len;
         assert!(lit_end <= self.buffer.len(), "ClauseRef out of bounds");
         unsafe { self.clause_with_len_unchecked_mut(cref, len) }
+    }
+
+    /// Mutate the literals of a clause without bound checks.
+    pub unsafe fn lits_ptr_mut_unchecked(&mut self, cref: ClauseRef) -> *mut Lit {
+        let offset = cref.offset as usize;
+        self.buffer.as_ptr().add(offset + HEADER_LEN) as *mut Lit
+    }
+
+    /// Perform a manual bound check on a ClauseRef assuming a given clause length.
+    pub fn check_bounds(&self, cref: ClauseRef, len: usize) {
+        // Even on 32 bit systems these additions can't overflow as we never create clause refs with
+        // an offset larger than ClauseRef::max_offset()
+
+        let lit_offset = cref.offset as usize + HEADER_LEN;
+        let lit_end = lit_offset + len;
+        assert!(lit_end <= self.buffer.len(), "ClauseRef out of bounds");
     }
 
     unsafe fn clause_with_len_unchecked(&self, cref: ClauseRef, len: usize) -> &Clause {
@@ -165,6 +188,14 @@ impl ClauseAlloc {
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct ClauseRef {
     offset: ClauseOffset,
+}
+
+impl ClauseRef {
+    /// The largest offset supported by the ClauseAlloc
+    const fn max_offset() -> ClauseOffset {
+        // Make sure we can savely add a length to an offset without overflowing usize
+        ((usize::max_value() >> 1) & (ClauseOffset::max_value() as usize)) as ClauseOffset
+    }
 }
 
 #[cfg(test)]

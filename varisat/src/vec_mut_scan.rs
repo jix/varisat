@@ -1,5 +1,8 @@
 //! Forward scan over a vector with mutation and item removal.
 
+// TODO This should move into its own crate, until then allow some dead code.
+#![allow(dead_code)]
+
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr};
 
