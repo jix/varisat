@@ -20,13 +20,6 @@ type ClauseOffset = u32;
 /// remaind valid when the buffer is grown. Clauses are aligned and the offset represents a multiple
 /// of the alignment size. This allows using 32-bit offsets while still supporting up to 16GB of
 /// clauses.
-///
-/// **Safety**: Using the safe methods is always memory safe, even if invariants of the clause
-/// storage are violated. An example invariant is using only ClauseRef's produced by the same
-/// ClauseAlloc. Some places in this codebase use the unsafe methods and expect users of the safe
-/// methods to not violate these invariants. It is important that this does not leak through the
-/// public API, i.e. crate external code using safe methods must be unable to violate invariants
-/// expected for internal unsafe code.
 #[derive(Default)]
 pub struct ClauseAlloc {
     buffer: Vec<LitIdx>,
