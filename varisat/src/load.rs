@@ -10,6 +10,8 @@ use crate::lit::Lit;
 use crate::prop::{assignment, full_restart, Reason};
 use crate::state::SatState;
 
+use crate::vec_mut_scan::VecMutScan;
+
 /// Adds a clause to the current formula.
 ///
 /// Removes duplicated literals, ignores tautological clauses (eg. x v -x v y), handles empty
@@ -43,14 +45,6 @@ pub fn load_clause(
 
     // Restart the search when the user adds new clauses.
     full_restart(ctx.borrow());
-    // Also make sure to repropagate all unit clauses
-    // TODO alternatively simplify the clause using unit clauses
-    ctx.part_mut(TrailP).reset_queue();
-
-    if lits.is_empty() {
-        ctx.part_mut(SolverStateP).sat_state = SatState::Unsat;
-        return;
-    }
 
     let (tmp_data, mut ctx) = ctx.split_part_mut(TmpDataP);
 
@@ -71,17 +65,26 @@ pub fn load_clause(
         last = Some(lit);
     }
 
-    match lits[..] {
-        [lit] => match ctx.part(AssignmentP).lit_value(lit) {
-            Some(true) => (),
-            Some(false) => {
-                ctx.part_mut(SolverStateP).sat_state = SatState::Unsat;
+    let mut scan = VecMutScan::new(lits);
+
+    // Remove false literals and satisfied clauses
+    while let Some(lit) = scan.next() {
+        match ctx.part(AssignmentP).lit_value(*lit) {
+            Some(true) => {
                 return;
             }
-            None => {
-                assignment::enqueue_assignment(ctx.borrow(), lit, Reason::Unit);
+            Some(false) => {
+                lit.remove();
             }
-        },
+            None => (),
+        }
+    }
+
+    drop(scan);
+
+    match lits[..] {
+        [] => ctx.part_mut(SolverStateP).sat_state = SatState::Unsat,
+        [lit] => assignment::enqueue_assignment(ctx.borrow(), lit, Reason::Unit),
         [lit_0, lit_1] => {
             ctx.part_mut(BinaryClausesP)
                 .add_binary_clause([lit_0, lit_1]);

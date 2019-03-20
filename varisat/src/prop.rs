@@ -176,15 +176,17 @@ mod tests {
 
             set_var_count(ctx.borrow(), formula.var_count());
 
-            for clause in formula.iter() {
-                load_clause(ctx.borrow(), clause);
-            }
+            // We add the conflict clause first to make sure that it isn't simplified during loading
 
             let conflict_size = conflict_size.index(lits.len() - 1) + 2;
 
             let conflict_clause: Vec<_> = lits[..conflict_size].iter().map(|&lit| !lit).collect();
 
             load_clause(ctx.borrow(), &conflict_clause);
+
+            for clause in formula.iter() {
+                load_clause(ctx.borrow(), clause);
+            }
 
             prop_assert_eq!(ctx.part(SolverStateP).sat_state, SatState::Unknown);
 
