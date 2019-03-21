@@ -104,6 +104,14 @@ impl Lit {
         Lit::from_litidx(var.index, negative)
     }
 
+    /// Create a literal with the given encoding.
+    pub fn from_code(code: usize) -> Lit {
+        debug_assert!(code <= Var::max_var().index() * 2 + 1);
+        Lit {
+            code: code as LitIdx,
+        }
+    }
+
     fn from_litidx(index: LitIdx, negative: bool) -> Lit {
         debug_assert!(index <= Var::max_var().index);
         Lit {

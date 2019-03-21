@@ -57,6 +57,10 @@ impl Assignment {
         fast_option_eq(self.assignment[lit.index()], Some(lit.is_negative()))
     }
 
+    pub fn lit_is_unk(&self, lit: Lit) -> bool {
+        fast_option_eq(self.assignment[lit.index()], None)
+    }
+
     pub fn assign_lit(&mut self, lit: Lit) {
         self.assignment[lit.index()] = lit.is_positive().into()
     }
@@ -71,6 +75,8 @@ pub struct Trail {
     queue_head_pos: usize,
     /// Decision levels as trail indices.
     decisions: Vec<LitIdx>,
+    /// Number of unit clauses removed from the trail.
+    units_removed: usize,
 }
 
 impl Trail {
@@ -95,6 +101,17 @@ impl Trail {
         &self.trail
     }
 
+    /// Clear the trail.
+    ///
+    /// This simply removes all entries without performing any backtracking. Can only be called with
+    /// no active decisions.
+    pub fn clear(&mut self) {
+        assert!(self.decisions.is_empty());
+        self.units_removed += self.trail.len();
+        self.trail.clear();
+        self.queue_head_pos = 0;
+    }
+
     /// Start a new decision level.
     ///
     /// Does not enqueue the decision itself.
@@ -108,11 +125,12 @@ impl Trail {
     }
 
     /// The number of assignments at level 0.
-    pub fn top_level_trail_length(&self) -> usize {
+    pub fn top_level_assignment_count(&self) -> usize {
         self.decisions
             .get(0)
             .map(|&len| len as usize)
             .unwrap_or(self.trail.len())
+            + self.units_removed
     }
 }
 

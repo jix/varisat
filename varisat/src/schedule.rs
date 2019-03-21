@@ -54,7 +54,7 @@ pub fn schedule_step(
     if ctx.part(SolverStateP).sat_state == SatState::Unknown {
         if schedule.conflicts > 0 && schedule.conflicts % 5000 == 0 {
             let db = ctx.part(ClauseDbP);
-            let units = ctx.part(TrailP).top_level_trail_length();
+            let units = ctx.part(TrailP).top_level_assignment_count();
             info!(
                 "confl: {}k rest: {} vars: {} bin: {} irred: {} core: {} mid: {} local: {}",
                 schedule.conflicts / 1000,

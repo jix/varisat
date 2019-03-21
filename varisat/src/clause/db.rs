@@ -1,7 +1,7 @@
 //! Database for long clauses.
 use partial_ref::{partial, PartialRef};
 
-use super::{header::HEADER_LEN, ClauseHeader, ClauseRef};
+use super::{header::HEADER_LEN, ClauseAlloc, ClauseHeader, ClauseRef};
 
 use crate::context::{AssignmentP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, WatchlistsP};
 use crate::lit::Lit;
@@ -164,6 +164,43 @@ pub fn clauses_iter<'a>(
         .iter()
         .cloned()
         .filter(move |&cref| !alloc.header(cref).deleted())
+}
+
+/// Iterate over all and remove some long clauses.
+///
+/// Takes a closure that returns true for each clause that should be kept and false for each that
+/// should be deleted.
+pub fn filter_clauses<F>(
+    mut ctx: partial!(Context, mut ClauseAllocP, mut ClauseDbP, mut WatchlistsP),
+    mut filter: F,
+) where
+    F: FnMut(&mut ClauseAlloc, ClauseRef) -> bool,
+{
+    ctx.part_mut(WatchlistsP).disable();
+
+    let (alloc, mut ctx) = ctx.split_part_mut(ClauseAllocP);
+    let db = ctx.part_mut(ClauseDbP);
+
+    let count_by_tier = &mut db.count_by_tier;
+    let garbage_size = &mut db.garbage_size;
+
+    db.clauses.retain(|&cref| {
+        if alloc.header(cref).deleted() {
+            false
+        } else if filter(alloc, cref) {
+            true
+        } else {
+            let header = alloc.header_mut(cref);
+
+            header.set_deleted(true);
+
+            count_by_tier[header.tier() as usize] -= 1;
+
+            *garbage_size += header.len() + HEADER_LEN;
+
+            false
+        }
+    })
 }
 
 #[cfg(test)]

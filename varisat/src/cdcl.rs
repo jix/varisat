@@ -10,6 +10,7 @@ use crate::context::{
 };
 use crate::decision::make_decision;
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
+use crate::simplify::simplify;
 use crate::state::SatState;
 
 /// Find a conflict, learn a clause and backtrack.
@@ -82,17 +83,23 @@ pub fn find_conflict(
     mut ctx: partial!(
         Context,
         mut AssignmentP,
+        mut BinaryClausesP,
         mut ClauseAllocP,
+        mut ClauseDbP,
         mut ImplGraphP,
         mut TrailP,
         mut VsidsP,
         mut WatchlistsP,
-        BinaryClausesP,
-        ClauseDbP,
     ),
 ) -> Result<(), Conflict> {
     loop {
         propagate(ctx.borrow())?;
+
+        if ctx.part(TrailP).current_level() == 0 {
+            if !ctx.part(TrailP).trail().is_empty() {
+                simplify(ctx.borrow());
+            }
+        }
 
         // TODO Handle incremental solving
 
