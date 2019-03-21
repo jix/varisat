@@ -5,8 +5,7 @@ use partial_ref::{partial, PartialRef};
 use crate::binary::simplify_binary;
 use crate::clause::db::filter_clauses;
 use crate::context::{
-    AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, TrailP, VsidsP,
-    WatchlistsP,
+    AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, TrailP, WatchlistsP,
 };
 use crate::prop::Reason;
 
@@ -19,7 +18,6 @@ pub fn simplify(
         mut ClauseDbP,
         mut ImplGraphP,
         mut TrailP,
-        mut VsidsP,
         mut WatchlistsP,
         AssignmentP,
     ),
