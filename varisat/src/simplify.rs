@@ -25,6 +25,7 @@ pub fn simplify(
     ),
 ) {
     assert_eq!(ctx.part(TrailP).current_level(), 0);
+    assert!(ctx.part(TrailP).fully_propagated());
 
     let (impl_graph, mut ctx) = ctx.split_part_mut(ImplGraphP);
     for &lit in ctx.part(TrailP).trail().iter() {
@@ -51,8 +52,10 @@ pub fn simplify(
             }
         }
         match new_lits[..] {
-            [] => unreachable!(),
-            [_lit] => false, // Unit clause already stored as part of the assignment
+            // Cannot have empty or unit clauses after full propagation. An empty clause would have
+            // been a conflict and a unit clause must be satisfied and thus would have been dropped
+            // above.
+            [] | [_] => unreachable!(),
             [lit_0, lit_1] => {
                 ctx.part_mut(BinaryClausesP)
                     .add_binary_clause([lit_0, lit_1]);

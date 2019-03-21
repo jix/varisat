@@ -132,6 +132,11 @@ impl Trail {
             .unwrap_or(self.trail.len())
             + self.units_removed
     }
+
+    /// Whether all assignments are processed.
+    pub fn fully_propagated(&self) -> bool {
+        self.queue_head_pos == self.trail.len()
+    }
 }
 
 /// Enqueues the assignment of true to a literal.
