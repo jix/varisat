@@ -9,8 +9,9 @@ Varisat is a [CDCL][cdcl] based SAT solver written in rust. Given a boolean
 formula in conjunctive normal form, it either finds a variable assignment that
 makes the formula true or finds a proof that this is impossible.
 
-This repository is for varisat 0.2, a rewrite of varisat 0.1. This is not in a
-usable state yet.
+This repository is for varisat 0.2, a rewrite of varisat 0.1. This is still a
+work in progress and does not support proof generation or incremental solving
+yet.
 
 ## Developer Documentation
 
