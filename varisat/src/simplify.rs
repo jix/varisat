@@ -39,7 +39,9 @@ pub fn simplify(
 
     let mut new_lits = vec![];
 
-    filter_clauses(ctx.borrow(), |alloc, cref| {
+    let (ctx_2, mut ctx) = ctx.split_borrow();
+
+    filter_clauses(ctx_2, |alloc, cref| {
         let clause = alloc.clause_mut(cref);
         new_lits.clear();
         for &lit in clause.lits() {

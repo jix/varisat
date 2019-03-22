@@ -156,7 +156,7 @@ pub fn try_delete_clause(
 ///
 /// This filters deleted (but uncollected) clauses on the fly.
 pub fn clauses_iter<'a>(
-    mut ctx: partial!('a Context, ClauseAllocP, ClauseDbP),
+    ctx: &'a partial!('a Context, ClauseAllocP, ClauseDbP),
 ) -> impl Iterator<Item = ClauseRef> + 'a {
     let alloc = ctx.part(ClauseAllocP);
     ctx.part(ClauseDbP)

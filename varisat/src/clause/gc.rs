@@ -97,7 +97,7 @@ fn collect_garbage_now(
 /// Mark asserting clauses to track them through GC.
 fn mark_asserting_clauses(mut ctx: partial!(Context, mut ClauseAllocP, ImplGraphP, TrailP,)) {
     let (trail, mut ctx) = ctx.split_part(TrailP);
-    let (alloc, mut ctx) = ctx.split_part_mut(ClauseAllocP);
+    let (alloc, ctx) = ctx.split_part_mut(ClauseAllocP);
     let impl_graph = ctx.part(ImplGraphP);
 
     for &lit in trail.trail().iter() {

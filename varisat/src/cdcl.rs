@@ -43,7 +43,9 @@ pub fn conflict_step(
 
     let backtrack_to = analyze_conflict(ctx.borrow(), conflict);
 
-    for &cref in ctx.part(AnalyzeConflictP).involved() {
+    let (analyze, mut ctx) = ctx.split_part(AnalyzeConflictP);
+
+    for &cref in analyze.involved() {
         bump_clause(ctx.borrow(), cref);
     }
 
@@ -53,7 +55,7 @@ pub fn conflict_step(
 
     backtrack(ctx.borrow(), backtrack_to);
 
-    let clause = ctx.part(AnalyzeConflictP).clause();
+    let clause = analyze.clause();
 
     let reason = match clause.len() {
         0 => {

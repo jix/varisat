@@ -11,7 +11,7 @@ use crate::lit::Lit;
 
 /// Compute the glue level of a clause.
 pub fn compute_glue(mut ctx: partial!(Context, mut TmpDataP, ImplGraphP), lits: &[Lit]) -> usize {
-    let (tmp_data, mut ctx) = ctx.split_part_mut(TmpDataP);
+    let (tmp_data, ctx) = ctx.split_part_mut(TmpDataP);
     let impl_graph = ctx.part(ImplGraphP);
     let flags = &mut tmp_data.flags;
 

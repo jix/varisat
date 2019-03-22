@@ -83,7 +83,7 @@ impl Solver {
 
     /// Set of literals that satisfy the formula.
     pub fn model(&self) -> Option<Vec<Lit>> {
-        let mut ctx = self.ctx.into_partial_ref();
+        let ctx = self.ctx.into_partial_ref();
         if ctx.part(SolverStateP).sat_state == SatState::Sat {
             Some(
                 ctx.part(AssignmentP)

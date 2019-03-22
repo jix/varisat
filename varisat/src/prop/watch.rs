@@ -123,9 +123,9 @@ pub fn enable_watchlists(mut ctx: partial!(Context, mut WatchlistsP, ClauseAlloc
 
     watchlists.enabled = true;
 
-    let alloc = ctx.part(ClauseAllocP);
+    let (alloc, mut ctx) = ctx.split_part(ClauseAllocP);
 
-    for cref in db::clauses_iter(ctx.borrow()) {
+    for cref in db::clauses_iter(&ctx.borrow()) {
         let lits = alloc.clause(cref).lits();
         watchlists.watch_clause(cref, [lits[0], lits[1]]);
     }

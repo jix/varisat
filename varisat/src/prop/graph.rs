@@ -16,7 +16,7 @@ pub enum Reason {
 
 impl Reason {
     /// The literals that caused the propagation.
-    pub fn lits<'out, 'a, 'b>(&'a self, mut ctx: partial!('b Context, ClauseAllocP)) -> &'out [Lit]
+    pub fn lits<'out, 'a, 'b>(&'a self, ctx: &'b partial!('b Context, ClauseAllocP)) -> &'out [Lit]
     where
         'a: 'out,
         'b: 'out,
@@ -39,7 +39,7 @@ pub enum Conflict {
 
 impl Conflict {
     /// The literals that caused the conflict.
-    pub fn lits<'out, 'a, 'b>(&'a self, mut ctx: partial!('b Context, ClauseAllocP)) -> &'out [Lit]
+    pub fn lits<'out, 'a, 'b>(&'a self, ctx: &'b partial!('b Context, ClauseAllocP)) -> &'out [Lit]
     where
         'a: 'out,
         'b: 'out,

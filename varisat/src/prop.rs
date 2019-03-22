@@ -196,7 +196,7 @@ mod tests {
 
             let conflict = prop_result.unwrap_err();
 
-            let conflict_lits = conflict.lits(ctx.borrow()).to_owned();
+            let conflict_lits = conflict.lits(&ctx.borrow()).to_owned();
 
             for &lit in conflict_lits.iter() {
                 prop_assert!(ctx.part(AssignmentP).lit_is_false(lit));
@@ -228,7 +228,7 @@ mod tests {
                 }
             }
 
-            let tmp_crefs: Vec<_> = db::clauses_iter(ctx.borrow()).collect();
+            let tmp_crefs: Vec<_> = db::clauses_iter(&mut ctx.borrow()).collect();
 
             for clause in formula.iter() {
                 load_clause(ctx.borrow(), clause);

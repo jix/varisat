@@ -50,9 +50,11 @@ pub fn bump_clause(
 ) {
     bump_clause_activity(ctx.borrow(), cref);
 
-    let clause = ctx.part_mut(ClauseAllocP).clause_mut(cref);
+    let (alloc, mut ctx_2) = ctx.split_part_mut(ClauseAllocP);
 
-    let glue = compute_glue(ctx.borrow(), clause.lits());
+    let clause = alloc.clause_mut(cref);
+
+    let glue = compute_glue(ctx_2.borrow(), clause.lits());
 
     clause.header_mut().set_active(true);
 

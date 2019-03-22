@@ -60,21 +60,21 @@ pub fn analyze_conflict(
 ) -> usize {
     split_borrow!(lit_ctx = &(ClauseAllocP) ctx);
 
-    let analyze = ctx.part_mut(AnalyzeConflictP);
+    {
+        let (analyze, ctx) = ctx.split_part_mut(AnalyzeConflictP);
 
-    analyze.clause.clear();
-    analyze.involved.clear();
-    analyze.current_level_count = 0;
+        analyze.clause.clear();
+        analyze.involved.clear();
+        analyze.current_level_count = 0;
 
-    if ctx.part(TrailP).current_level() == 0 {
-        // Conflict with no decisions, generate empty clause
-        return 0;
+        if ctx.part(TrailP).current_level() == 0 {
+            // Conflict with no decisions, generate empty clause
+            return 0;
+        }
     }
 
-    drop(analyze);
-
     // We start with all the literals of the conflicted clause
-    for &lit in conflict.lits(lit_ctx.borrow()) {
+    for &lit in conflict.lits(&lit_ctx.borrow()) {
         add_literal(ctx.borrow(), lit);
     }
 
@@ -85,7 +85,10 @@ pub fn analyze_conflict(
     // To get rid of all but one literal of the current level, we resolve the clause with the reason
     // for those literals. The correct order for this is reverse chronological.
 
-    for &lit in ctx.part(TrailP).trail().iter().rev() {
+    split_borrow!(ctx_trail = &(TrailP) ctx);
+    // split_borrow!(ctx_analyze = &(mut AnalyzeConflictP) ctx);
+
+    for &lit in ctx_trail.part(TrailP).trail().iter().rev() {
         let analyze = ctx.part_mut(AnalyzeConflictP);
         let lit_present = &mut analyze.var_flags[lit.index()];
         // Is the lit present in the current clause?
@@ -102,9 +105,11 @@ pub fn analyze_conflict(
                 break;
             } else {
                 // We removed the literal and now add its reason.
-                let reason = ctx.part(ImplGraphP).reason(lit.var());
+                let (graph, mut ctx) = ctx.split_part(ImplGraphP);
 
-                for &lit in reason.lits(lit_ctx.borrow()) {
+                let reason = graph.reason(lit.var());
+
+                for &lit in reason.lits(&lit_ctx.borrow()) {
                     add_literal(ctx.borrow(), lit);
                 }
 
@@ -118,7 +123,7 @@ pub fn analyze_conflict(
     // This needs var_flags set and keeps some var_fags set.
     minimize_clause(ctx.borrow());
 
-    let analyze = ctx.part_mut(AnalyzeConflictP);
+    let (analyze, mut ctx) = ctx.split_part_mut(AnalyzeConflictP);
 
     for var in analyze.to_clean.drain(..) {
         analyze.var_flags[var.index()] = false;
@@ -260,7 +265,7 @@ fn minimize_clause(
 
         'outer: while let Some(lit) = analyze.stack.pop() {
             let reason = impl_graph.reason(lit.var());
-            for &reason_lit in reason.lits(lit_ctx.borrow()) {
+            for &reason_lit in reason.lits(&lit_ctx.borrow()) {
                 let reason_level = impl_graph.level(reason_lit.var());
 
                 if !analyze.var_flags[reason_lit.index()] && reason_level > 0 {
