@@ -9,6 +9,7 @@ use log::info;
 use crate::cnf::CnfFormula;
 use crate::context::{ensure_var_count, AssignmentP, Context, SolverStateP};
 use crate::dimacs::DimacsParser;
+use crate::incremental::set_assumptions;
 use crate::lit::{Lit, Var};
 use crate::load::load_clause;
 use crate::schedule::schedule_step;
@@ -81,6 +82,15 @@ impl Solver {
         }
     }
 
+    /// Assume given literals for future calls to solve.
+    ///
+    /// This replaces the current set of assumed literals.
+    pub fn assume(&mut self, assumptions: &[Lit]) {
+        let mut ctx = self.ctx.into_partial_ref_mut();
+
+        set_assumptions(ctx.borrow(), assumptions);
+    }
+
     /// Set of literals that satisfy the formula.
     pub fn model(&self) -> Option<Vec<Lit>> {
         let ctx = self.ctx.into_partial_ref();
@@ -97,6 +107,17 @@ impl Solver {
             )
         } else {
             None
+        }
+    }
+
+    /// Subset of the assumptions that made the formula unsatisfiable.
+    ///
+    /// This is not guaranteed to be minimal and may just return all assumptions every time.
+    pub fn failed_core(&self) -> Option<&[Lit]> {
+        match self.ctx.solver_state.sat_state {
+            SatState::UnsatUnderAssumptions => Some(self.ctx.incremental.failed_core()),
+            SatState::Unsat => Some(&[]),
+            SatState::Unknown | SatState::Sat => None,
         }
     }
 
@@ -120,7 +141,7 @@ mod tests {
     use crate::cnf::CnfFormula;
     use crate::dimacs::write_dimacs;
 
-    use crate::test::{sat_formula, sgen_unsat_formula};
+    use crate::test::{conditional_pigeon_hole, sat_formula, sgen_unsat_formula};
 
     proptest! {
         #[test]
@@ -199,6 +220,45 @@ mod tests {
             }
 
             prop_assert_eq!(last_state, Some(false));
+        }
+
+        #[test]
+        fn pigeon_hole_unsat_assumption_core(
+            (enable_row, columns, formula) in conditional_pigeon_hole(1..5usize, 1..5usize),
+        ) {
+            let mut solver = Solver::new();
+            solver.add_formula(&formula);
+
+            prop_assert_eq!(solver.solve(), Some(true));
+
+            solver.assume(&enable_row);
+
+            prop_assert_eq!(solver.solve(), Some(false));
+
+
+            let mut candidates = solver.failed_core().unwrap().to_owned();
+            let mut core: Vec<Lit> = vec![];
+
+            while !candidates.is_empty() {
+
+                solver.assume(&candidates[0..candidates.len() - 1]);
+
+                match solver.solve() {
+                    None => unreachable!(),
+                    Some(true) => {
+                        let skipped = *candidates.last().unwrap();
+                        core.push(skipped);
+
+                        let single_clause = CnfFormula::from(Some(&[skipped]));
+                        solver.add_formula(&single_clause);
+                    },
+                    Some(false) => {
+                        candidates = solver.failed_core().unwrap().to_owned();
+                    }
+                }
+            }
+
+            prop_assert_eq!(core.len(), columns + 1);
         }
     }
 

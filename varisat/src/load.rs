@@ -3,8 +3,8 @@ use partial_ref::{partial, PartialRef};
 
 use crate::clause::{db, ClauseHeader, Tier};
 use crate::context::{
-    AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, SolverStateP,
-    TmpDataP, TrailP, VsidsP, WatchlistsP,
+    AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, IncrementalP,
+    SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::lit::Lit;
 use crate::prop::{assignment, full_restart, Reason};
@@ -27,6 +27,7 @@ pub fn load_clause(
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ImplGraphP,
+        mut IncrementalP,
         mut SolverStateP,
         mut TmpDataP,
         mut TrailP,

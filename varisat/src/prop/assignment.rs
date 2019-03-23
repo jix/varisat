@@ -1,7 +1,7 @@
 //! Partial assignment and backtracking.
 use partial_ref::{partial, PartialRef};
 
-use crate::context::{AssignmentP, Context, ImplGraphP, TrailP, VsidsP};
+use crate::context::{AssignmentP, Context, ImplGraphP, IncrementalP, TrailP, VsidsP};
 use crate::decision::make_available;
 use crate::lit::{Lit, LitIdx, Var};
 
@@ -190,12 +190,29 @@ pub fn backtrack(
 }
 
 /// Undo all decisions and assumptions.
-pub fn full_restart(mut ctx: partial!(Context, mut AssignmentP, mut TrailP, mut VsidsP)) {
+pub fn full_restart(
+    mut ctx: partial!(
+        Context,
+        mut AssignmentP,
+        mut IncrementalP,
+        mut TrailP,
+        mut VsidsP,
+    ),
+) {
+    ctx.part_mut(IncrementalP).full_restart();
     backtrack(ctx.borrow(), 0);
 }
 
 /// Undo all decisions.
-pub fn restart(mut ctx: partial!(Context, mut AssignmentP, mut TrailP, mut VsidsP)) {
-    // TODO when assumptions are active this should backtrack to level 1 instead of 0
-    backtrack(ctx.borrow(), 0);
+pub fn restart(
+    mut ctx: partial!(
+        Context,
+        mut AssignmentP,
+        mut TrailP,
+        mut VsidsP,
+        IncrementalP
+    ),
+) {
+    let level = ctx.part(IncrementalP).assumption_levels();
+    backtrack(ctx.borrow(), level);
 }

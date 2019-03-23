@@ -6,9 +6,10 @@ use crate::analyze_conflict::analyze_conflict;
 use crate::clause::{assess_learned_clause, bump_clause, db, decay_clause_activities};
 use crate::context::{
     AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseActivityP, ClauseAllocP, ClauseDbP,
-    Context, ImplGraphP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
+    Context, ImplGraphP, IncrementalP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::decision::make_decision;
+use crate::incremental::{enqueue_assumption, EnqueueAssumption};
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
 use crate::simplify::simplify;
 use crate::state::SatState;
@@ -24,6 +25,7 @@ pub fn conflict_step(
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ImplGraphP,
+        mut IncrementalP,
         mut SolverStateP,
         mut TmpDataP,
         mut TrailP,
@@ -38,7 +40,11 @@ pub fn conflict_step(
             ctx.part_mut(SolverStateP).sat_state = SatState::Sat;
             return;
         }
-        Err(conflict) => conflict,
+        Err(FoundConflict::Assumption) => {
+            ctx.part_mut(SolverStateP).sat_state = SatState::UnsatUnderAssumptions;
+            return;
+        }
+        Err(FoundConflict::Conflict(conflict)) => conflict,
     };
 
     let backtrack_to = analyze_conflict(ctx.borrow(), conflict);
@@ -50,8 +56,6 @@ pub fn conflict_step(
     }
 
     decay_clause_activities(ctx.borrow());
-
-    // TODO Handle incremental solving
 
     backtrack(ctx.borrow(), backtrack_to);
 
@@ -78,10 +82,24 @@ pub fn conflict_step(
     enqueue_assignment(ctx.borrow(), clause[0], reason);
 }
 
+/// Return type of [`find_conflict`].
+///
+/// Specifies whether a conflict was found during propagation or while enqueuing assumptions.
+enum FoundConflict {
+    Conflict(Conflict),
+    Assumption,
+}
+
+impl From<Conflict> for FoundConflict {
+    fn from(conflict: Conflict) -> FoundConflict {
+        FoundConflict::Conflict(conflict)
+    }
+}
+
 /// Find a conflict.
 ///
 /// Returns `Err` if a conflict was found and `Ok` if a satisfying assignment was found instead.
-pub fn find_conflict(
+fn find_conflict(
     mut ctx: partial!(
         Context,
         mut AssignmentP,
@@ -89,21 +107,29 @@ pub fn find_conflict(
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ImplGraphP,
+        mut IncrementalP,
+        mut TmpDataP,
         mut TrailP,
         mut VsidsP,
         mut WatchlistsP,
     ),
-) -> Result<(), Conflict> {
+) -> Result<(), FoundConflict> {
     loop {
         propagate(ctx.borrow())?;
 
-        if ctx.part(TrailP).current_level() == 0 {
+        let current_level = ctx.part(TrailP).current_level();
+
+        if current_level == 0 {
             if !ctx.part(TrailP).trail().is_empty() {
                 simplify(ctx.borrow());
             }
         }
 
-        // TODO Handle incremental solving
+        match enqueue_assumption(ctx.borrow()) {
+            EnqueueAssumption::Enqueued => continue,
+            EnqueueAssumption::Conflict => return Err(FoundConflict::Assumption),
+            EnqueueAssumption::Done => (),
+        }
 
         if !make_decision(ctx.borrow()) {
             return Ok(());

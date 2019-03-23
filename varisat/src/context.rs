@@ -5,6 +5,7 @@ use crate::analyze_conflict::AnalyzeConflict;
 use crate::binary::BinaryClauses;
 use crate::clause::{ClauseActivity, ClauseAlloc, ClauseDb};
 use crate::decision::vsids::Vsids;
+use crate::incremental::Incremental;
 use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
 use crate::schedule::Schedule;
 use crate::state::SolverState;
@@ -21,6 +22,7 @@ mod parts {
     part!(pub ClauseAllocP: ClauseAlloc);
     part!(pub ClauseDbP: ClauseDb);
     part!(pub ImplGraphP: ImplGraph);
+    part!(pub IncrementalP: Incremental);
     part!(pub ScheduleP: Schedule);
     part!(pub SolverStateP: SolverState);
     part!(pub TmpDataP: TmpData);
@@ -40,31 +42,33 @@ pub use parts::*;
 #[derive(PartialRefTarget, Default)]
 pub struct Context {
     #[part = "AnalyzeConflictP"]
-    analyze_conflict: AnalyzeConflict,
+    pub analyze_conflict: AnalyzeConflict,
     #[part = "AssignmentP"]
-    assignment: Assignment,
+    pub assignment: Assignment,
     #[part = "BinaryClausesP"]
-    binary_clauses: BinaryClauses,
+    pub binary_clauses: BinaryClauses,
     #[part = "ClauseActivityP"]
-    clause_activity: ClauseActivity,
+    pub clause_activity: ClauseActivity,
     #[part = "ClauseAllocP"]
-    clause_alloc: ClauseAlloc,
+    pub clause_alloc: ClauseAlloc,
     #[part = "ClauseDbP"]
-    clause_db: ClauseDb,
+    pub clause_db: ClauseDb,
     #[part = "ImplGraphP"]
-    impl_graph: ImplGraph,
+    pub impl_graph: ImplGraph,
+    #[part = "IncrementalP"]
+    pub incremental: Incremental,
     #[part = "ScheduleP"]
-    schedule: Schedule,
+    pub schedule: Schedule,
     #[part = "SolverStateP"]
-    solver_state: SolverState,
+    pub solver_state: SolverState,
     #[part = "TmpDataP"]
-    tmp_data: TmpData,
+    pub tmp_data: TmpData,
     #[part = "TrailP"]
-    trail: Trail,
+    pub trail: Trail,
     #[part = "VsidsP"]
-    vsids: Vsids,
+    pub vsids: Vsids,
     #[part = "WatchlistsP"]
-    watchlists: Watchlists,
+    pub watchlists: Watchlists,
 }
 
 /// Update structures for a new variable count.

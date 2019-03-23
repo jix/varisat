@@ -11,6 +11,7 @@ mod clause;
 mod context;
 mod decision;
 mod glue;
+mod incremental;
 mod load;
 mod prop;
 mod schedule;
