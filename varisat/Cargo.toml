@@ -10,6 +10,7 @@ itoa = "0.4.3"
 log = "0.4.6"
 partial_ref = "0.2.0"
 ordered-float = "1.0.1"
+env_logger = "0.6.1"
 
 [dev-dependencies]
 proptest = "0.9.1"
