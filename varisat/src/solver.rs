@@ -36,6 +36,14 @@ impl Solver {
         }
     }
 
+    /// Increases the variable count to handle all literals in the given slice.
+    fn ensure_var_count_from_slice(&mut self, lits: &[Lit]) {
+        if let Some(index) = lits.iter().map(|&lit| lit.index()).max() {
+            let mut ctx = self.ctx.into_partial_ref_mut();
+            ensure_var_count(ctx.borrow(), index + 1);
+        }
+    }
+
     /// Reads and adds a formula in DIMACS CNF format.
     ///
     /// Using this avoids creating a temporary [`CnfFormula`].
@@ -86,8 +94,8 @@ impl Solver {
     ///
     /// This replaces the current set of assumed literals.
     pub fn assume(&mut self, assumptions: &[Lit]) {
+        self.ensure_var_count_from_slice(assumptions);
         let mut ctx = self.ctx.into_partial_ref_mut();
-
         set_assumptions(ctx.borrow(), assumptions);
     }
 
@@ -231,7 +239,11 @@ mod tests {
 
             prop_assert_eq!(solver.solve(), Some(true));
 
-            solver.assume(&enable_row);
+            let mut assumptions = enable_row.to_owned();
+
+            assumptions.push(Lit::from_var(Var::from_index(formula.var_count() + 10), false));
+
+            solver.assume(&assumptions);
 
             prop_assert_eq!(solver.solve(), Some(false));
 
