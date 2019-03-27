@@ -43,7 +43,7 @@ pub fn main_with_err() -> Result<i32, Error> {
         .filter(None, LevelFilter::Info);
 
     if let Ok(ref env_var) = env::var("VARISAT_LOG") {
-        builder.parse(env_var);
+        builder.parse_filters(env_var);
     }
 
     builder.init();
