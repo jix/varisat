@@ -6,12 +6,13 @@ use crate::analyze_conflict::analyze_conflict;
 use crate::clause::{assess_learned_clause, bump_clause, db, decay_clause_activities};
 use crate::context::{
     AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseActivityP, ClauseAllocP, ClauseDbP,
-    Context, ImplGraphP, IncrementalP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
+    Context, ImplGraphP, IncrementalP, ProofP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::decision::make_decision;
 use crate::incremental::{enqueue_assumption, EnqueueAssumption};
+use crate::proof::ProofStep;
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
-use crate::simplify::simplify;
+use crate::simplify::{prove_units, simplify};
 use crate::state::SatState;
 
 /// Find a conflict, learn a clause and backtrack.
@@ -26,6 +27,7 @@ pub fn conflict_step(
         mut ClauseDbP,
         mut ImplGraphP,
         mut IncrementalP,
+        mut ProofP,
         mut SolverStateP,
         mut TmpDataP,
         mut TrailP,
@@ -60,6 +62,11 @@ pub fn conflict_step(
     backtrack(ctx.borrow(), backtrack_to);
 
     let clause = analyze.clause();
+
+    ctx.part_mut(ProofP).add_step(&ProofStep::RupClause(
+        clause.into(),
+        analyze.clause_hashes().into(),
+    ));
 
     let reason = match clause.len() {
         0 => {
@@ -108,6 +115,7 @@ fn find_conflict(
         mut ClauseDbP,
         mut ImplGraphP,
         mut IncrementalP,
+        mut ProofP,
         mut TmpDataP,
         mut TrailP,
         mut VsidsP,
@@ -115,14 +123,14 @@ fn find_conflict(
     ),
 ) -> Result<(), FoundConflict> {
     loop {
-        propagate(ctx.borrow())?;
+        let propagation_result = propagate(ctx.borrow());
 
-        let current_level = ctx.part(TrailP).current_level();
+        let new_unit = prove_units(ctx.borrow());
 
-        if current_level == 0 {
-            if !ctx.part(TrailP).trail().is_empty() {
-                simplify(ctx.borrow());
-            }
+        propagation_result?;
+
+        if new_unit {
+            simplify(ctx.borrow());
         }
 
         match enqueue_assumption(ctx.borrow()) {

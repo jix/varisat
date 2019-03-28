@@ -4,13 +4,12 @@ use partial_ref::{partial, PartialRef};
 use crate::clause::{db, ClauseHeader, Tier};
 use crate::context::{
     AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, IncrementalP,
-    SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
+    ProofP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::lit::Lit;
+use crate::proof::{clause_hash, ProofStep};
 use crate::prop::{assignment, full_restart, Reason};
 use crate::state::SatState;
-
-use crate::vec_mut_scan::VecMutScan;
 
 /// Adds a clause to the current formula.
 ///
@@ -28,6 +27,7 @@ pub fn load_clause(
         mut ClauseDbP,
         mut ImplGraphP,
         mut IncrementalP,
+        mut ProofP,
         mut SolverStateP,
         mut TmpDataP,
         mut TrailP,
@@ -48,10 +48,12 @@ pub fn load_clause(
     full_restart(ctx.borrow());
 
     let (tmp_data, mut ctx) = ctx.split_part_mut(TmpDataP);
+    let (proof, mut ctx) = ctx.split_part_mut(ProofP);
 
     tmp_data.lits.clear();
     tmp_data.lits.extend_from_slice(lits);
     let lits = &mut tmp_data.lits;
+    let simplified_lits = &mut tmp_data.lits_2;
 
     lits.sort_unstable();
     lits.dedup();
@@ -61,29 +63,38 @@ pub fn load_clause(
 
     for &lit in lits.iter() {
         if last == Some(!lit) {
+            proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
             return;
         }
         last = Some(lit);
     }
 
-    let mut scan = VecMutScan::new(lits);
-
     // Remove false literals and satisfied clauses
-    while let Some(lit) = scan.next() {
-        match ctx.part(AssignmentP).lit_value(*lit) {
+    simplified_lits.clear();
+
+    for &lit in lits.iter() {
+        match ctx.part(AssignmentP).lit_value(lit) {
             Some(true) => {
+                proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
                 return;
             }
-            Some(false) => {
-                lit.remove();
+            Some(false) => (),
+            None => {
+                simplified_lits.push(lit);
             }
-            None => (),
         }
     }
 
-    drop(scan);
+    if proof.is_active() && simplified_lits.len() < lits.len() {
+        let hash = [clause_hash(lits)];
+        proof.add_step(&ProofStep::RupClause(
+            simplified_lits[..].into(),
+            hash[..].into(),
+        ));
+        proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
+    }
 
-    match lits[..] {
+    match simplified_lits[..] {
         [] => ctx.part_mut(SolverStateP).sat_state = SatState::Unsat,
         [lit] => assignment::enqueue_assignment(ctx.borrow(), lit, Reason::Unit),
         [lit_0, lit_1] => {
@@ -94,7 +105,7 @@ pub fn load_clause(
             let mut header = ClauseHeader::new();
             header.set_tier(Tier::Irred);
 
-            db::add_clause(ctx.borrow(), header, lits);
+            db::add_clause(ctx.borrow(), header, simplified_lits);
         }
     }
 }

@@ -5,7 +5,11 @@ use ordered_float::OrderedFloat;
 
 use partial_ref::{partial, PartialRef};
 
-use crate::context::{AssignmentP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, WatchlistsP};
+use crate::context::{
+    AssignmentP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, ProofP, WatchlistsP,
+};
+use crate::proof::ProofStep;
+
 use crate::vec_mut_scan::VecMutScan;
 
 use super::db::{set_clause_tier, try_delete_clause, Tier};
@@ -36,6 +40,7 @@ pub fn reduce_locals(
         Context,
         mut ClauseAllocP,
         mut ClauseDbP,
+        mut ProofP,
         mut WatchlistsP,
         AssignmentP,
         ImplGraphP
@@ -64,6 +69,12 @@ pub fn reduce_locals(
             ctx.part_mut(ClauseAllocP).header_mut(*cref).set_mark(false);
 
             if try_delete_clause(ctx.borrow(), *cref) {
+                if ctx.part(ProofP).is_active() {
+                    let (proof, ctx) = ctx.split_part_mut(ProofP);
+                    let lits = ctx.part(ClauseAllocP).clause(*cref).lits();
+                    proof.add_step(&ProofStep::DeleteClause(lits.into()));
+                }
+
                 cref.remove();
                 to_delete -= 1;
                 if to_delete == 0 {

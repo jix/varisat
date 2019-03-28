@@ -10,7 +10,7 @@ use crate::clause::reduce::{reduce_locals, reduce_mids};
 use crate::clause::{collect_garbage, Tier};
 use crate::context::{
     AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseActivityP, ClauseAllocP, ClauseDbP,
-    Context, ImplGraphP, IncrementalP, ScheduleP, SolverStateP, TmpDataP, TrailP, VsidsP,
+    Context, ImplGraphP, IncrementalP, ProofP, ScheduleP, SolverStateP, TmpDataP, TrailP, VsidsP,
     WatchlistsP,
 };
 use crate::prop::restart;
@@ -43,6 +43,7 @@ pub fn schedule_step(
         mut ClauseDbP,
         mut ImplGraphP,
         mut IncrementalP,
+        mut ProofP,
         mut ScheduleP,
         mut SolverStateP,
         mut TmpDataP,

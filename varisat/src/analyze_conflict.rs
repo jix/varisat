@@ -4,8 +4,9 @@ use std::mem::swap;
 use partial_ref::{partial, split_borrow, PartialRef};
 
 use crate::clause::ClauseRef;
-use crate::context::{AnalyzeConflictP, ClauseAllocP, Context, ImplGraphP, TrailP, VsidsP};
-use crate::lit::{Lit, Var};
+use crate::context::{AnalyzeConflictP, ClauseAllocP, Context, ImplGraphP, ProofP, TrailP, VsidsP};
+use crate::lit::{Lit, LitIdx, Var};
+use crate::proof::{clause_hash, lit_hash, ClauseHash};
 use crate::prop::{Conflict, Reason};
 
 use crate::vec_mut_scan::VecMutScan;
@@ -23,6 +24,10 @@ pub struct AnalyzeConflict {
     to_clean: Vec<Var>,
     /// Clauses to bump.
     involved: Vec<ClauseRef>,
+    /// Hashes of all involved clauses needed to proof the minimized clause.
+    clause_hashes: Vec<ClauseHash>,
+    /// Clause hashes paired with the trail depth of the propagated lit.
+    unordered_clause_hashes: Vec<(LitIdx, ClauseHash)>,
     /// Stack for recursive minimization.
     stack: Vec<Lit>,
 }
@@ -42,6 +47,13 @@ impl AnalyzeConflict {
     pub fn involved(&self) -> &[ClauseRef] {
         &self.involved
     }
+
+    /// Hashes of clauses involved in the proof of the learned clause.
+    ///
+    /// Hashes are in clause propagation order.
+    pub fn clause_hashes(&self) -> &[ClauseHash] {
+        &self.clause_hashes
+    }
 }
 
 /// Learns a new clause by analyzing a conflict.
@@ -54,6 +66,7 @@ pub fn analyze_conflict(
         mut VsidsP,
         ClauseAllocP,
         ImplGraphP,
+        ProofP,
         TrailP,
     ),
     conflict: Conflict,
@@ -61,20 +74,30 @@ pub fn analyze_conflict(
     split_borrow!(lit_ctx = &(ClauseAllocP) ctx);
 
     {
-        let (analyze, ctx) = ctx.split_part_mut(AnalyzeConflictP);
+        let analyze = ctx.part_mut(AnalyzeConflictP);
 
         analyze.clause.clear();
         analyze.involved.clear();
+        analyze.clause_hashes.clear();
+        analyze.unordered_clause_hashes.clear();
         analyze.current_level_count = 0;
-
-        if ctx.part(TrailP).current_level() == 0 {
-            // Conflict with no decisions, generate empty clause
-            return 0;
-        }
     }
 
     // We start with all the literals of the conflicted clause
-    for &lit in conflict.lits(&lit_ctx.borrow()) {
+    let conflict_lits = conflict.lits(&lit_ctx);
+
+    if ctx.part(ProofP).clause_hashes_required() {
+        ctx.part_mut(AnalyzeConflictP)
+            .clause_hashes
+            .push(clause_hash(conflict_lits));
+    }
+
+    if ctx.part(TrailP).current_level() == 0 {
+        // Conflict with no decisions, generate empty clause
+        return 0;
+    }
+
+    for &lit in conflict_lits {
         add_literal(ctx.borrow(), lit);
     }
 
@@ -109,7 +132,14 @@ pub fn analyze_conflict(
 
                 let reason = graph.reason(lit.var());
 
-                for &lit in reason.lits(&lit_ctx.borrow()) {
+                let lits = reason.lits(&lit_ctx);
+
+                if ctx.part(ProofP).clause_hashes_required() && !reason.is_unit() {
+                    let hash = clause_hash(lits) ^ lit_hash(lit);
+                    ctx.part_mut(AnalyzeConflictP).clause_hashes.push(hash);
+                }
+
+                for &lit in lits {
                     add_literal(ctx.borrow(), lit);
                 }
 
@@ -124,6 +154,29 @@ pub fn analyze_conflict(
     minimize_clause(ctx.borrow());
 
     let (analyze, mut ctx) = ctx.split_part_mut(AnalyzeConflictP);
+
+    if ctx.part(ProofP).clause_hashes_required() {
+        // Clause minimization cannot give us clause hashes in propagation order, so we need to sort
+        // them. Clauses used during minimization propagte before clauses used during initial
+        // analysis. The clauses during initial analysis are discovered in reverse propagation
+        // order. This means we can sort the minimization clauses in reverse order, append them to
+        // the initial clauses and then reverse the order of all clauses.
+        analyze
+            .unordered_clause_hashes
+            .sort_unstable_by_key(|&(depth, _)| !depth);
+
+        analyze
+            .unordered_clause_hashes
+            .dedup_by_key(|&mut (depth, _)| depth);
+
+        analyze.clause_hashes.extend(
+            analyze
+                .unordered_clause_hashes
+                .iter()
+                .map(|&(_, hash)| hash),
+        );
+        analyze.clause_hashes.reverse();
+    }
 
     for var in analyze.to_clean.drain(..) {
         analyze.var_flags[var.index()] = false;
@@ -233,6 +286,7 @@ fn minimize_clause(
         mut VsidsP,
         ClauseAllocP,
         ImplGraphP,
+        ProofP,
         TrailP,
     ),
 ) {
@@ -258,14 +312,26 @@ fn minimize_clause(
 
         // Start the DFS
         analyze.stack.clear();
-        analyze.stack.push(*lit);
+        analyze.stack.push(!*lit);
 
         // Used to remember which var_flags are set during this DFS
         let top = analyze.to_clean.len();
 
-        'outer: while let Some(lit) = analyze.stack.pop() {
+        // Used to remember which clause hashes were added during the DFS, so we can remove them in
+        // case the literal is not redundant.
+        let hashes_top = analyze.unordered_clause_hashes.len();
+
+        while let Some(lit) = analyze.stack.pop() {
             let reason = impl_graph.reason(lit.var());
-            for &reason_lit in reason.lits(&lit_ctx.borrow()) {
+            let lits = reason.lits(&lit_ctx);
+
+            if ctx.part(ProofP).clause_hashes_required() && !reason.is_unit() {
+                let depth = impl_graph.depth(lit.var()) as LitIdx;
+                let hash = clause_hash(lits) ^ lit_hash(lit);
+                analyze.unordered_clause_hashes.push((depth, hash));
+            }
+
+            for &reason_lit in lits {
                 let reason_level = impl_graph.level(reason_lit.var());
 
                 if !analyze.var_flags[reason_lit.index()] && reason_level > 0 {
@@ -282,11 +348,13 @@ fn minimize_clause(
                         for lit in analyze.to_clean.drain(top..) {
                             analyze.var_flags[lit.index()] = false;
                         }
+                        // Remove clauses not needed to justify the minimized clause.
+                        analyze.unordered_clause_hashes.truncate(hashes_top);
                         continue 'next_lit;
                     } else {
                         analyze.var_flags[reason_lit.index()] = true;
                         analyze.to_clean.push(reason_lit.var());
-                        analyze.stack.push(reason_lit);
+                        analyze.stack.push(!reason_lit);
                     }
                 }
             }

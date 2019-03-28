@@ -6,6 +6,7 @@ use crate::binary::BinaryClauses;
 use crate::clause::{ClauseActivity, ClauseAlloc, ClauseDb};
 use crate::decision::vsids::Vsids;
 use crate::incremental::Incremental;
+use crate::proof::Proof;
 use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
 use crate::schedule::Schedule;
 use crate::state::SolverState;
@@ -23,6 +24,7 @@ mod parts {
     part!(pub ClauseDbP: ClauseDb);
     part!(pub ImplGraphP: ImplGraph);
     part!(pub IncrementalP: Incremental);
+    part!(pub ProofP: Proof);
     part!(pub ScheduleP: Schedule);
     part!(pub SolverStateP: SolverState);
     part!(pub TmpDataP: TmpData);
@@ -57,6 +59,8 @@ pub struct Context {
     pub impl_graph: ImplGraph,
     #[part = "IncrementalP"]
     pub incremental: Incremental,
+    #[part = "ProofP"]
+    pub proof: Proof,
     #[part = "ScheduleP"]
     pub schedule: Schedule,
     #[part = "SolverStateP"]

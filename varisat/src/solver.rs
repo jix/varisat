@@ -15,6 +15,8 @@ use crate::load::load_clause;
 use crate::schedule::schedule_step;
 use crate::state::SatState;
 
+pub use crate::proof::ProofFormat;
+
 /// A boolean satisfiability solver.
 #[derive(Default)]
 pub struct Solver {
@@ -127,6 +129,18 @@ impl Solver {
             SatState::Unsat => Some(&[]),
             SatState::Unknown | SatState::Sat => None,
         }
+    }
+
+    /// Generate a proof of unsatisfiability during solving.
+    pub fn write_proof(&mut self, target: impl io::Write + 'static, format: ProofFormat) {
+        self.ctx.proof.write_proof(target, format);
+    }
+
+    /// Stop generating a proof of unsatisfiability.
+    ///
+    /// This also flushes internal buffers and closes the target file.
+    pub fn close_proof(&mut self) {
+        self.ctx.proof.close_proof();
     }
 
     /// Enables a test schedule that triggers steps early

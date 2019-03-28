@@ -1,6 +1,8 @@
 //! Literals and variables.
 use std::{fmt, ops};
 
+use serde::{Deserialize, Serialize};
+
 /// The backing type used to represent literals and variables.
 pub type LitIdx = u32;
 
@@ -12,7 +14,7 @@ pub type LitIdx = u32;
 ///
 /// Creating a variable with an index larger than `Var::max_var().index()` is unsupported. This
 /// might panic or be interpreted as a different variable.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct Var {
     index: LitIdx,
@@ -92,7 +94,7 @@ impl fmt::Display for Var {
 /// literal.
 ///
 /// The restriction on the range of allowed indices for `Var` also applies to `Lit`.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct Lit {
     code: LitIdx,

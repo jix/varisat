@@ -3,13 +3,13 @@ use std::fs;
 use std::io;
 use std::io::Write;
 
-use clap::App;
+use clap::{App, Arg};
 use env_logger::{fmt, Builder, Target};
 use failure::Error;
 use log::{error, info};
 use log::{Level, LevelFilter, Record};
 
-use varisat::solver::Solver;
+use varisat::solver::{ProofFormat, Solver};
 
 fn main() {
     let exit_code = match main_with_err() {
@@ -26,6 +26,15 @@ pub fn main_with_err() -> Result<i32, Error> {
     let matches = App::new("varisat")
         .version(env!("VARISAT_VERSION"))
         .arg_from_usage("[INPUT] 'The input file to use (stdin if omitted)'")
+        .arg_from_usage("[proof-file] --proof=[FILE] 'Write a proof to the specified file'")
+        .arg(
+            Arg::from_usage(
+                "[proof-format] --proof-format=[FORMAT] 'Specify the proof format to use.'",
+            )
+            .possible_values(&["drat", "binary-drat", "varisat"])
+            .default_value("drat")
+            .case_insensitive(true),
+        )
         .get_matches();
 
     let format = |buf: &mut fmt::Formatter, record: &Record| {
@@ -74,6 +83,24 @@ pub fn main_with_err() -> Result<i32, Error> {
             &mut locked_stdin as &mut io::Read
         }
     };
+
+    if let Some(path) = matches.value_of("proof-file") {
+        let proof_format_str = matches
+            .value_of("proof-format")
+            .unwrap()
+            .to_ascii_lowercase();
+
+        let proof_format = match &proof_format_str[..] {
+            "drat" => ProofFormat::Drat,
+            "binary-drat" => ProofFormat::BinaryDrat,
+            "varisat" => ProofFormat::Varisat,
+            _ => unreachable!(),
+        };
+
+        info!("Writing {} proof to file '{}'", proof_format_str, path);
+
+        solver.write_proof(fs::File::create(path)?, proof_format);
+    }
 
     solver.add_dimacs_cnf(file)?;
 

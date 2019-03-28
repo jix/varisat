@@ -36,10 +36,9 @@ pub fn propagate(
 ) -> Result<(), Conflict> {
     enable_watchlists(ctx.borrow());
 
-    while let Some(lit) = ctx.part(TrailP).queue_head() {
+    while let Some(lit) = ctx.part_mut(TrailP).pop_queue() {
         binary::propagate_binary(ctx.borrow(), lit)?;
         long::propagate_long(ctx.borrow(), lit)?;
-        ctx.part_mut(TrailP).pop_queue();
     }
     Ok(())
 }

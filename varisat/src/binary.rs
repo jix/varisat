@@ -2,7 +2,8 @@
 
 use partial_ref::{partial, PartialRef};
 
-use crate::context::{AssignmentP, BinaryClausesP, Context};
+use crate::context::{AssignmentP, BinaryClausesP, Context, ProofP};
+use crate::proof::ProofStep;
 
 use crate::lit::Lit;
 
@@ -39,8 +40,9 @@ impl BinaryClauses {
 }
 
 /// Remove binary clauses that have an assigned literal.
-pub fn simplify_binary(mut ctx: partial!(Context, mut BinaryClausesP, AssignmentP)) {
-    let (binary_clauses, ctx) = ctx.split_part_mut(BinaryClausesP);
+pub fn simplify_binary(mut ctx: partial!(Context, mut BinaryClausesP, mut ProofP, AssignmentP)) {
+    let (binary_clauses, mut ctx) = ctx.split_part_mut(BinaryClausesP);
+    let (proof, ctx) = ctx.split_part_mut(ProofP);
     let assignment = ctx.part(AssignmentP);
 
     let mut double_count = 0;
@@ -49,9 +51,28 @@ pub fn simplify_binary(mut ctx: partial!(Context, mut BinaryClausesP, Assignment
         let lit = Lit::from_code(code);
 
         if !assignment.lit_is_unk(lit) {
+            if proof.is_active() {
+                for &other_lit in implied.iter() {
+                    // This check avoids deleting binary clauses twice if both literals are assigned.
+                    if (!lit) < other_lit {
+                        let lits = [!lit, other_lit];
+                        proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
+                    }
+                }
+            }
+
             implied.clear();
         } else {
-            implied.retain(|&other_lit| assignment.lit_is_unk(other_lit));
+            implied.retain(|&other_lit| {
+                let retain = assignment.lit_is_unk(other_lit);
+                // This check avoids deleting binary clauses twice if both literals are assigned.
+                if proof.is_active() && !retain && (!lit) < other_lit {
+                    let lits = [!lit, other_lit];
+                    proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
+                }
+
+                retain
+            });
 
             double_count += implied.len();
         }

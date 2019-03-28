@@ -28,6 +28,14 @@ impl Reason {
             Reason::Long(cref) => &ctx.part(ClauseAllocP).clause(*cref).lits()[1..],
         }
     }
+
+    /// True if a unit clause or assumption and not a propagation.
+    pub fn is_unit(&self) -> bool {
+        match self {
+            Reason::Unit => true,
+            _ => false,
+        }
+    }
 }
 
 /// Propagation that resulted in a conflict.
@@ -56,6 +64,7 @@ impl Conflict {
 pub struct ImplNode {
     pub reason: Reason,
     pub level: LitIdx,
+    pub depth: LitIdx,
 }
 
 /// The implication graph.
@@ -77,6 +86,7 @@ impl ImplGraph {
             ImplNode {
                 reason: Reason::Unit,
                 level: 0,
+                depth: 0,
             },
         );
     }
@@ -95,10 +105,24 @@ impl ImplGraph {
         self.nodes[var.index()].level as usize
     }
 
+    /// Get the trail depth of an assigned variable.
+    ///
+    /// Returns stale data if the variable isn't assigned.
+    pub fn depth(&self, var: Var) -> usize {
+        self.nodes[var.index()].depth as usize
+    }
+
     /// Updates the reason for an assigned variable.
     ///
     /// Make sure the reason vars are in front of the assigned variable in the trail.
     pub fn update_reason(&mut self, var: Var, reason: Reason) {
         self.nodes[var.index()].reason = reason
+    }
+
+    /// Updates the reason and depth of a unit clause removed from the trail.
+    pub fn update_removed_unit(&mut self, var: Var) {
+        let node = &mut self.nodes[var.index()];
+        node.reason = Reason::Unit;
+        node.depth = 0;
     }
 }

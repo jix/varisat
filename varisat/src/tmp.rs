@@ -8,6 +8,7 @@ use crate::lit::Lit;
 #[derive(Default)]
 pub struct TmpData {
     pub lits: Vec<Lit>,
+    pub lits_2: Vec<Lit>,
     /// A boolean for each literal.
     ///
     /// Reset to all-false, keep size.

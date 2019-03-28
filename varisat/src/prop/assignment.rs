@@ -85,10 +85,13 @@ impl Trail {
         self.trail.get(self.queue_head_pos).cloned()
     }
 
-    /// Removes the head of the propagation queue.
-    pub fn pop_queue(&mut self) {
-        self.queue_head_pos += 1;
-        debug_assert!(self.queue_head_pos <= self.trail.len());
+    ///  Return the next assigned literal to propagate and remove it from the queue.
+    pub fn pop_queue(&mut self) -> Option<Lit> {
+        let head = self.queue_head();
+        if head.is_some() {
+            self.queue_head_pos += 1;
+        }
+        head
     }
 
     /// Re-enqueue all assigned literals.
@@ -160,6 +163,7 @@ pub fn enqueue_assignment(
     let node = &mut ctx.part_mut(ImplGraphP).nodes[lit.index()];
     node.reason = reason;
     node.level = trail.decisions.len() as LitIdx;
+    node.depth = trail.trail.len() as LitIdx;
 }
 
 /// Undo all assignments in decision levels deeper than the given level.
