@@ -3,13 +3,15 @@ use std::fs;
 use std::io;
 use std::io::Write;
 
-use clap::{App, Arg};
+use clap::{App, AppSettings, Arg};
 use env_logger::{fmt, Builder, Target};
 use failure::Error;
 use log::{error, info};
 use log::{Level, LevelFilter, Record};
 
 use varisat::solver::{ProofFormat, Solver};
+
+mod check;
 
 fn main() {
     let exit_code = match main_with_err() {
@@ -22,21 +24,7 @@ fn main() {
     std::process::exit(exit_code);
 }
 
-pub fn main_with_err() -> Result<i32, Error> {
-    let matches = App::new("varisat")
-        .version(env!("VARISAT_VERSION"))
-        .arg_from_usage("[INPUT] 'The input file to use (stdin if omitted)'")
-        .arg_from_usage("[proof-file] --proof=[FILE] 'Write a proof to the specified file'")
-        .arg(
-            Arg::from_usage(
-                "[proof-format] --proof-format=[FORMAT] 'Specify the proof format to use.'",
-            )
-            .possible_values(&["drat", "binary-drat", "varisat"])
-            .default_value("drat")
-            .case_insensitive(true),
-        )
-        .get_matches();
-
+fn init_logging() {
     let format = |buf: &mut fmt::Formatter, record: &Record| {
         if record.level() == Level::Info {
             writeln!(buf, "c {}", record.args())
@@ -56,13 +44,42 @@ pub fn main_with_err() -> Result<i32, Error> {
     }
 
     builder.init();
+}
 
+fn banner() {
     info!("This is varisat {}", env!("VARISAT_VERSION"));
     info!(
         "  {} build - {}",
         env!("VARISAT_PROFILE"),
         env!("VARISAT_RUSTC_VERSION")
     );
+}
+
+fn main_with_err() -> Result<i32, Error> {
+    let matches = App::new("varisat")
+        .version(env!("VARISAT_VERSION"))
+        .setting(AppSettings::DisableHelpSubcommand)
+        .setting(AppSettings::ArgsNegateSubcommands)
+        .setting(AppSettings::VersionlessSubcommands)
+        .arg_from_usage("[INPUT] 'The input file to use (stdin if omitted)'")
+        .arg_from_usage("[proof-file] --proof=[FILE] 'Write a proof to the specified file'")
+        .arg(
+            Arg::from_usage(
+                "[proof-format] --proof-format=[FORMAT] 'Specify the proof format to use.'",
+            )
+            .possible_values(&["drat", "binary-drat", "varisat"])
+            .default_value("drat")
+            .case_insensitive(true),
+        )
+        .subcommand(check::check_args())
+        .get_matches();
+
+    if let Some(matches) = matches.subcommand_matches("--check") {
+        return check::check_main(matches);
+    }
+
+    init_logging();
+    banner();
 
     let mut solver = Solver::new();
 

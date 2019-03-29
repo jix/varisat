@@ -1,5 +1,6 @@
 #[macro_use]
 pub mod lit;
+pub mod checker;
 pub mod cnf;
 pub mod dimacs;
 pub mod solver;
