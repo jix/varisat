@@ -43,18 +43,25 @@ pub fn clause_hash(lits: &[Lit]) -> ClauseHash {
 /// Represents a mutation of the current formula and a justification for the mutation's validity.
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ProofStep<'a> {
-    /// Add a clause justified by reverse unit propagation.
+    /// Add a clause that is an asymmetric tautoligy (AT).
+    ///
+    /// Assuming the negation of the clause's literals leads to a unit propagation conflict.
     ///
     /// The second slice contains the hashes of all clauses involved in the resulting conflict. The
     /// order of hashes is the order in which the clauses propagate when all literals of the clause
     /// are set false.
     ///
     /// When generating DRAT proofs the second slice is ignored and may be empty.
-    RupClause(Cow<'a, [Lit]>, Cow<'a, [ClauseHash]>),
+    AtClause {
+        clause: Cow<'a, [Lit]>,
+        propagation_hashes: Cow<'a, [ClauseHash]>,
+    },
     /// Unit clauses found by top-level unit-propagation.
     ///
-    /// The first slice is a list of units found. The second is a list of hashes of the respective
-    /// clauses that became unit.
+    /// Pairs of unit clauses and the original clause that became unit. Clauses are in chronological
+    /// order. This is equivalent to multiple `AtClause` steps where the clause is unit and the
+    /// propagation_hashes field contains just one hash, with the difference that this is not output
+    /// for DRAT proofs.
     ///
     /// Ignored when generating DRAT proofs.
     UnitClauses(Cow<'a, [(Lit, ClauseHash)]>),
@@ -141,7 +148,7 @@ impl Proof {
     /// Writes a proof step in DRAT or binary DRAT format.
     fn write_drat_step<'a>(&'a mut self, step: &'a ProofStep<'a>) {
         match step {
-            ProofStep::RupClause(clause, ..) => {
+            ProofStep::AtClause { clause, .. } => {
                 self.drat_add_clause();
                 self.drat_literals(&clause)
             }

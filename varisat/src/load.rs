@@ -87,10 +87,10 @@ pub fn load_clause(
 
     if proof.is_active() && simplified_lits.len() < lits.len() {
         let hash = [clause_hash(lits)];
-        proof.add_step(&ProofStep::RupClause(
-            simplified_lits[..].into(),
-            hash[..].into(),
-        ));
+        proof.add_step(&ProofStep::AtClause {
+            clause: simplified_lits[..].into(),
+            propagation_hashes: hash[..].into(),
+        });
         proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
     }
 

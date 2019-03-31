@@ -4,7 +4,7 @@ use std::io;
 use clap::{App, ArgMatches, SubCommand};
 use failure::Error;
 
-use varisat::checker::Checker;
+use varisat::checker::{Checker, WriteLrat};
 
 use super::{banner, init_logging};
 
@@ -12,6 +12,10 @@ pub fn check_args() -> App<'static, 'static> {
     SubCommand::with_name("--check")
         .arg_from_usage("[INPUT] 'The input file to use (stdin if omitted)'")
         .arg_from_usage("<proof-file> --proof=[FILE] 'The varisat proof file to check.'")
+        .arg_from_usage("[lrat-file] --write-lrat=[FILE] 'Convert the proof to LRAT.'")
+        .arg_from_usage(
+            "[clrat-file] --write-clrat=[FILE] 'Convert the proof to compressed (binary) LRAT.'",
+        )
 }
 
 pub fn check_main(matches: &ArgMatches) -> Result<i32, Error> {
@@ -37,6 +41,20 @@ pub fn check_main(matches: &ArgMatches) -> Result<i32, Error> {
             &mut locked_stdin as &mut io::Read
         }
     };
+
+    let mut lrat_processor;
+
+    if let Some(lrat_path) = matches.value_of("lrat-file") {
+        lrat_processor = WriteLrat::new(fs::File::create(lrat_path)?, false);
+        checker.add_processor(&mut lrat_processor);
+    }
+
+    let mut clrat_processor;
+
+    if let Some(clrat_path) = matches.value_of("clrat-file") {
+        clrat_processor = WriteLrat::new(fs::File::create(clrat_path)?, true);
+        checker.add_processor(&mut clrat_processor);
+    }
 
     checker.add_dimacs_cnf(file)?;
 

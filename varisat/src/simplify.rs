@@ -97,7 +97,10 @@ pub fn simplify(
         if new_lits.len() < clause.lits().len() {
             if proof.is_active() {
                 let hash = [clause_hash(clause.lits())];
-                proof.add_step(&ProofStep::RupClause(new_lits[..].into(), hash[..].into()));
+                proof.add_step(&ProofStep::AtClause {
+                    clause: new_lits[..].into(),
+                    propagation_hashes: hash[..].into(),
+                });
                 proof.add_step(&ProofStep::DeleteClause(clause.lits().into()));
             }
 

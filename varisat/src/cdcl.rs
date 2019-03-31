@@ -63,10 +63,10 @@ pub fn conflict_step(
 
     let clause = analyze.clause();
 
-    ctx.part_mut(ProofP).add_step(&ProofStep::RupClause(
-        clause.into(),
-        analyze.clause_hashes().into(),
-    ));
+    ctx.part_mut(ProofP).add_step(&ProofStep::AtClause {
+        clause: clause.into(),
+        propagation_hashes: analyze.clause_hashes().into(),
+    });
 
     let reason = match clause.len() {
         0 => {
