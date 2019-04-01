@@ -174,7 +174,10 @@ pub fn backtrack(
     let (assignment, mut ctx) = ctx.split_part_mut(AssignmentP);
     let (trail, mut ctx) = ctx.split_part_mut(TrailP);
 
-    if level == trail.decisions.len() {
+    // level can actually be greater than the current level. This happens when restart is called
+    // after a conflict backtracked into the assumptions, but before any assumption was reenqueued.
+    // TODO should we update assumption_levels on backtracking instead of allowing this here?
+    if level >= trail.decisions.len() {
         return;
     }
 
