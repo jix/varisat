@@ -4,44 +4,60 @@ jobs:
   build:
     docker:
       - image: jixone/rust-ci:master
-    branches:
-      ignore: gh-pages
     steps:
       - checkout
+      - run: |
+          cargo build --verbose --all --all-targets
+          python3 .circleci/save_binaries.py
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - bins/*
+            - tests/*
 
-      - run:
-          name: Build
-          command: cargo build --verbose --all
+  test:
+    docker:
+      - image: jixone/rust-ci:master
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run: kcov coverage --include-path=varisat/src /tmp/workspace/tests/varisat/varisat
+      - run: bash <(curl -s https://codecov.io/bash)
 
-      - run:
-          name: Run tests
-          command: cargo test --verbose --all
+  build_dev_docs:
+    docker:
+      - image: jixone/rust-ci:master
+    steps:
+      - checkout
+      - run: |
+          cargo +nightly doc --document-private-items --no-deps --all --exclude varisat-cli
+          mkdir -p /tmp/workspace
+          cp -r target/doc /tmp/workspace/dev_docs
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - dev_docs/*
 
-      - run:
-          name: Publish developer docs
-          command: |
-            if [[ $CIRCLE_BRANCH == "master" ]]; then
-              cargo +nightly doc --document-private-items --no-deps --all --exclude varisat-cli
-              cd target/doc
-              cp -r ../../.circleci .
-              git config --global user.name "CI Deploy"
-              git config --global user.email "ci@example.com"
-              git init
-              git add .
-              git commit -m 'Deploy developer documentation from CI'
-              git remote add origin git@github.com:jix/varisat.git
-              echo "$SSH_PRIVKEY" | base64 -d > ~/.ssh/id_ed25519
-              echo "$SSH_PUBKEY" > ~/.ssh/id_ed25519.pub
-              chmod -R go= ~/.ssh
-              GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o 'IdentitiesOnly=Yes'" git push -f origin master:gh-pages
-              cd ..
-              rm -rf doc
-            fi
+  publish_dev_docs:
+    docker:
+      - image: jixone/rust-ci:master
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run: bash .circleci/publish_dev_docs.sh /tmp/workspace/dev_docs git@github.com:jix/varisat.git
 
-      - run:
-          name: Collect test coverage
-          command: |
-            curl -Ls 'https://gist.github.com/jix/4342dd522a7125a2803c6edeedd8735c/raw' > $CARGO_HOME/bin/rustc-proptest-fix
-            chmod 755 $CARGO_HOME/bin/rustc-proptest-fix
-            RUSTC=rustc-proptest-fix cargo tarpaulin --ignore-tests --all --exclude varisat-cli --out Xml
-            bash <(curl -s https://codecov.io/bash)
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - build
+      - test:
+          requires: [build]
+      - build_dev_docs
+      - publish_dev_docs:
+          requires: [build_dev_docs, test]
+          filters:
+            branches:
+              only: master
