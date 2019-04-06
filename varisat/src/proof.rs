@@ -204,3 +204,84 @@ impl Proof {
         Some(result.expect("unable to write to proof file"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use proptest::prelude::*;
+
+    use std::fs::File;
+    use std::process::Command;
+
+    use tempfile::TempDir;
+
+    use crate::dimacs::write_dimacs;
+    use crate::solver::Solver;
+
+    use crate::test::sgen_unsat_formula;
+
+    proptest! {
+
+        #[cfg_attr(not(test_drat_trim), ignore)]
+        #[test]
+        fn sgen_unsat_drat(
+            formula in sgen_unsat_formula(1..7usize),
+        ) {
+            let mut solver = Solver::new();
+
+            let tmp = TempDir::new()?;
+
+            let drat_proof = tmp.path().join("proof.drat");
+            let cnf_file = tmp.path().join("input.cnf");
+
+            write_dimacs(&mut File::create(&cnf_file)?, &formula)?;
+
+            solver.write_proof(File::create(&drat_proof)?, ProofFormat::Drat);
+
+            solver.add_formula(&formula);
+
+            prop_assert_eq!(solver.solve(), Some(false));
+
+            solver.close_proof();
+
+            let output = Command::new("drat-trim")
+                .arg(&cnf_file)
+                .arg(&drat_proof)
+                .output()?;
+
+            prop_assert!(std::str::from_utf8(&output.stdout)?.contains("s VERIFIED"));
+        }
+
+        #[cfg_attr(not(test_drat_trim), ignore)]
+        #[test]
+        fn sgen_unsat_binary_drat(
+            formula in sgen_unsat_formula(1..7usize),
+        ) {
+            let mut solver = Solver::new();
+
+            let tmp = TempDir::new()?;
+
+            let drat_proof = tmp.path().join("proof.bdrat");
+            let cnf_file = tmp.path().join("input.cnf");
+
+            write_dimacs(&mut File::create(&cnf_file)?, &formula)?;
+
+            solver.write_proof(File::create(&drat_proof)?, ProofFormat::BinaryDrat);
+
+            solver.add_formula(&formula);
+
+            prop_assert_eq!(solver.solve(), Some(false));
+
+            solver.close_proof();
+
+            let output = Command::new("drat-trim")
+                .arg(&cnf_file)
+                .arg(&drat_proof)
+                .arg("-i")
+                .output()?;
+
+            prop_assert!(std::str::from_utf8(&output.stdout)?.contains("s VERIFIED"));
+        }
+    }
+}
