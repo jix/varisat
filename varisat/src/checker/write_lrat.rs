@@ -193,3 +193,113 @@ impl<'a> Drop for WriteLrat<'a> {
         let _ignore_errors = self.close_delete();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use proptest::prelude::*;
+
+    use std::fs::File;
+    use std::path::PathBuf;
+    use std::process::{Command, Stdio};
+
+    use tempfile::TempDir;
+
+    use crate::checker::Checker;
+    use crate::cnf::CnfFormula;
+    use crate::dimacs::write_dimacs;
+    use crate::solver::{ProofFormat, Solver};
+
+    use crate::test::io::RcWriteBuffer;
+    use crate::test::sgen_unsat_formula;
+
+    fn check_lrat(tool: &str, cnf_file: &PathBuf, proof_file: &PathBuf) -> Result<bool, Error> {
+        let mut child = Command::new(tool)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()?;
+
+        let mut stdin = child.stdin.as_mut().unwrap();
+        writeln!(&mut stdin, "(lrat-check {:?} {:?})", cnf_file, proof_file)?;
+
+        let output = child.wait_with_output()?;
+        let stdout = std::str::from_utf8(&output.stdout)?;
+
+        Ok(stdout.contains("s VERIFIED"))
+    }
+
+    fn solve_and_check_lrat(formula: CnfFormula, binary: bool) -> Result<bool, Error> {
+        let mut solver = Solver::new();
+
+        let mut dimacs = vec![];
+        let proof = RcWriteBuffer::default();
+
+        write_dimacs(&mut dimacs, &formula).unwrap();
+
+        solver.write_proof(proof.clone(), ProofFormat::Varisat);
+
+        solver.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
+
+        assert_eq!(solver.solve(), Some(false));
+
+        solver.close_proof();
+
+        let proof = proof.take();
+
+        let tmp = TempDir::new()?;
+
+        let lrat_proof = tmp.path().join("proof.lrat");
+        let cnf_file = tmp.path().join("input.cnf");
+
+        write_dimacs(&mut File::create(&cnf_file)?, &formula)?;
+
+        let mut checker = Checker::new();
+        let mut write_lrat = WriteLrat::new(File::create(&lrat_proof)?, binary);
+        checker.add_processor(&mut write_lrat);
+
+        checker.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
+
+        checker.check_proof(&mut &proof[..]).unwrap();
+
+        drop(write_lrat);
+
+        check_lrat(
+            if binary { "check-clrat" } else { "check-lrat" },
+            &cnf_file,
+            &lrat_proof,
+        )
+    }
+
+    #[cfg_attr(not(test_check_lrat), ignore)]
+    #[test]
+    fn duplicated_clause_lrat() {
+        for &binary in [false, true].iter() {
+            assert!(solve_and_check_lrat(
+                cnf_formula![
+                    1, 2;
+                    1, 2;
+                    -1, -2;
+                    3;
+                    -3, -1, 2;
+                    -4, 1, -2;
+                    4;
+                ],
+                binary
+            )
+            .unwrap());
+        }
+    }
+
+    proptest! {
+
+        #[cfg_attr(not(test_check_lrat), ignore)]
+        #[test]
+        fn sgen_unsat_lrat(
+            formula in sgen_unsat_formula(1..7usize),
+            binary in proptest::bool::ANY,
+        ) {
+            prop_assert!(solve_and_check_lrat(formula, binary).unwrap());
+        }
+    }
+}

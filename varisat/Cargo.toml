@@ -21,3 +21,6 @@ smallvec = "0.6.9"
 proptest = "0.9.1"
 rand = "0.6.5"
 tempfile = "3.0.7"
+
+[build-dependencies]
+failure = "0.1.3"
