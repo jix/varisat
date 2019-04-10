@@ -55,7 +55,7 @@ fn have_check_clrat() -> Result<(), Error> {
 
 fn main() {
     match have_drat_trim() {
-        Ok(_) => println!("cargo:rustc-cfg=test_check_lrat"),
+        Ok(_) => println!("cargo:rustc-cfg=test_drat_trim"),
         Err(err) => println!(
             "cargo:warning=drat-trim utility not found, some tests will be disabled: {}",
             err
