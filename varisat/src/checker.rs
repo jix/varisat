@@ -689,7 +689,6 @@ mod tests {
 
     use crate::dimacs::write_dimacs;
 
-    use crate::test::io::RcWriteBuffer;
     use crate::test::sgen_unsat_formula;
 
     use crate::solver::{ProofFormat, Solver};
@@ -797,14 +796,14 @@ mod tests {
     proptest! {
         #[test]
         fn checked_unsat_via_dimacs(formula in sgen_unsat_formula(1..7usize)) {
-            let mut solver = Solver::new();
-
             let mut dimacs = vec![];
-            let proof = RcWriteBuffer::default();
+            let mut proof = vec![];
+
+            let mut solver = Solver::new();
 
             write_dimacs(&mut dimacs, &formula).unwrap();
 
-            solver.write_proof(proof.clone(), ProofFormat::Varisat);
+            solver.write_proof(&mut proof, ProofFormat::Varisat);
 
             solver.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
 
@@ -812,7 +811,7 @@ mod tests {
 
             solver.close_proof();
 
-            let proof = proof.take();
+            drop(solver);
 
             let mut checker = Checker::new();
 

@@ -6,8 +6,6 @@ use rand::seq::SliceRandom;
 use crate::cnf::CnfFormula;
 use crate::lit::{Lit, Var};
 
-pub mod io;
-
 /// Generate small hard unsat instances.
 ///
 /// Implementation of http://www.cs.qub.ac.uk/~i.spence/sgen/ but with random partitions

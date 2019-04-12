@@ -32,9 +32,9 @@ pub struct Schedule {
 }
 
 /// Perform one step of the schedule.
-pub fn schedule_step(
+pub fn schedule_step<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut AnalyzeConflictP,
         mut AssignmentP,
         mut BinaryClausesP,
@@ -43,7 +43,7 @@ pub fn schedule_step(
         mut ClauseDbP,
         mut ImplGraphP,
         mut IncrementalP,
-        mut ProofP,
+        mut ProofP<'a>,
         mut ScheduleP,
         mut SolverStateP,
         mut TmpDataP,

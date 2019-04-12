@@ -40,7 +40,9 @@ impl BinaryClauses {
 }
 
 /// Remove binary clauses that have an assigned literal.
-pub fn simplify_binary(mut ctx: partial!(Context, mut BinaryClausesP, mut ProofP, AssignmentP)) {
+pub fn simplify_binary<'a>(
+    mut ctx: partial!(Context<'a>, mut BinaryClausesP, mut ProofP<'a>, AssignmentP),
+) {
     let (binary_clauses, mut ctx) = ctx.split_part_mut(BinaryClausesP);
     let (proof, ctx) = ctx.split_part_mut(ProofP);
     let assignment = ctx.part(AssignmentP);

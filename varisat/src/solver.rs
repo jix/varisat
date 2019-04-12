@@ -19,13 +19,13 @@ pub use crate::proof::ProofFormat;
 
 /// A boolean satisfiability solver.
 #[derive(Default)]
-pub struct Solver {
-    ctx: Box<Context>,
+pub struct Solver<'a> {
+    ctx: Box<Context<'a>>,
 }
 
-impl Solver {
+impl<'a> Solver<'a> {
     /// Create a new solver.
-    pub fn new() -> Solver {
+    pub fn new() -> Solver<'a> {
         Solver::default()
     }
 
@@ -132,7 +132,7 @@ impl Solver {
     }
 
     /// Generate a proof of unsatisfiability during solving.
-    pub fn write_proof(&mut self, target: impl io::Write + 'static, format: ProofFormat) {
+    pub fn write_proof(&mut self, target: impl io::Write + 'a, format: ProofFormat) {
         self.ctx.proof.write_proof(target, format);
     }
 

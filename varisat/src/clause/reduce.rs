@@ -35,12 +35,12 @@ pub fn dedup_and_mark_by_tier(
 }
 
 /// Reduce the number of local tier clauses by deleting half of them.
-pub fn reduce_locals(
+pub fn reduce_locals<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut ClauseAllocP,
         mut ClauseDbP,
-        mut ProofP,
+        mut ProofP<'a>,
         mut WatchlistsP,
         AssignmentP,
         ImplGraphP

@@ -18,16 +18,16 @@ use crate::state::SatState;
 ///
 /// Does not adjust the solvers variable count. If necessary that has to be done before calling
 /// this.
-pub fn load_clause(
+pub fn load_clause<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut AssignmentP,
         mut BinaryClausesP,
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ImplGraphP,
         mut IncrementalP,
-        mut ProofP,
+        mut ProofP<'a>,
         mut SolverStateP,
         mut TmpDataP,
         mut TrailP,

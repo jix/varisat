@@ -11,11 +11,11 @@ use crate::context::{
 use crate::proof::{clause_hash, lit_hash, ProofStep};
 
 /// Remove satisfied clauses and false literals.
-pub fn prove_units(
+pub fn prove_units<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut ImplGraphP,
-        mut ProofP,
+        mut ProofP<'a>,
         mut TrailP,
         AssignmentP,
         ClauseAllocP,
@@ -61,13 +61,13 @@ pub fn prove_units(
 }
 
 /// Remove satisfied clauses and false literals.
-pub fn simplify(
+pub fn simplify<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut BinaryClausesP,
         mut ClauseAllocP,
         mut ClauseDbP,
-        mut ProofP,
+        mut ProofP<'a>,
         mut WatchlistsP,
         AssignmentP,
     ),

@@ -59,14 +59,14 @@ impl AnalyzeConflict {
 /// Learns a new clause by analyzing a conflict.
 ///
 /// Returns the lowest decision level that makes the learned clause asserting.
-pub fn analyze_conflict(
+pub fn analyze_conflict<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut AnalyzeConflictP,
         mut VsidsP,
         ClauseAllocP,
         ImplGraphP,
-        ProofP,
+        ProofP<'a>,
         TrailP,
     ),
     conflict: Conflict,
@@ -279,14 +279,14 @@ impl LevelAbstraction {
 /// literal to be non-redundant, we clear var_flags for the literals we visited, resetting it to the
 /// state at the beginning of the DFS. When the literal was redundant we keep it as is. This means
 /// the following DFS will not expand these literals.
-fn minimize_clause(
+fn minimize_clause<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut AnalyzeConflictP,
         mut VsidsP,
         ClauseAllocP,
         ImplGraphP,
-        ProofP,
+        ProofP<'a>,
         TrailP,
     ),
 ) {

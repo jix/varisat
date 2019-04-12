@@ -70,13 +70,13 @@ pub enum ProofStep<'a> {
 }
 
 /// Proof generation.
-pub struct Proof {
+pub struct Proof<'a> {
     format: Option<ProofFormat>,
-    target: BufWriter<Box<dyn Write>>,
+    target: BufWriter<Box<dyn Write + 'a>>,
 }
 
-impl Default for Proof {
-    fn default() -> Proof {
+impl<'a> Default for Proof<'a> {
+    fn default() -> Proof<'a> {
         Proof {
             format: None,
             target: BufWriter::new(Box::new(sink())),
@@ -91,9 +91,9 @@ macro_rules! handle_io_errors {
     }};
 }
 
-impl Proof {
+impl<'a> Proof<'a> {
     /// Start writing proof steps to the given target with the given format.
-    pub fn write_proof(&mut self, target: impl Write + 'static, format: ProofFormat) {
+    pub fn write_proof(&mut self, target: impl Write + 'a, format: ProofFormat) {
         self.format = Some(format);
         self.target = BufWriter::new(Box::new(target))
     }
@@ -132,7 +132,7 @@ impl Proof {
     /// Add a step to the proof.
     ///
     /// Ignored when proof generation is disabled.
-    pub fn add_step<'a>(&'a mut self, step: &'a ProofStep<'a>) {
+    pub fn add_step<'s>(&'s mut self, step: &'s ProofStep<'s>) {
         match self.format {
             None => (),
             Some(ProofFormat::Varisat) => self.write_varisat_step(step),
@@ -141,12 +141,12 @@ impl Proof {
     }
 
     /// Writes a proof step in our own format.
-    fn write_varisat_step<'a>(&'a mut self, step: &'a ProofStep<'a>) {
+    fn write_varisat_step<'s>(&'s mut self, step: &'s ProofStep<'s>) {
         handle_io_errors!(self, bincode::serialize_into(&mut self.target, step));
     }
 
     /// Writes a proof step in DRAT or binary DRAT format.
-    fn write_drat_step<'a>(&'a mut self, step: &'a ProofStep<'a>) {
+    fn write_drat_step<'s>(&'s mut self, step: &'s ProofStep<'s>) {
         match step {
             ProofStep::AtClause { clause, .. } => {
                 self.drat_add_clause();

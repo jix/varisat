@@ -24,7 +24,7 @@ mod parts {
     part!(pub ClauseDbP: ClauseDb);
     part!(pub ImplGraphP: ImplGraph);
     part!(pub IncrementalP: Incremental);
-    part!(pub ProofP: Proof);
+    part!(pub ProofP<'a>: Proof<'a>);
     part!(pub ScheduleP: Schedule);
     part!(pub SolverStateP: SolverState);
     part!(pub TmpDataP: TmpData);
@@ -42,36 +42,36 @@ pub use parts::*;
 /// dependencies and makes the borrow checker happy without the overhead of passing individual
 /// references.
 #[derive(PartialRefTarget, Default)]
-pub struct Context {
-    #[part = "AnalyzeConflictP"]
+pub struct Context<'a> {
+    #[part(AnalyzeConflictP)]
     pub analyze_conflict: AnalyzeConflict,
-    #[part = "AssignmentP"]
+    #[part(AssignmentP)]
     pub assignment: Assignment,
-    #[part = "BinaryClausesP"]
+    #[part(BinaryClausesP)]
     pub binary_clauses: BinaryClauses,
-    #[part = "ClauseActivityP"]
+    #[part(ClauseActivityP)]
     pub clause_activity: ClauseActivity,
-    #[part = "ClauseAllocP"]
+    #[part(ClauseAllocP)]
     pub clause_alloc: ClauseAlloc,
-    #[part = "ClauseDbP"]
+    #[part(ClauseDbP)]
     pub clause_db: ClauseDb,
-    #[part = "ImplGraphP"]
+    #[part(ImplGraphP)]
     pub impl_graph: ImplGraph,
-    #[part = "IncrementalP"]
+    #[part(IncrementalP)]
     pub incremental: Incremental,
-    #[part = "ProofP"]
-    pub proof: Proof,
-    #[part = "ScheduleP"]
+    #[part(ProofP<'a>)]
+    pub proof: Proof<'a>,
+    #[part(ScheduleP)]
     pub schedule: Schedule,
-    #[part = "SolverStateP"]
+    #[part(SolverStateP)]
     pub solver_state: SolverState,
-    #[part = "TmpDataP"]
+    #[part(TmpDataP)]
     pub tmp_data: TmpData,
-    #[part = "TrailP"]
+    #[part(TrailP)]
     pub trail: Trail,
-    #[part = "VsidsP"]
+    #[part(VsidsP)]
     pub vsids: Vsids,
-    #[part = "WatchlistsP"]
+    #[part(WatchlistsP)]
     pub watchlists: Watchlists,
 }
 

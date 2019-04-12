@@ -16,9 +16,9 @@ use crate::simplify::{prove_units, simplify};
 use crate::state::SatState;
 
 /// Find a conflict, learn a clause and backtrack.
-pub fn conflict_step(
+pub fn conflict_step<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut AnalyzeConflictP,
         mut AssignmentP,
         mut BinaryClausesP,
@@ -27,7 +27,7 @@ pub fn conflict_step(
         mut ClauseDbP,
         mut ImplGraphP,
         mut IncrementalP,
-        mut ProofP,
+        mut ProofP<'a>,
         mut SolverStateP,
         mut TmpDataP,
         mut TrailP,
@@ -106,16 +106,16 @@ impl From<Conflict> for FoundConflict {
 /// Find a conflict.
 ///
 /// Returns `Err` if a conflict was found and `Ok` if a satisfying assignment was found instead.
-fn find_conflict(
+fn find_conflict<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut AssignmentP,
         mut BinaryClausesP,
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ImplGraphP,
         mut IncrementalP,
-        mut ProofP,
+        mut ProofP<'a>,
         mut TmpDataP,
         mut TrailP,
         mut VsidsP,
