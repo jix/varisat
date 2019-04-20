@@ -6,8 +6,9 @@ use partial_ref::{IntoPartialRef, IntoPartialRefMut, PartialRef};
 use failure::Error;
 use log::info;
 
+use crate::checker::ProofProcessor;
 use crate::cnf::CnfFormula;
-use crate::context::{ensure_var_count, AssignmentP, Context, SolverStateP};
+use crate::context::{ensure_var_count, AssignmentP, Context, ProofP, SolverStateP};
 use crate::dimacs::DimacsParser;
 use crate::incremental::set_assumptions;
 use crate::lit::{Lit, Var};
@@ -85,11 +86,15 @@ impl<'a> Solver<'a> {
 
         while schedule_step(ctx.borrow()) {}
 
-        match ctx.part(SolverStateP).sat_state {
+        let result = match ctx.part(SolverStateP).sat_state {
             SatState::Unknown => None,
             SatState::Sat => Some(true),
             SatState::Unsat | SatState::UnsatUnderAssumptions => Some(false),
-        }
+        };
+
+        ctx.part_mut(ProofP).solve_finished();
+
+        result
     }
 
     /// Assume given literals for future calls to solve.
@@ -132,7 +137,10 @@ impl<'a> Solver<'a> {
     }
 
     /// Generate a proof of unsatisfiability during solving.
+    ///
+    /// This needs to be called before any clauses are added.
     pub fn write_proof(&mut self, target: impl io::Write + 'a, format: ProofFormat) {
+        // TODO check precondition
         self.ctx.proof.write_proof(target, format);
     }
 
@@ -141,6 +149,24 @@ impl<'a> Solver<'a> {
     /// This also flushes internal buffers and closes the target file.
     pub fn close_proof(&mut self) {
         self.ctx.proof.close_proof();
+    }
+
+    /// Generate and check a proof on the fly.
+    ///
+    /// This needs to be called before any clauses are added.
+    pub fn enable_self_checking(&mut self) {
+        // TODO check precondition
+        self.ctx.proof.begin_checking();
+    }
+
+    /// Generate a proof and process it using a [`ProofProcessor`].
+    ///
+    /// This implicitly enables self checking.
+    ///
+    /// This needs to be called before any clauses are added.
+    pub fn add_proof_processor(&mut self, processor: &'a mut dyn ProofProcessor) {
+        // TODO check precondition
+        self.ctx.proof.add_processor(processor);
     }
 
     /// Enables a test schedule that triggers steps early
@@ -172,6 +198,24 @@ mod tests {
             test_schedule in proptest::bool::ANY,
         ) {
             let mut solver = Solver::new();
+
+            solver.add_formula(&formula);
+
+            if test_schedule {
+                solver.enable_test_schedule();
+            }
+
+            prop_assert_eq!(solver.solve(), Some(false));
+        }
+
+        #[test]
+        fn sgen_unsat_checked(
+            formula in sgen_unsat_formula(1..7usize),
+            test_schedule in proptest::bool::ANY,
+        ) {
+            let mut solver = Solver::new();
+
+            solver.enable_self_checking();
 
             solver.add_formula(&formula);
 

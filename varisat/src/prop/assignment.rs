@@ -64,6 +64,10 @@ impl Assignment {
     pub fn assign_lit(&mut self, lit: Lit) {
         self.assignment[lit.index()] = lit.is_positive().into()
     }
+
+    pub fn unassign_var(&mut self, var: Var) {
+        self.assignment[var.index()] = None;
+    }
 }
 
 /// Decision and propagation history.

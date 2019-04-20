@@ -7,9 +7,12 @@ use crate::context::{
     ProofP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::lit::Lit;
-use crate::proof::{clause_hash, ProofStep};
+use crate::proof::ProofStep;
 use crate::prop::{assignment, full_restart, Reason};
+use crate::simplify::resurrect_unit;
 use crate::state::SatState;
+
+use crate::vec_mut_scan::VecMutScan;
 
 /// Adds a clause to the current formula.
 ///
@@ -53,10 +56,12 @@ pub fn load_clause<'a>(
     tmp_data.lits.clear();
     tmp_data.lits.extend_from_slice(lits);
     let lits = &mut tmp_data.lits;
-    let simplified_lits = &mut tmp_data.lits_2;
+    let false_lits = &mut tmp_data.lits_2;
 
     lits.sort_unstable();
     lits.dedup();
+
+    proof.add_clause(&lits);
 
     // Detect tautological clauses
     let mut last = None;
@@ -69,34 +74,62 @@ pub fn load_clause<'a>(
         last = Some(lit);
     }
 
-    // Remove false literals and satisfied clauses
-    simplified_lits.clear();
+    // Remove satisfied clauses and handle false literals.
+    //
+    // Proof generation expects us to start with the actual input clauses. If we would remove false
+    // literals we would have to generate proof steps for that. This would result in derived clauses
+    // being added during loading. If we're running proof processors on the fly, they'd see those
+    // derived clauses interspersed with the input clauses.
+    //
+    // We don't want to require each proof processor to handle dervied clause additions during
+    // loading of the initial formula. Thus we need to handle clauses with false literals here.
+    false_lits.clear();
 
-    for &lit in lits.iter() {
-        match ctx.part(AssignmentP).lit_value(lit) {
+    let mut lits_scan = VecMutScan::new(lits);
+
+    let mut clause_is_true = false;
+
+    // We move unassigned literals to the beginning to make sure we're going to watch unassigned
+    // literals.
+    while let Some(lit) = lits_scan.next() {
+        match ctx.part(AssignmentP).lit_value(*lit) {
             Some(true) => {
-                proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
-                return;
+                clause_is_true = true;
+                break;
             }
-            Some(false) => (),
-            None => {
-                simplified_lits.push(lit);
+            Some(false) => {
+                false_lits.push(lit.remove());
             }
+            None => (),
         }
     }
 
-    if proof.is_active() && simplified_lits.len() < lits.len() {
-        let hash = [clause_hash(lits)];
-        proof.add_step(&ProofStep::AtClause {
-            clause: simplified_lits[..].into(),
-            propagation_hashes: hash[..].into(),
-        });
-        proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
+    drop(lits_scan);
+
+    let will_conflict = lits.is_empty();
+
+    // We resurrect any removed false literals to ensure propagation by this new clause. This is
+    // also required to eventually simplify this clause.
+    for &lit in false_lits.iter() {
+        resurrect_unit(ctx.borrow(), !lit);
     }
 
-    match simplified_lits[..] {
+    lits.extend_from_slice(&false_lits);
+
+    if clause_is_true {
+        proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
+        return;
+    }
+
+    match lits[..] {
         [] => ctx.part_mut(SolverStateP).sat_state = SatState::Unsat,
-        [lit] => assignment::enqueue_assignment(ctx.borrow(), lit, Reason::Unit),
+        [lit] => {
+            if will_conflict {
+                ctx.part_mut(SolverStateP).sat_state = SatState::Unsat
+            } else {
+                assignment::enqueue_assignment(ctx.borrow(), lit, Reason::Unit)
+            }
+        }
         [lit_0, lit_1] => {
             ctx.part_mut(BinaryClausesP)
                 .add_binary_clause([lit_0, lit_1]);
@@ -105,7 +138,7 @@ pub fn load_clause<'a>(
             let mut header = ClauseHeader::new();
             header.set_tier(Tier::Irred);
 
-            db::add_clause(ctx.borrow(), header, simplified_lits);
+            db::add_clause(ctx.borrow(), header, lits);
         }
     }
 }

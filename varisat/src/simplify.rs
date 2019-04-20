@@ -8,7 +8,9 @@ use crate::context::{
     AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, ProofP, TrailP,
     WatchlistsP,
 };
+use crate::lit::Lit;
 use crate::proof::{clause_hash, lit_hash, ProofStep};
+use crate::prop::{enqueue_assignment, Reason};
 
 /// Remove satisfied clauses and false literals.
 pub fn prove_units<'a>(
@@ -58,6 +60,22 @@ pub fn prove_units<'a>(
     }
 
     new_unit
+}
+
+/// Put a removed unit back onto the trail.
+pub fn resurrect_unit<'a>(
+    mut ctx: partial!(Context<'a>, mut AssignmentP, mut ImplGraphP, mut TrailP),
+    lit: Lit,
+) {
+    // TODO move this somewhere else?
+    if ctx.part(ImplGraphP).is_removed_unit(lit.var()) {
+        debug_assert!(ctx.part(AssignmentP).lit_is_true(lit));
+        ctx.part_mut(AssignmentP).unassign_var(lit.var());
+
+        // Because we always enqueue with Reason::Unit this will not cause a unit clause to be
+        // proven in `prove_units`.
+        enqueue_assignment(ctx.borrow(), lit, Reason::Unit);
+    }
 }
 
 /// Remove satisfied clauses and false literals.

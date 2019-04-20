@@ -5,6 +5,7 @@ use std::io::{sink, BufWriter, Write};
 
 use serde::{Deserialize, Serialize};
 
+use crate::checker::{Checker, ProofProcessor};
 use crate::lit::Lit;
 
 /// Proof formats that can be generated during solving.
@@ -41,7 +42,7 @@ pub fn clause_hash(lits: &[Lit]) -> ClauseHash {
 /// A single proof step.
 ///
 /// Represents a mutation of the current formula and a justification for the mutation's validity.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum ProofStep<'a> {
     /// Add a clause that is an asymmetric tautoligy (AT).
     ///
@@ -73,6 +74,7 @@ pub enum ProofStep<'a> {
 pub struct Proof<'a> {
     format: Option<ProofFormat>,
     target: BufWriter<Box<dyn Write + 'a>>,
+    checker: Option<Checker<'a>>,
 }
 
 impl<'a> Default for Proof<'a> {
@@ -80,6 +82,7 @@ impl<'a> Default for Proof<'a> {
         Proof {
             format: None,
             target: BufWriter::new(Box::new(sink())),
+            checker: None,
         }
     }
 }
@@ -106,27 +109,52 @@ impl<'a> Proof<'a> {
         self.target = BufWriter::new(Box::new(sink()));
     }
 
+    /// Begin checking proof steps.
+    pub fn begin_checking(&mut self) {
+        if self.checker.is_none() {
+            self.checker = Some(Checker::new())
+        }
+    }
+
+    /// Called before solve returns to trigger delayed unit conflict processing.
+    pub fn solve_finished(&mut self) {
+        if let Some(checker) = &mut self.checker {
+            checker.process_unit_conflicts().unwrap();
+            // TODO error handling
+        }
+    }
+
+    /// Add a [`ProofProcessor`].
+    ///
+    /// See also [`Checker::add_processor`].
+    pub fn add_processor(&mut self, processor: &'a mut dyn ProofProcessor) {
+        self.begin_checking();
+        self.checker.as_mut().unwrap().add_processor(processor);
+    }
+
     /// Whether proof generation is active.
     pub fn is_active(&self) -> bool {
-        self.format.is_some()
+        self.checker.is_some() || self.format.is_some()
     }
 
     /// Whether clause hashes are required for steps that support them.
     pub fn clause_hashes_required(&self) -> bool {
-        match self.format {
-            Some(ProofFormat::Varisat) => true,
-            Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => false,
-            None => false,
-        }
+        self.checker.is_some()
+            || match self.format {
+                Some(ProofFormat::Varisat) => true,
+                Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => false,
+                None => false,
+            }
     }
 
     /// Whether unit clauses discovered through unit propagation have to be proven.
     pub fn prove_propagated_unit_clauses(&self) -> bool {
-        match self.format {
-            Some(ProofFormat::Varisat) => true,
-            Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => false,
-            None => false,
-        }
+        self.checker.is_some()
+            || match self.format {
+                Some(ProofFormat::Varisat) => true,
+                Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => false,
+                None => false,
+            }
     }
 
     /// Add a step to the proof.
@@ -137,6 +165,20 @@ impl<'a> Proof<'a> {
             None => (),
             Some(ProofFormat::Varisat) => self.write_varisat_step(step),
             Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => self.write_drat_step(step),
+        }
+        if let Some(checker) = &mut self.checker {
+            checker.check_step(step.clone()).unwrap();
+            // TODO error handling
+        }
+    }
+
+    /// Call when adding an external clause.
+    ///
+    /// This is ignored for writing proof files but required for on-the-fly checking.
+    pub fn add_clause(&mut self, clause: &[Lit]) {
+        if let Some(checker) = &mut self.checker {
+            checker.add_clause(clause).unwrap();
+            // TODO error handling
         }
     }
 

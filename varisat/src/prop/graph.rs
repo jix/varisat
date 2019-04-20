@@ -64,6 +64,8 @@ impl Conflict {
 pub struct ImplNode {
     pub reason: Reason,
     pub level: LitIdx,
+    /// Position in trail when assigned, `LitIdx::max_value()` is used as sentinel for removed
+    /// units.
     pub depth: LitIdx,
 }
 
@@ -123,6 +125,10 @@ impl ImplGraph {
     pub fn update_removed_unit(&mut self, var: Var) {
         let node = &mut self.nodes[var.index()];
         node.reason = Reason::Unit;
-        node.depth = 0;
+        node.depth = LitIdx::max_value();
+    }
+
+    pub fn is_removed_unit(&self, var: Var) -> bool {
+        self.nodes[var.index()].depth == LitIdx::max_value()
     }
 }

@@ -546,7 +546,7 @@ impl<'a> Checker<'a> {
     }
 
     /// Check a single proof step
-    fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
+    pub(crate) fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
         match step {
             ProofStep::AtClause {
                 clause,
@@ -658,6 +658,11 @@ impl<'a> Checker<'a> {
             }
         }
 
+        self.process_unit_conflicts()
+    }
+
+    /// Process unit conflicts detected during clause loading.
+    pub(crate) fn process_unit_conflicts(&mut self) -> Result<(), CheckerError> {
         if let Some(ids) = &self.unit_conflict {
             let clause = &[];
             Self::process_step(

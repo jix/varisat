@@ -228,15 +228,31 @@ mod tests {
         Ok(stdout.contains("s VERIFIED"))
     }
 
-    fn solve_and_check_lrat(formula: CnfFormula, binary: bool) -> Result<bool, Error> {
+    fn solve_and_check_lrat(
+        formula: CnfFormula,
+        binary: bool,
+        direct: bool,
+    ) -> Result<bool, Error> {
+        let tmp = TempDir::new()?;
+
+        let lrat_proof = tmp.path().join("proof.lrat");
+        let cnf_file = tmp.path().join("input.cnf");
+
         let mut dimacs = vec![];
         let mut proof = vec![];
+
+        let mut write_lrat = WriteLrat::new(File::create(&lrat_proof)?, binary);
+        write_dimacs(&mut File::create(&cnf_file)?, &formula)?;
 
         let mut solver = Solver::new();
 
         write_dimacs(&mut dimacs, &formula).unwrap();
 
-        solver.write_proof(&mut proof, ProofFormat::Varisat);
+        if direct {
+            solver.add_proof_processor(&mut write_lrat);
+        } else {
+            solver.write_proof(&mut proof, ProofFormat::Varisat);
+        }
 
         solver.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
 
@@ -246,20 +262,14 @@ mod tests {
 
         drop(solver);
 
-        let tmp = TempDir::new()?;
+        if !direct {
+            let mut checker = Checker::new();
+            checker.add_processor(&mut write_lrat);
 
-        let lrat_proof = tmp.path().join("proof.lrat");
-        let cnf_file = tmp.path().join("input.cnf");
+            checker.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
 
-        write_dimacs(&mut File::create(&cnf_file)?, &formula)?;
-
-        let mut checker = Checker::new();
-        let mut write_lrat = WriteLrat::new(File::create(&lrat_proof)?, binary);
-        checker.add_processor(&mut write_lrat);
-
-        checker.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
-
-        checker.check_proof(&mut &proof[..]).unwrap();
+            checker.check_proof(&mut &proof[..]).unwrap();
+        }
 
         drop(write_lrat);
 
@@ -274,19 +284,52 @@ mod tests {
     #[test]
     fn duplicated_clause_lrat() {
         for &binary in [false, true].iter() {
-            assert!(solve_and_check_lrat(
-                cnf_formula![
-                    1, 2;
-                    1, 2;
-                    -1, -2;
-                    3;
-                    -3, -1, 2;
-                    -4, 1, -2;
-                    4;
-                ],
-                binary
-            )
-            .unwrap());
+            for &direct in [false, true].iter() {
+                assert!(
+                    solve_and_check_lrat(
+                        cnf_formula![
+                            1, 2;
+                            1, 2;
+                            -1, -2;
+                            3;
+                            -3, -1, 2;
+                            -4, 1, -2;
+                            4;
+                        ],
+                        binary,
+                        direct
+                    )
+                    .unwrap(),
+                    "binary: {:?} direct: {:?}",
+                    binary,
+                    direct
+                );
+            }
+        }
+    }
+
+    #[cfg_attr(not(test_check_lrat), ignore)]
+    #[test]
+    fn unit_conflict_lrat() {
+        for &binary in [false, true].iter() {
+            for &direct in [false, true].iter() {
+                assert!(
+                    solve_and_check_lrat(
+                        cnf_formula![
+                            1;
+                            2, 3;
+                            -1;
+                            4, 5;
+                        ],
+                        binary,
+                        direct
+                    )
+                    .unwrap(),
+                    "binary: {:?} direct: {:?}",
+                    binary,
+                    direct
+                );
+            }
         }
     }
 
@@ -297,8 +340,9 @@ mod tests {
         fn sgen_unsat_lrat(
             formula in sgen_unsat_formula(1..7usize),
             binary in proptest::bool::ANY,
+            direct in proptest::bool::ANY,
         ) {
-            prop_assert!(solve_and_check_lrat(formula, binary).unwrap());
+            prop_assert!(solve_and_check_lrat(formula, binary, direct).unwrap());
         }
     }
 }
