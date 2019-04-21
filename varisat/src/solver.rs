@@ -39,6 +39,13 @@ impl<'a> Solver<'a> {
         }
     }
 
+    /// Add a clause to the solver.
+    pub fn add_clause(&mut self, clause: &[Lit]) {
+        self.ensure_var_count_from_slice(clause);
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        load_clause(ctx.borrow(), clause);
+    }
+
     /// Increases the variable count to handle all literals in the given slice.
     fn ensure_var_count_from_slice(&mut self, lits: &[Lit]) {
         if let Some(index) = lits.iter().map(|&lit| lit.index()).max() {
@@ -268,14 +275,13 @@ mod tests {
         }
 
         #[test]
-        fn sgen_unsat_incremetal_clauses(formula in sgen_unsat_formula(1..7usize)) {
+        fn sgen_unsat_incremental_clauses(formula in sgen_unsat_formula(1..7usize)) {
             let mut solver = Solver::new();
 
             let mut last_state = Some(true);
 
             for clause in formula.iter() {
-                let single_clause = CnfFormula::from(Some(clause));
-                solver.add_formula(&single_clause);
+                solver.add_clause(clause);
 
                 let state = solver.solve();
                 if state != last_state {
