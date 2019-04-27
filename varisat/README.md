@@ -1,26 +1,15 @@
 # Varisat
 
-[![crates.io](https://img.shields.io/crates/v/varisat.svg)](https://crates.io/crates/varisat)
-[![docs.rs](https://docs.rs/varisat/badge.svg)](https://docs.rs/varisat)
-[![CircleCI branch](https://img.shields.io/circleci/project/github/jix/varisat/master.svg)](https://circleci.com/gh/jix/varisat/tree/master)
-[![codecov](https://img.shields.io/codecov/c/gh/jix/varisat/master.svg)](https://codecov.io/gh/jix/varisat)
-[![Developer Documentation](https://img.shields.io/badge/dev%20docs-master-blue.svg)](https://jix.github.io/varisat/varisat/)
-![](https://img.shields.io/crates/l/varisat.svg)
-
 Varisat is a [CDCL][cdcl] based SAT solver written in rust. Given a boolean
 formula in [conjunctive normal form][cnf], it either finds a variable
 assignment that makes the formula true or finds a proof that this is
 impossible.
 
-Varisat is available as a rust library ([`varisat` on
-crates.io][crate-varisat]) and as a command line solver ([`varisat-cli` on
-crates.io][crate-varisat-cli]).
+[cdcl]: https://en.wikipedia.org/wiki/Conflict-Driven_Clause_Learning
+[cnf]: https://en.wikipedia.org/wiki/Conjunctive_normal_form
 
-## Installation
-
-Varisat is available using rust's package manager cargo. The command line
-solver can be installed or updated using `cargo install --force varisat-cli`.
-Cargo can be installed using [rustup](https://rustup.rs/).
+This is the library version. Varisat is also available as a command line solver
+([`varisat-cli` on crates.io][crate-varisat-cli]).
 
 ## Documentation
 

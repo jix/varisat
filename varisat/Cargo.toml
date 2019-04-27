@@ -1,9 +1,13 @@
 [package]
 name = "varisat"
+description = "A CDCL based SAT solver (library)"
 version = "0.2.0"
 authors = ["Jannis Harder <me@jix.one>"]
+license = "MIT/Apache-2.0"
+readme = "README.md"
 build = "build.rs"
 edition = "2018"
+
 
 [dependencies]
 bincode = "1.1.2"
