@@ -48,6 +48,28 @@ jobs:
           at: /tmp/workspace
       - run: bash .circleci/publish_dev_docs.sh /tmp/workspace/dev_docs git@github.com:jix/varisat.git
 
+  build_static_linux:
+    docker:
+      - image: jixone/rust-ci:master
+    steps:
+      - checkout
+      - run: |
+          cargo build --target x86_64-unknown-linux-musl -p varisat-cli
+      - store_artifacts:
+          path: target/x86_64-unknown-linux-musl/release/varisat
+          destination: varisat-linux
+
+  build_static_windows:
+    docker:
+      - image: jixone/rust-ci:master
+    steps:
+      - checkout
+      - run: |
+          cargo build --target x86_64-pc-windows-gnu -p varisat-cli
+      - store_artifacts:
+          path: target/x86_64-pc-windows-gnu/release/varisat.exe
+          destination: varisat-windows
+
 workflows:
   version: 2
   build-deploy:
@@ -61,3 +83,5 @@ workflows:
           filters:
             branches:
               only: master
+      - build_static_linux
+      - build_static_windows
