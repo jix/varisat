@@ -54,10 +54,14 @@ jobs:
     steps:
       - checkout
       - run: |
+          sed -i -e '/^debug = true/d' Cargo.toml
           cargo build --target x86_64-unknown-linux-musl -p varisat-cli --release
+          mkdir varisat-linux
+          cp target/x86_64-unknown-linux-musl/release/varisat varisat-linux
+          tar czf varisat-linux.tar.gz varisat-linux
       - store_artifacts:
-          path: target/x86_64-unknown-linux-musl/release/varisat
-          destination: varisat-linux
+          path: varisat-linux.tar.gz
+          destination: varisat-linux.tar.gz
 
   build_static_windows:
     docker:
@@ -65,10 +69,14 @@ jobs:
     steps:
       - checkout
       - run: |
+          sed -i -e '/^debug = true/d' Cargo.toml
           cargo build --target x86_64-pc-windows-gnu -p varisat-cli --release
+          mkdir varisat-windows
+          cp target/x86_64-pc-windows-gnu/release/varisat.exe .
+          zip varisat-windows.zip varisat.exe
       - store_artifacts:
-          path: target/x86_64-pc-windows-gnu/release/varisat.exe
-          destination: varisat-windows
+          path: varisat-windows.zip
+          destination: varisat-windows.zip
 
 workflows:
   version: 2
