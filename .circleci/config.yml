@@ -54,7 +54,7 @@ jobs:
     steps:
       - checkout
       - run: |
-          cargo build --target x86_64-unknown-linux-musl -p varisat-cli
+          cargo build --target x86_64-unknown-linux-musl -p varisat-cli --release
       - store_artifacts:
           path: target/x86_64-unknown-linux-musl/release/varisat
           destination: varisat-linux
@@ -65,7 +65,7 @@ jobs:
     steps:
       - checkout
       - run: |
-          cargo build --target x86_64-pc-windows-gnu -p varisat-cli
+          cargo build --target x86_64-pc-windows-gnu -p varisat-cli --release
       - store_artifacts:
           path: target/x86_64-pc-windows-gnu/release/varisat.exe
           destination: varisat-windows
