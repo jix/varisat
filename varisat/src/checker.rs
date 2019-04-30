@@ -221,26 +221,9 @@ impl<'a> Checker<'a> {
     ///
     /// Using this avoids creating a temporary [`CnfFormula`].
     pub fn add_dimacs_cnf(&mut self, input: impl io::Read) -> Result<(), Error> {
-        // TODO avoid code duplication with Solver's add_dimacs_cnf
-        use io::BufRead;
-
-        let mut buffer = io::BufReader::new(input);
-        let mut parser = DimacsParser::new();
-
-        loop {
-            let data = buffer.fill_buf()?;
-            if data.is_empty() {
-                break;
-            }
-            parser.parse_chunk(data)?;
-            let len = data.len();
-            buffer.consume(len);
-
-            self.add_formula(&parser.take_formula())?;
-        }
-        parser.eof()?;
-        self.add_formula(&parser.take_formula())?;
-        parser.check_header()?;
+        let parser = DimacsParser::parse_incremental(input, |parser| {
+            Ok(self.add_formula(&parser.take_formula())?)
+        })?;
 
         log::info!(
             "Parsed formula with {} variables and {} clauses",

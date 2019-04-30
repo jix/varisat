@@ -105,8 +105,21 @@ impl DimacsParser {
     /// Parse the given input and check the header if present.
     ///
     /// This parses the whole input into a signel [`CnfFormula`]. Incremental parsing is possible
-    /// using the [`parse_chunk`](DimacsParser::parse_chunk) method.
+    /// using [`parse_incremental`](DimacsParser::parse_incremental) or the
+    /// [`parse_chunk`](DimacsParser::parse_chunk) method.
     pub fn parse(input: impl io::Read) -> Result<CnfFormula, Error> {
+        Ok(Self::parse_incremental(input, |_| Ok(()))?.take_formula())
+    }
+
+    /// Parse the given input incrementally and check the header if present.
+    ///
+    /// The callback is invoked repeatedly with a reference to the parser. The callback can process
+    /// the formula incrementally by calling [`take_formula`](DimacsParser::take_formula) on the
+    /// passed argument.
+    pub fn parse_incremental(
+        input: impl io::Read,
+        mut callback: impl FnMut(&mut DimacsParser) -> Result<(), Error>,
+    ) -> Result<DimacsParser, Error> {
         use io::BufRead;
 
         let mut buffer = io::BufReader::new(input);
@@ -120,11 +133,14 @@ impl DimacsParser {
             parser.parse_chunk(data)?;
             let len = data.len();
             buffer.consume(len);
+
+            callback(&mut parser)?;
         }
         parser.eof()?;
+        callback(&mut parser)?;
         parser.check_header()?;
 
-        Ok(parser.take_formula())
+        Ok(parser)
     }
 
     /// Parse a chunk of input.
