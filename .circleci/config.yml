@@ -39,14 +39,17 @@ jobs:
           paths:
             - dev_docs/*
 
-  publish_dev_docs:
+  deploy:
     docker:
       - image: jixone/rust-ci:master
     steps:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - run: bash .circleci/publish_dev_docs.sh /tmp/workspace/dev_docs git@github.com:jix/varisat.git
+      - run: |
+          if [ $CIRCLE_BRANCH == staging ]; then
+            bash .circleci/publish_dev_docs.sh /tmp/workspace/dev_docs git@github.com:jix/varisat.git
+          fi
 
   build_static_linux:
     docker:
@@ -78,18 +81,30 @@ jobs:
           path: varisat-windows.zip
           destination: varisat-windows.zip
 
+bors_branches: &bors_branches
+  filters:
+    branches:
+      only: [staging, trying]
+
 workflows:
   version: 2
   build-deploy:
     jobs:
-      - build
+      - build:
+          <<: *bors_branches
       - test:
+          <<: *bors_branches
           requires: [build]
-      - build_dev_docs
-      - publish_dev_docs:
-          requires: [build_dev_docs, test]
-          filters:
-            branches:
-              only: master
-      - build_static_linux
-      - build_static_windows
+      - build_dev_docs:
+          <<: *bors_branches
+      - build_static_linux:
+          <<: *bors_branches
+      - build_static_windows:
+          <<: *bors_branches
+      - deploy:
+          <<: *bors_branches
+          requires:
+            - build_dev_docs
+            - test
+            - build_static_linux
+            - build_static_windows
