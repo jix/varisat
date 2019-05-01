@@ -22,7 +22,10 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp/workspace
-      - run: kcov coverage --include-path=varisat/src /tmp/workspace/tests/varisat/varisat
+      - run: |
+          for TEST_BIN in /tmp/workspace/tests/*/*; do
+            kcov coverage --include-path=varisat/src $TEST_BIN
+          done
       - run: bash <(curl -s https://codecov.io/bash)
 
   build_dev_docs:
