@@ -1,3 +1,4 @@
 status = [
   "ci/circleci: deploy"
 ]
+delete_merged_branches = true
