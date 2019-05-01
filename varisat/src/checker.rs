@@ -795,9 +795,9 @@ mod tests {
 
             solver.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
 
-            prop_assert_eq!(solver.solve(), Some(false));
+            prop_assert_eq!(solver.solve().ok(), Some(false));
 
-            solver.close_proof();
+            solver.close_proof().map_err(|e| e.compat())?;
 
             drop(solver);
 

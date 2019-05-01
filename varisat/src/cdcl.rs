@@ -10,7 +10,7 @@ use crate::context::{
 };
 use crate::decision::make_decision;
 use crate::incremental::{enqueue_assumption, EnqueueAssumption};
-use crate::proof::ProofStep;
+use crate::proof::{self, ProofStep};
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
 use crate::simplify::{prove_units, simplify};
 use crate::state::SatState;
@@ -63,10 +63,13 @@ pub fn conflict_step<'a>(
 
     let clause = analyze.clause();
 
-    ctx.part_mut(ProofP).add_step(&ProofStep::AtClause {
-        clause: clause.into(),
-        propagation_hashes: analyze.clause_hashes().into(),
-    });
+    proof::add_step(
+        ctx.borrow(),
+        &ProofStep::AtClause {
+            clause: clause.into(),
+            propagation_hashes: analyze.clause_hashes().into(),
+        },
+    );
 
     let reason = match clause.len() {
         0 => {
@@ -116,6 +119,7 @@ fn find_conflict<'a>(
         mut ImplGraphP,
         mut IncrementalP,
         mut ProofP<'a>,
+        mut SolverStateP,
         mut TmpDataP,
         mut TrailP,
         mut VsidsP,

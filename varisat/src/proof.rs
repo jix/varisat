@@ -1,12 +1,16 @@
 //! Proof generation.
 
 use std::borrow::Cow;
-use std::io::{sink, BufWriter, Write};
+use std::io::{self, sink, BufWriter, Write};
 
 use serde::{Deserialize, Serialize};
 
-use crate::checker::{Checker, ProofProcessor};
+use partial_ref::{partial, PartialRef};
+
+use crate::checker::{Checker, CheckerError, ProofProcessor};
+use crate::context::{Context, ProofP, SolverStateP};
 use crate::lit::Lit;
+use crate::solver::SolverError;
 
 /// Proof formats that can be generated during solving.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -87,13 +91,6 @@ impl<'a> Default for Proof<'a> {
     }
 }
 
-macro_rules! handle_io_errors {
-    ($s:expr, $e:expr) => {{
-        let res = $e;
-        $s.handle_io_errors(res)
-    }};
-}
-
 impl<'a> Proof<'a> {
     /// Start writing proof steps to the given target with the given format.
     pub fn write_proof(&mut self, target: impl Write + 'a, format: ProofFormat) {
@@ -101,26 +98,10 @@ impl<'a> Proof<'a> {
         self.target = BufWriter::new(Box::new(target))
     }
 
-    /// Stop writing proof steps.
-    pub fn close_proof(&mut self) {
-        // We need to explicitly flush to handle IO errors.
-        handle_io_errors!(self, self.target.flush());
-        self.format = None;
-        self.target = BufWriter::new(Box::new(sink()));
-    }
-
     /// Begin checking proof steps.
     pub fn begin_checking(&mut self) {
         if self.checker.is_none() {
             self.checker = Some(Checker::new())
-        }
-    }
-
-    /// Called before solve returns to trigger delayed unit conflict processing.
-    pub fn solve_finished(&mut self) {
-        if let Some(checker) = &mut self.checker {
-            checker.process_unit_conflicts().unwrap();
-            // TODO error handling
         }
     }
 
@@ -157,93 +138,157 @@ impl<'a> Proof<'a> {
             }
     }
 
-    /// Add a step to the proof.
-    ///
-    /// Ignored when proof generation is disabled.
-    pub fn add_step<'s>(&'s mut self, step: &'s ProofStep<'s>) {
-        match self.format {
-            None => (),
-            Some(ProofFormat::Varisat) => self.write_varisat_step(step),
-            Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => self.write_drat_step(step),
-        }
-        if let Some(checker) = &mut self.checker {
-            checker.check_step(step.clone()).unwrap();
-            // TODO error handling
-        }
-    }
-
-    /// Call when adding an external clause.
-    ///
-    /// This is ignored for writing proof files but required for on-the-fly checking.
-    pub fn add_clause(&mut self, clause: &[Lit]) {
-        if let Some(checker) = &mut self.checker {
-            checker.add_clause(clause).unwrap();
-            // TODO error handling
-        }
-    }
-
     /// Writes a proof step in our own format.
-    fn write_varisat_step<'s>(&'s mut self, step: &'s ProofStep<'s>) {
-        handle_io_errors!(self, bincode::serialize_into(&mut self.target, step));
+    fn write_varisat_step<'s>(&'s mut self, step: &'s ProofStep<'s>) -> io::Result<()> {
+        match bincode::serialize_into(&mut self.target, step) {
+            Ok(()) => Ok(()),
+            Err(err) => match *err {
+                bincode::ErrorKind::Io(err) => Err(err),
+                err => panic!("proof serialization error: {}", err),
+            },
+        }
     }
 
     /// Writes a proof step in DRAT or binary DRAT format.
-    fn write_drat_step<'s>(&'s mut self, step: &'s ProofStep<'s>) {
+    fn write_drat_step<'s>(&'s mut self, step: &'s ProofStep<'s>) -> io::Result<()> {
         match step {
             ProofStep::AtClause { clause, .. } => {
-                self.drat_add_clause();
-                self.drat_literals(&clause)
+                self.drat_add_clause()?;
+                self.drat_literals(&clause)?;
             }
             ProofStep::DeleteClause(clause) => {
-                self.drat_delete_clause();
-                self.drat_literals(&clause[..]);
+                self.drat_delete_clause()?;
+                self.drat_literals(&clause[..])?;
             }
             ProofStep::UnitClauses(..) => (),
         }
+
+        Ok(())
     }
 
     /// Writes an add clause step to the DRAT proof.
-    fn drat_add_clause(&mut self) {
+    fn drat_add_clause(&mut self) -> io::Result<()> {
         if self.format == Some(ProofFormat::BinaryDrat) {
-            handle_io_errors!(self, self.target.write_all(b"a"));
+            self.target.write_all(b"a")?;
         }
+        Ok(())
     }
 
     /// Writes a delete clause step to the DRAT proof.
-    fn drat_delete_clause(&mut self) {
+    fn drat_delete_clause(&mut self) -> io::Result<()> {
         if self.format == Some(ProofFormat::BinaryDrat) {
-            handle_io_errors!(self, self.target.write_all(b"d"));
+            self.target.write_all(b"d")?;
         } else {
-            handle_io_errors!(self, self.target.write_all(b"d "));
+            self.target.write_all(b"d ")?;
         }
+        Ok(())
     }
 
     /// Writes the literals of a clause for a step in a DRAT proof.
-    fn drat_literals(&mut self, literals: &[Lit]) {
+    fn drat_literals(&mut self, literals: &[Lit]) -> io::Result<()> {
         if self.format == Some(ProofFormat::BinaryDrat) {
             for &lit in literals {
                 let drat_code = lit.code() as u64 + 2;
-                handle_io_errors!(self, leb128::write::unsigned(&mut self.target, drat_code));
+                leb128::write::unsigned(&mut self.target, drat_code)?;
             }
-            handle_io_errors!(self, self.target.write_all(&[0]));
+            self.target.write_all(&[0])?;
         } else {
             for &lit in literals {
-                handle_io_errors!(self, itoa::write(&mut self.target, lit.to_dimacs()));
-                handle_io_errors!(self, self.target.write_all(b" "));
+                itoa::write(&mut self.target, lit.to_dimacs())?;
+                self.target.write_all(b" ")?;
             }
-            handle_io_errors!(self, self.target.write_all(b"0\n"));
+            self.target.write_all(b"0\n")?;
         }
+        Ok(())
     }
+}
 
-    /// Handles IO errors.
-    ///
-    /// Right now this panics. In the future it should set an error flag that will be checked in the
-    /// solver main loop to abort when proof writing failed.
-    fn handle_io_errors<V, E: std::fmt::Debug>(&self, result: Result<V, E>) -> Option<V> {
-        // TODO better error handling
-        // on error we want to abort solving eventually but not panic
-        // we also don't want to force error handling on proof generating code
-        Some(result.expect("unable to write to proof file"))
+/// Call when adding an external clause.
+///
+/// This is ignored for writing proof files but required for on-the-fly checking.
+pub fn add_clause<'a>(
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP),
+    clause: &[Lit],
+) {
+    if let Some(checker) = &mut ctx.part_mut(ProofP).checker {
+        let result = checker.add_clause(clause);
+        handle_self_check_result(ctx.borrow(), result);
+    }
+}
+
+/// Add a step to the proof.
+///
+/// Ignored when proof generation is disabled.
+pub fn add_step<'a, 's>(
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP),
+    step: &'s ProofStep<'s>,
+) {
+    let proof = ctx.part_mut(ProofP);
+    let io_result = match proof.format {
+        None => Ok(()),
+        Some(ProofFormat::Varisat) => proof.write_varisat_step(step),
+        Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => proof.write_drat_step(step),
+    };
+
+    handle_io_errors(ctx.borrow(), io_result);
+
+    let proof = ctx.part_mut(ProofP);
+    if let Some(checker) = &mut proof.checker {
+        let result = checker.check_step(step.clone());
+        handle_self_check_result(ctx.borrow(), result);
+    }
+}
+
+/// Flush buffers used for writing proof steps.
+pub fn flush_proof<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP)) {
+    // We need to explicitly flush to handle IO errors.
+    let result = ctx.part_mut(ProofP).target.flush();
+    handle_io_errors(ctx.borrow(), result);
+}
+
+/// Stop writing proof steps.
+pub fn close_proof<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP)) {
+    flush_proof(ctx.borrow());
+    ctx.part_mut(ProofP).format = None;
+    ctx.part_mut(ProofP).target = BufWriter::new(Box::new(sink()));
+}
+
+/// Called before solve returns to flush buffers and to trigger delayed unit conflict processing.
+///
+/// We flush buffers before solve returns to ensure that we can pass IO errors to the user.
+pub fn solve_finished<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP)) {
+    flush_proof(ctx.borrow());
+    if let Some(checker) = &mut ctx.part_mut(ProofP).checker {
+        let result = checker.process_unit_conflicts();
+        handle_self_check_result(ctx.borrow(), result);
+    }
+}
+
+/// Handle results of on the fly checking.
+///
+/// Panics when the proof is incorrect and aborts solving when a proof processor produced an error.
+fn handle_self_check_result<'a>(
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP),
+    result: Result<(), CheckerError>,
+) {
+    match result {
+        Err(CheckerError::ProofProcessorError { cause }) => {
+            ctx.part_mut(SolverStateP).solver_error =
+                Some(SolverError::ProofProcessorError { cause });
+            *ctx.part_mut(ProofP) = Proof::default();
+        }
+        result => result.expect("self check failure"),
+    }
+}
+
+/// Handle io errors during proof writing.
+fn handle_io_errors<'a>(
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP),
+    result: io::Result<()>,
+) {
+    if let Err(io_err) = result {
+        ctx.part_mut(SolverStateP).solver_error = Some(SolverError::ProofIoError { cause: io_err });
+        *ctx.part_mut(ProofP) = Proof::default();
     }
 }
 
@@ -255,6 +300,8 @@ mod tests {
 
     use std::fs::File;
     use std::process::Command;
+
+    use failure::Fail;
 
     use tempfile::TempDir;
 
@@ -283,9 +330,9 @@ mod tests {
 
             solver.add_formula(&formula);
 
-            prop_assert_eq!(solver.solve(), Some(false));
+            prop_assert_eq!(solver.solve().ok(), Some(false));
 
-            solver.close_proof();
+            solver.close_proof().map_err(|e| e.compat())?;
 
             let output = Command::new("drat-trim")
                 .arg(&cnf_file)
@@ -313,9 +360,9 @@ mod tests {
 
             solver.add_formula(&formula);
 
-            prop_assert_eq!(solver.solve(), Some(false));
+            prop_assert_eq!(solver.solve().ok(), Some(false));
 
-            solver.close_proof();
+            solver.close_proof().map_err(|e| e.compat())?;
 
             let output = Command::new("drat-trim")
                 .arg(&cnf_file)

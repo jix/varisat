@@ -7,7 +7,7 @@ use crate::context::{
     ProofP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::lit::Lit;
-use crate::proof::ProofStep;
+use crate::proof::{self, ProofStep};
 use crate::prop::{assignment, full_restart, Reason};
 use crate::simplify::resurrect_unit;
 use crate::state::SatState;
@@ -47,11 +47,12 @@ pub fn load_clause<'a>(
         _ => {}
     }
 
+    ctx.part_mut(SolverStateP).formula_is_empty = false;
+
     // Restart the search when the user adds new clauses.
     full_restart(ctx.borrow());
 
     let (tmp_data, mut ctx) = ctx.split_part_mut(TmpDataP);
-    let (proof, mut ctx) = ctx.split_part_mut(ProofP);
 
     tmp_data.lits.clear();
     tmp_data.lits.extend_from_slice(lits);
@@ -61,14 +62,14 @@ pub fn load_clause<'a>(
     lits.sort_unstable();
     lits.dedup();
 
-    proof.add_clause(&lits);
+    proof::add_clause(ctx.borrow(), &lits);
 
     // Detect tautological clauses
     let mut last = None;
 
     for &lit in lits.iter() {
         if last == Some(!lit) {
-            proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
+            proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits[..].into()));
             return;
         }
         last = Some(lit);
@@ -117,7 +118,7 @@ pub fn load_clause<'a>(
     lits.extend_from_slice(&false_lits);
 
     if clause_is_true {
-        proof.add_step(&ProofStep::DeleteClause(lits[..].into()));
+        proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits[..].into()));
         return;
     }
 

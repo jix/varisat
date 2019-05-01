@@ -1,15 +1,15 @@
 //! Simplification using unit clauses.
 
-use partial_ref::{partial, PartialRef};
+use partial_ref::{partial, split_borrow, PartialRef};
 
 use crate::binary::simplify_binary;
 use crate::clause::db::filter_clauses;
 use crate::context::{
-    AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, ProofP, TrailP,
-    WatchlistsP,
+    AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, ProofP,
+    SolverStateP, TrailP, WatchlistsP,
 };
 use crate::lit::Lit;
-use crate::proof::{clause_hash, lit_hash, ProofStep};
+use crate::proof::{self, clause_hash, lit_hash, ProofStep};
 use crate::prop::{enqueue_assignment, Reason};
 
 /// Remove satisfied clauses and false literals.
@@ -18,6 +18,7 @@ pub fn prove_units<'a>(
         Context<'a>,
         mut ImplGraphP,
         mut ProofP<'a>,
+        mut SolverStateP,
         mut TrailP,
         AssignmentP,
         ClauseAllocP,
@@ -54,8 +55,7 @@ pub fn prove_units<'a>(
         trail.clear();
 
         if !unit_proofs.is_empty() {
-            ctx.part_mut(ProofP)
-                .add_step(&ProofStep::UnitClauses(unit_proofs.into()));
+            proof::add_step(ctx.borrow(), &ProofStep::UnitClauses(unit_proofs.into()));
         }
     }
 
@@ -86,6 +86,7 @@ pub fn simplify<'a>(
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ProofP<'a>,
+        mut SolverStateP,
         mut WatchlistsP,
         AssignmentP,
     ),
@@ -96,7 +97,7 @@ pub fn simplify<'a>(
 
     let mut new_lits = vec![];
 
-    let (proof, mut ctx) = ctx.split_part_mut(ProofP);
+    split_borrow!(proof_ctx = &(mut ProofP, mut SolverStateP) ctx);
     let (ctx_2, mut ctx) = ctx.split_borrow();
 
     filter_clauses(ctx_2, |alloc, cref| {
@@ -106,20 +107,29 @@ pub fn simplify<'a>(
             match assignment.lit_value(lit) {
                 None => new_lits.push(lit),
                 Some(true) => {
-                    proof.add_step(&ProofStep::DeleteClause(clause.lits().into()));
+                    proof::add_step(
+                        proof_ctx.borrow(),
+                        &ProofStep::DeleteClause(clause.lits().into()),
+                    );
                     return false;
                 }
                 Some(false) => (),
             }
         }
         if new_lits.len() < clause.lits().len() {
-            if proof.is_active() {
+            if proof_ctx.part(ProofP).is_active() {
                 let hash = [clause_hash(clause.lits())];
-                proof.add_step(&ProofStep::AtClause {
-                    clause: new_lits[..].into(),
-                    propagation_hashes: hash[..].into(),
-                });
-                proof.add_step(&ProofStep::DeleteClause(clause.lits().into()));
+                proof::add_step(
+                    proof_ctx.borrow(),
+                    &ProofStep::AtClause {
+                        clause: new_lits[..].into(),
+                        propagation_hashes: hash[..].into(),
+                    },
+                );
+                proof::add_step(
+                    proof_ctx.borrow(),
+                    &ProofStep::DeleteClause(clause.lits().into()),
+                );
             }
 
             match new_lits[..] {

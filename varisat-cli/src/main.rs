@@ -140,7 +140,7 @@ fn main_with_err() -> Result<i32, Error> {
     solver.add_dimacs_cnf(file)?;
 
     match solver.solve() {
-        Some(true) => {
+        Ok(true) => {
             println!("s SATISFIABLE");
             print!("v");
             for l in solver.model().unwrap() {
@@ -149,11 +149,12 @@ fn main_with_err() -> Result<i32, Error> {
             println!(" 0");
             Ok(10)
         }
-        Some(false) => {
+        Ok(false) => {
             println!("s UNSATISFIABLE");
             Ok(20)
         }
-        None => {
+        Err(err) => {
+            log::error!("{}", err);
             println!("s UNKNOWN");
             Ok(0)
         }

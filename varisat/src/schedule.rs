@@ -54,7 +54,11 @@ pub fn schedule_step<'a>(
 ) -> bool {
     let (schedule, mut ctx) = ctx.split_part_mut(ScheduleP);
 
-    if ctx.part(SolverStateP).sat_state == SatState::Unknown {
+    if ctx.part(SolverStateP).sat_state != SatState::Unknown {
+        false
+    } else if ctx.part(SolverStateP).solver_error.is_some() {
+        false
+    } else {
         if schedule.conflicts > 0 && schedule.conflicts % 5000 == 0 {
             let db = ctx.part(ClauseDbP);
             let units = ctx.part(TrailP).top_level_assignment_count();
@@ -100,7 +104,5 @@ pub fn schedule_step<'a>(
         conflict_step(ctx.borrow());
         schedule.conflicts += 1;
         true
-    } else {
-        false
     }
 }
