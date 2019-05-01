@@ -1,0 +1,7 @@
+jobs:
+  build:
+    docker:
+      - image: jixone/rust-ci:master
+    branches:
+      ignore: gh-pages
+    steps: []
