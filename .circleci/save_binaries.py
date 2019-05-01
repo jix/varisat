@@ -23,7 +23,13 @@ for line in output.split('\n'):
     else:
         subdir = 'bins'
 
-    target_dir = f'/tmp/workspace/{subdir}/{package_name}'
+    target_dir = '/tmp/workspace/{subdir}/{package_name}'.format(
+        subdir=subdir,
+        package_name=package_name,
+    )
 
     os.makedirs(target_dir, exist_ok=True)
-    copy2(executable, f'{target_dir}/{executable_name}')
+    copy2(executable, '{target_dir}/{executable_name}'.format(
+        target_dir=target_dir,
+        executable_name=executable_name,
+    ))
