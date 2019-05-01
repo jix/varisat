@@ -1,9 +1,15 @@
 use failure::{ensure, Error};
+use std::env;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use std::str::from_utf8;
 
 fn have_drat_trim() -> Result<(), Error> {
+    println!("rerun-if-env-changed=VARISAT_HAVE_DRAT_TRIM");
+    if env::var("VARISAT_HAVE_DRAT_TRIM").is_ok() {
+        return Ok(());
+    }
+
     let output = Command::new("drat-trim").output()?;
     let stdout = from_utf8(&output.stdout)?;
 
@@ -16,6 +22,11 @@ fn have_drat_trim() -> Result<(), Error> {
 }
 
 fn have_check_lrat() -> Result<(), Error> {
+    println!("rerun-if-env-changed=VARISAT_HAVE_CHECK_LRAT");
+    if env::var("VARISAT_HAVE_CHECK_LRAT").is_ok() {
+        return Ok(());
+    }
+
     let mut child = Command::new("check-lrat")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -35,6 +46,11 @@ fn have_check_lrat() -> Result<(), Error> {
 }
 
 fn have_check_clrat() -> Result<(), Error> {
+    println!("rerun-if-env-changed=VARISAT_HAVE_CHECK_LRAT");
+    if env::var("VARISAT_HAVE_CHECK_LRAT").is_ok() {
+        return Ok(());
+    }
+
     let mut child = Command::new("check-clrat")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
