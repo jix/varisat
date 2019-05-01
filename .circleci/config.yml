@@ -3,7 +3,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: jixone/rust-ci:master
+      - image: jixone/rust-ci:rust-stable
     steps:
       - checkout
       - run: |
@@ -17,7 +17,7 @@ jobs:
 
   test:
     docker:
-      - image: jixone/rust-ci:master
+      - image: jixone/rust-ci:varisat-tests
     steps:
       - checkout
       - attach_workspace:
@@ -30,7 +30,7 @@ jobs:
 
   build_dev_docs:
     docker:
-      - image: jixone/rust-ci:master
+      - image: jixone/rust-ci:rust-nightly
     steps:
       - checkout
       - run: |
@@ -44,7 +44,7 @@ jobs:
 
   deploy:
     docker:
-      - image: jixone/rust-ci:master
+      - image: circleci/buildpack-deps:stretch
     steps:
       - checkout
       - attach_workspace:
@@ -56,7 +56,7 @@ jobs:
 
   build_static_linux:
     docker:
-      - image: jixone/rust-ci:master
+      - image: jixone/rust-ci:rust-stable-musl
     steps:
       - checkout
       - run: |
@@ -71,7 +71,7 @@ jobs:
 
   build_static_windows:
     docker:
-      - image: jixone/rust-ci:master
+      - image: jixone/rust-ci:rust-stable-mingw
     steps:
       - checkout
       - run: |
