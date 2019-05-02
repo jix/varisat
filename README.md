@@ -4,7 +4,7 @@
 [![docs.rs](https://docs.rs/varisat/badge.svg)](https://docs.rs/varisat)
 [![CircleCI branch](https://img.shields.io/circleci/project/github/jix/varisat/master.svg)](https://circleci.com/gh/jix/varisat/tree/master)
 [![codecov](https://img.shields.io/codecov/c/gh/jix/varisat/master.svg)](https://codecov.io/gh/jix/varisat)
-[![Developer Documentation](https://img.shields.io/badge/dev%20docs-master-blue.svg)](https://jix.github.io/varisat/varisat/)
+[![Developer Documentation](https://img.shields.io/badge/dev%20docs-master-blue.svg)](https://jix.github.io/varisat/dev/varisat/)
 ![](https://img.shields.io/crates/l/varisat.svg)
 
 Varisat is a [CDCL][cdcl] based SAT solver written in rust. Given a boolean
@@ -55,7 +55,7 @@ dual licensed as above, without any additional terms or conditions.
 
 [cdcl]: https://en.wikipedia.org/wiki/Conflict-Driven_Clause_Learning
 [cnf]: https://en.wikipedia.org/wiki/Conjunctive_normal_form
-[dev-docs]: https://jix.github.io/dev/varisat/varisat/
+[dev-docs]: https://jix.github.io/varisat/dev/varisat/
 [blog-series]: https://jix.one/tags/refactoring-varisat/
 [crate-varisat]: https://crates.io/crates/varisat
 [crate-varisat-cli]: https://crates.io/crates/varisat-cli
