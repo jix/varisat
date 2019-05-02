@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["LubySequence","Infinite iterator yielding the Luby sequence."]]});

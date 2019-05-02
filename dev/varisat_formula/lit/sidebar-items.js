@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["strategy",""]],"struct":[["Lit","A boolean literal."],["Var","A boolean variable."]],"type":[["LitIdx","The backing type used to represent literals and variables."]]});

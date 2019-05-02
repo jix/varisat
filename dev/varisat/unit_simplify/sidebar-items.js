@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["prove_units","Remove satisfied clauses and false literals."],["resurrect_unit","Put a removed unit back onto the trail."],["unit_simplify","Remove satisfied clauses and false literals."]]});

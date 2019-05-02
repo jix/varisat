@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["simplify_binary","Remove binary clauses that have an assigned literal."]],"struct":[["BinaryClauses","Binary clauses."]]});

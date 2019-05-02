@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["ProcessingP",""]],"struct":[["CheckerStateP",""],["ClauseHasherP",""],["ClausesP",""],["ProcessingP",""],["RupCheckP",""],["TmpDataP",""],["VariablesP",""]]});

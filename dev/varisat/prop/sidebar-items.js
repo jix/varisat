@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["propagate","Propagate enqueued assignments."]],"mod":[["assignment","Partial assignment and backtracking."],["binary","Propagation of binary clauses."],["graph","The implication graph."],["long","Propagation of long clauses."],["watch","Watchlists to detect clauses that became unit."]]});

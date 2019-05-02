@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MapStep","Maps literals and hashes of clause steps between the solver and the checker."]]});

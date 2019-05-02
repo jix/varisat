@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["SatState","Satisfiability state."]],"struct":[["SolverState","Miscellaneous solver state."]]});

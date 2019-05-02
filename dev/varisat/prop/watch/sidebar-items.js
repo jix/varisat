@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["enable_watchlists","Enable and rebuild watchlists."]],"struct":[["Watch","A watch on a long clause."],["Watchlists","Watchlists to detect clauses that became unit."]]});

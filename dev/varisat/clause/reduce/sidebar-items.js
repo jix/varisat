@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["dedup_and_mark_by_tier","Remove deleted and duplicate entries from the by_tier clause lists."],["reduce_locals","Reduce the number of local tier clauses by deleting half of them."],["reduce_mids","Reduce the number of mid tier clauses by moving inactive ones to the local tier."]]});

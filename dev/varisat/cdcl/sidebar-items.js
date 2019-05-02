@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["FoundConflict","Return type of [`find_conflict`]."]],"fn":[["conflict_step","Find a conflict, learn a clause and backtrack."],["find_conflict","Find a conflict."]]});

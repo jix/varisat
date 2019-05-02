@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["TmpData","Temporary data used by various parts of the solver."],["TmpFlags","Temporary data that is automatically resized."]]});

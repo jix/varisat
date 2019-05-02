@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["SamplingMode","Variable sampling mode."]],"struct":[["VarData","Data associated with variables."]]});

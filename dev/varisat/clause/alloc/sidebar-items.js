@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ClauseAlloc","Bump allocator for clause storage."],["ClauseRef","Compact reference to a clause."]],"type":[["ClauseOffset","Integer type used to store offsets into [`ClauseAlloc`]'s memory."]]});

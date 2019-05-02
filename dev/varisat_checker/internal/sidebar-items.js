@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["SelfChecker","Varisat internal interface used for on-the-fly checking."]]});

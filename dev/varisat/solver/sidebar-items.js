@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["_DERIVE_failure_Fail_FOR_SolverError",""],["_DERIVE_failure_core_fmt_Display_FOR_SolverError",""]],"enum":[["ProofFormat","Proof formats that can be generated during solving."],["SolverError","Possible errors while solving a formula."]],"struct":[["Solver","A boolean satisfiability solver."]]});

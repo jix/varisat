@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["NO_VAR_IDX",""]],"struct":[["VarBiMap","A bidirectional mapping between variables."],["VarBiMapMut","Mutable view of a [`VarBiMap`]."],["VarMap","A mapping from variables to variables."]]});

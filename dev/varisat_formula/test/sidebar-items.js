@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["conditional_pigeon_hole","Generates a conditional pigeon hole principle formula."],["sat_formula","Generate a sat instance."],["sgen_unsat_formula","Generate small hard unsat instances."]]});

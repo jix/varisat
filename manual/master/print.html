@@ -1,0 +1,716 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Varisat Manual</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body class="light">
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            document.body.className = theme;
+            document.querySelector('html').className = theme + ' js';
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <ol class="chapter"><li><a href="index.html"><strong aria-hidden="true">1.</strong> Varisat</a></li><li><a href="cli/index.html"><strong aria-hidden="true">2.</strong> Command Line Solver</a></li><li><ol class="section"><li><a href="cli/basic.html"><strong aria-hidden="true">2.1.</strong> Basic Usage</a></li><li><a href="cli/proofs.html"><strong aria-hidden="true">2.2.</strong> Generating and Checking Proofs</a></li></ol></li><li><a href="lib/index.html"><strong aria-hidden="true">3.</strong> Rust Library</a></li><li><ol class="section"><li><a href="lib/formulas.html"><strong aria-hidden="true">3.1.</strong> Formulas</a></li><li><a href="lib/basic.html"><strong aria-hidden="true">3.2.</strong> Basic Solving</a></li><li><a href="lib/incremental.html"><strong aria-hidden="true">3.3.</strong> Incremental Solving</a></li></ol></li><li><a href="formats/index.html"><strong aria-hidden="true">4.</strong> File Formats</a></li><li><ol class="section"><li><a href="formats/dimacs.html"><strong aria-hidden="true">4.1.</strong> DIMACS CNF</a></li><li><a href="formats/varisat-proofs.html"><strong aria-hidden="true">4.2.</strong> Varisat Proofs</a></li><li><a href="formats/drat-proofs.html"><strong aria-hidden="true">4.3.</strong> DRAT Proofs</a></li><li><a href="formats/lrat-proofs.html"><strong aria-hidden="true">4.4.</strong> LRAT Proofs</a></li></ol></li></ol>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div id="menu-bar-sticky-container">
+                        <div class="left-buttons">
+                            <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                                <i class="fa fa-bars"></i>
+                            </button>
+                            <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                                <i class="fa fa-paint-brush"></i>
+                            </button>
+                            <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            </ul>
+                            
+                            <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                                <i class="fa fa-search"></i>
+                            </button>
+                            
+                        </div>
+
+                        <h1 class="menu-title">Varisat Manual</h1> 
+
+                        <div class="right-buttons">
+                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                                <i id="print-button" class="fa fa-print"></i>
+                            </a>
+                            
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <a class="header" href="#varisat" id="varisat"><h1>Varisat</h1></a>
+<p>Varisat is a <a href="https://en.wikipedia.org/wiki/Conflict-Driven_Clause_Learning">CDCL</a> based SAT solver written in rust. Given a boolean
+formula in <a href="https://en.wikipedia.org/wiki/Conjunctive_normal_form">conjunctive normal form</a>, it either finds a variable
+assignment that makes the formula true or finds a proof that this is
+impossible.</p>
+<p>Varisat is open source software. You can find the Varisat project on <a href="https://github.com/jix/varisat">GitHub</a>.</p>
+<p>Varisat is available as a rust library (<a href="https://crates.io/crates/varisat"><code>varisat</code> on
+crates.io</a>) and as a command line solver (<a href="https://crates.io/crates/varisat-cli"><code>varisat-cli</code> on
+crates.io</a>).</p>
+<p>In addition to this user manual, Varisat comes with an <a href="https://docs.rs/varisat/0.2.1/varisat/">API
+documentation</a>.</p>
+<a class="header" href="#command-line-solver" id="command-line-solver"><h1>Command Line Solver</h1></a>
+<p>The command line solver can be installed or updated using <code>cargo install --force varisat-cli</code>. Cargo can be installed using
+<a href="https://rustup.rs/">rustup</a>.</p>
+<p>The command line solver is also available as a <a href="https://github.com/jix/varisat/releases">pre-compiled binary</a>
+for Linux and Windows.</p>
+<p>Varisat follows the basic conventions used by most other SAT solvers. If you've
+used a SAT solver before, you'll likely know how to use varisat. If you
+haven't, you can read the next chapter to learn how to use varisat. In any case
+make sure to check out the built in command line help using <code>varisat --help</code>.</p>
+<a class="header" href="#basic-usage" id="basic-usage"><h1>Basic Usage</h1></a>
+<p>The command line solver reads and solves a single formula. The file name of the
+formula to solve is passed as an argument on the command line. If no file is
+specified, Varisat will read a formula from the standard input. The formula is
+parsed as a <a href="cli/../common/dimacs.html">DIMACS CNF</a> file.</p>
+<p>During the solving process, Varisat will print some statistics on lines
+starting with <code>c</code>. In general it is not possible to infer the solving process
+from these statistics and it is not necessary to understand them to use a SAT
+solver. They are intended for the expert user and solver developers who are
+familiar with the solver's internals.</p>
+<p>Solving an instance can take from milliseconds to forever and anything in
+between. There is no known algorithm that will efficiently solve all possible
+SAT formulas. Nevertheless the algorithms and heuristics used by SAT solvers
+are often successful. Most of the time it's not possible to tell whether they
+are effective for a given formula.</p>
+<p>If Varisat is able to find a satisfying assignment or is able to determine that
+there is no such assignment, it will print a solution line. This is either <code>s SATISFIABLE</code> or <code>s UNSATISFIABLE</code> depending on the verdict.</p>
+<p>If there is a satisfying assignment it will be output on lines starting with <code>v</code>, followed by a list of literals. Assigning these literals to true will make
+the input formula true.</p>
+<p>The exit code of the solver will also indicate the solver's verdict. When the
+formula is satisfiable, the exit code <code>10</code> will be returned. When it is
+unsatisfiable the exit code will be <code>20</code>.</p>
+<p>In the next chapter we will see how to generate a proof of unsatisfiability in
+case no satisfying assignment exists.</p>
+<a class="header" href="#satisfiable-example" id="satisfiable-example"><h2>Satisfiable Example</h2></a>
+<p>This shows an example run for the satisfiable formula
+<a href="../examples/sgen1_sat_90_0.cnf">sgen1_sat_90_0.cnf</a>:</p>
+<pre><code class="language-txt">$ varisat sgen1_sat_90_0.cnf
+c This is varisat [...]
+c   release build - rustc [...]
+c Reading file 'sgen1_sat_90_0.cnf'
+c Parsed formula with 90 variables and 216 clauses
+c [...]
+s SATISFIABLE
+v 1 -2 -3 -4 -5 -6 -7 8 -9 -10 11 -12 -13 -14 -15 -16 17 -18 -19 -20 -21 22 -23 -24 -25 -26 -27 -28 29 -30 -31 32 -33 -34 -35 -36 -37 -38 -39 40 -41 -42 43 -44 -45 46 -47 -48 -49 -50 -51 52 -53 -54 -55 -56 -57 -58 -59 60 -61 62 -63 -64 -65 -66 -67 68 -69 -70 -71 -72 -73 -74 75 -76 -77 78 -79 -80 -81 -82 -83 84 -85 -86 -87 -88 89 -90 0
+</code></pre>
+<a class="header" href="#unsatisfiable-example" id="unsatisfiable-example"><h2>Unsatisfiable Example</h2></a>
+<p>This shows an example run for the unsatisfiable formula
+<a href="../examples/sgen1_unsat_57_0.cnf">sgen1_unsat_57_0.cnf</a>:</p>
+<pre><code class="language-txt">$ varisat sgen1_unsat_57_0.cnf
+c This is varisat [...]
+c   release build - rustc [...]
+c Reading file 'sgen1_unsat_57_0.cnf'
+c Parsed formula with 57 variables and 124 clauses
+c [...]
+s UNSATISFIABLE
+</code></pre>
+<a class="header" href="#generating-and-checking-proofs" id="generating-and-checking-proofs"><h1>Generating and Checking Proofs</h1></a>
+<p>SAT solvers are often used to for problems where correctness is critical. For
+this reason SAT solvers are expected to produce proofs of unsatisfiability.
+Such proofs allow us to independently check the solver's result.</p>
+<a class="header" href="#generating-proofs" id="generating-proofs"><h2>Generating Proofs</h2></a>
+<p>Varisat allows generating proofs in three different formats:</p>
+<table><thead><tr><th> Format </th><th> Solving Overhead </th><th> Proof File Size </th><th> Checking Performance </th><th> Notes </th></tr></thead><tbody>
+<tr><td> <a href="cli/../formats/varisat-proofs.html">Varisat</a> </td><td> Low </td><td> Largest </td><td> Fast </td><td> Requires matching solver and checker versions.</td></tr>
+<tr><td> <a href="cli/../formats/drat-proofs.html">DRAT</a> </td><td> Very Low </td><td> Smallest </td><td> Slow </td><td> Supported by most solvers.</td></tr>
+<tr><td> <a href="cli/../formats/lrat-proofs.html">LRAT</a> </td><td> High </td><td> Large </td><td> Fast </td><td> Supports efficient formally verified checking.</td></tr>
+</tbody></table>
+<p>To generate a proof, invoke Varisat with the <code>--proof</code> option followed by a
+target file name. By default Varisat generates proofs in its <a href="cli/../formats/varisat-proofs.html">own custom proof
+format</a>. This can be changed by using the <code>--proof-format</code> option
+followed by one of <code>varisat</code>, <code>drat</code>, <code>binary-drat</code>, <code>lrat</code> or <code>clrat</code> (binary
+variant of <code>lrat</code>).</p>
+<a class="header" href="#checking-proofs" id="checking-proofs"><h2>Checking Proofs</h2></a>
+<p>Varisat has a built in checker for its own proof format. For the other formats
+see the chapters linked from the overview table. While the proof checker is
+built-in, it shares very little code with the solver. This makes it unlikely
+for the same bug to affect checker and solver. The proof format is not stable
+between version. Thus a proof produced by a sufficiently different
+version of Varisat will most likely be rejected as invalid.</p>
+<p>The builtin proof checker is available using the <code>--check</code> subcommand.
+Subcommands have to be the first argument passed on the command line. The input
+formula and proof file are specified in the same way used for solving, except
+that the proof parameter is required for checking.</p>
+<p>If the proof checker is able to successfully verify the proof, it will print
+the line <code>s VERIFEID</code>. Otherwise an error will be printed and a non-zero exit
+code returned.</p>
+<p>The proof checker also has a a built in command line help that can be accessed
+using <code>varisat --check --help</code>.</p>
+<a class="header" href="#self-checking" id="self-checking"><h2>Self Checking</h2></a>
+<p>Varisat can run its built in checker concurrently with the solver. This
+avoids the storage requirements for a proof file, which can become prohibitive
+for long running instances. It also allows aborting a solve as soon as an error
+occurred, producing relevant debugging information. This is enabled by passing the <code>--self-check</code> option to the solver.</p>
+<a class="header" href="#converting-proofs" id="converting-proofs"><h2>Converting Proofs</h2></a>
+<p>Varisat proof files can be converted into the LRAT format during checking. In
+fact, internally, if LRAT proofs are generated during solving, they are
+generated by enabling self checking and conversion into LRAT. With this a
+verified LRAT proof checker can be used.</p>
+<p>To the author's knowledge besides Varisat the only other way of producing LRAT
+proofs is by generating DRAT proofs. Converting DRAT proofs into LRAT proofs
+often takes longer than solving the instance in the first place. Conversion
+from Varisat proof files to LRAT is very efficient and much faster than the
+alternative.</p>
+<p>To convert a Varisat proof, when invoking <code>varisat --check</code>, simply pass the <code>--write-lrat</code> or <code>--write-clrat</code> option followed by a target file name.</p>
+<a class="header" href="#example" id="example"><h2>Example</h2></a>
+<p>This shows an example run for the unsatisfiable formula
+<a href="../examples/sgen1_unsat_57_0.cnf">sgen1_unsat_57_0.cnf</a>:</p>
+<pre><code class="language-txt">$ varisat sgen1_unsat_57_0.cnf --proof sgen1_unsat_57_0.varisat
+c This is varisat [...]
+c   release build - rustc [...]
+c Reading file 'sgen1_unsat_57_0.cnf'
+c Writing varisat proof to file 'sgen1_unsat_57_0.varisat'
+c [...]
+s UNSATISFIABLE
+</code></pre>
+<p>Checking the proof:</p>
+<pre><code class="language-txt">$ varisat --check sgen1_unsat_57_0.cnf --proof sgen1_unsat_57_0.varisat
+c This is varisat [...]
+c   release build - rustc [...]
+c Reading file 'sgen1_unsat_57_0.cnf'
+c Parsed formula with 57 variables and 124 clauses
+c Checking proof file 'sgen1_unsat_57_0.varisat'
+c checking step 100k
+s VERIFIED
+</code></pre>
+<a class="header" href="#rust-library" id="rust-library"><h1>Rust Library</h1></a>
+<p>This section of the manual assumes basic familiarity with SAT solving. If
+you're new to SAT solving, familiarizing yourself with the command line solver,
+described in the previous section, is recommended.</p>
+<p>The Varisat library is available on <a href="https://crates.io/crates/varisat">crates.io as the <code>varisat</code>
+crate</a>. The API documentation can be viewed on <a href="https://docs.rs/varisat/0.2.1/varisat/">docs.rs</a>.</p>
+<a class="header" href="#formulas" id="formulas"><h1>Formulas</h1></a>
+<p>SAT solvers operate on formulas in <a href="https://en.wikipedia.org/wiki/Conjunctive_normal_form">conjunctive normal form</a> (CNF). The
+Varisat library comes with types to efficiently store CNF formulas. This is
+independent from loading a formula into the solver. This is useful for writing
+custom code that processes CNF formulas. It also simplifies writing code that
+generates a formula to either directly solve it or alternatively write it to a
+file.</p>
+<a class="header" href="#literals-and-variables" id="literals-and-variables"><h2>Literals and Variables</h2></a>
+<p>To build formulas in conjunctive normal form, we need to start with variables
+and literals. For this Varisat provides the types <code>Var</code> and <code>Lit</code>.</p>
+<p>A variable is identified by an integer. The convention used for
+input and output of variables follows the <a href="lib/(../formats/dimacs.html">DIMACS CNF</a>
+format and is 1-based. A literal is a variable or a negated variable. In the
+DIMACS format negative literals are represented by negative integers.</p>
+<p>Internally variables are numbered starting with zero. This matches the array
+indexing convention used by Rust. The 0-based number of a variable is called
+index, while the 1-based number is called dimacs. Literals are also represented
+by a non-negative number called the code. A literal's code is the corresponding
+variable's index shifted to the left by one. The least significant bit is set
+if the literal is negative.</p>
+<p>The <code>Var</code> and <code>Lit</code> types come with methods to convert between the
+representations. Note that <code>Lit::index</code> returns the corresponding variable's
+index, not the literal's code.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+use varisat::{Var, Lit};
+
+let x = Var::from_index(0);
+
+assert_eq!(x, Var::from_dimacs(1));
+assert_eq!(x.index(), 0);
+assert_eq!(x.to_dimacs(), 1);
+
+assert!(Lit::from_dimacs(2).is_positive());
+assert!(Lit::from_dimacs(-3).is_negative());
+
+assert_eq!(Lit::positive(x), x.lit(true));
+assert_eq!(Lit::negative(x), x.lit(false));
+
+assert_eq!(x.positive(), Lit::from_var(x, true));
+assert_eq!(x.negative(), Lit::from_var(x, false));
+
+assert_eq!(x.positive(), !x.negative());
+
+assert_eq!(Lit::from_index(6, true).code(), 12);
+assert_eq!(Lit::from_index(6, false).code(), 13);
+
+assert_eq!(Lit::from_code(13).var(), Var::from_dimacs(7));
+assert_eq!(Lit::from_code(13).index(), 6);
+#}</code></pre></pre>
+<p>When formatting variables or literals the DIMACS convention is used.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::{Var, Lit};
+
+let fmt_display = format!(&quot;{}, {}&quot;, Var::from_dimacs(5), Lit::from_dimacs(-1));
+let fmt_debug = format!(&quot;{:?}, {:?}&quot;, Var::from_dimacs(5), Lit::from_dimacs(-1));
+
+assert_eq!(fmt_display, &quot;5, -1&quot;);
+assert_eq!(fmt_debug, &quot;5, -1&quot;);
+#}</code></pre></pre>
+<a class="header" href="#formulas-1" id="formulas-1"><h2>Formulas</h2></a>
+<p>A CNF formula is a conjunction of clauses and a clause a disjunction of
+literals. This means we can represent a formula as a set of sets of literals.</p>
+<p>By arbitrarily ordering the elements of the sets, we could use a
+<code>Vec&lt;Vec&lt;Lit&gt;&gt;</code> to represent a formula. Such a representation has too much
+memory overhead per clause though. Each clause requires a separate allocation,
+which also hurts cache locality when iterating over the clauses of a large
+formula.</p>
+<p>Instead Varisat provides the <code>CnfFormula</code> type, which stores all literals in a
+single <code>Vec</code>. When iterating over a <code>CnfFormula</code> the clauses can be accessed as
+slices.</p>
+<p>The <code>add_clause</code> method of the <code>ExtendFormula</code> trait allows adding new clauses
+to a <code>CnfFormula</code>.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::{Var, Lit};
+use varisat::{CnfFormula, ExtendFormula};
+
+let mut formula = CnfFormula::new();
+
+let (a, b, c) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
+
+formula.add_clause(&amp;[a, b, c]);
+formula.add_clause(&amp;[!a, !b]);
+formula.add_clause(&amp;[!b, !c]);
+formula.add_clause(&amp;[!a, !c]);
+
+assert_eq!(formula.iter().last().unwrap(), &amp;[!a, !c]);
+#}</code></pre></pre>
+<a class="header" href="#new-variables-and-literals" id="new-variables-and-literals"><h2>New Variables and Literals</h2></a>
+<p>Often we don't care about the specific indices of variables. In that case,
+instead of manually computing indices, we can dynamically ask for new unused
+variables. This functionality is also also provided by the <code>ExtendFormula</code>
+trait.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::{CnfFormula, ExtendFormula, Lit, Var};
+let mut formula = CnfFormula::new();
+
+let a = formula.new_var().negative();
+let b = formula.new_lit();
+let (c, d, e) = formula.new_lits();
+let f: Vec&lt;Lit&gt; = formula.new_lit_iter(10).collect();
+
+formula.add_clause(&amp;[a, b, c, d, e]);
+formula.add_clause(&amp;f);
+
+assert_eq!(formula.var_count(), 15);
+#}</code></pre></pre>
+<a class="header" href="#parsing-and-writing-formulas" id="parsing-and-writing-formulas"><h2>Parsing and Writing Formulas</h2></a>
+<p>Varisat provides routines for parsing and writing Formulas in the <a href="lib/(../formats/dimacs.html">DIMACS
+CNF</a> format.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::{Var, Lit};
+# use varisat::ExtendFormula;
+use varisat::dimacs::{DimacsParser, write_dimacs};
+
+let input = b&quot;p cnf 3 2\n1 2 3 0\n-1 -3 0\n&quot;;
+
+let implements_read = &amp;input[..];
+
+let mut formula = DimacsParser::parse(implements_read).expect(&quot;parse error&quot;);
+
+formula.add_clause(&amp;[Lit::from_dimacs(2)]);
+
+let mut implements_write = vec![];
+
+write_dimacs(&amp;mut implements_write, &amp;formula);
+
+assert_eq!(implements_write, b&quot;p cnf 3 3\n1 2 3 0\n-1 -3 0\n2 0\n&quot;);
+#}</code></pre></pre>
+<a class="header" href="#basic-solving" id="basic-solving"><h1>Basic Solving</h1></a>
+<p>To solve a formula, we start with creating a SAT solver object.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+use varisat::solver::Solver;
+
+let mut solver = Solver::new();
+#}</code></pre></pre>
+<a class="header" href="#loading-a-formula" id="loading-a-formula"><h2>Loading a Formula</h2></a>
+<p>The solver also implements the <code>ExtendFormula</code> trait, so we already know how to
+add clauses from the previous chapter.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::Solver;
+# let mut solver = Solver::new();
+use varisat::ExtendFormula;
+
+let (x, y, z) = solver.new_lits();
+
+solver.add_clause(&amp;[x, y, z]);
+solver.add_clause(&amp;[!x, !y]);
+solver.add_clause(&amp;[!y, !z]);
+#}</code></pre></pre>
+<p>We can also load a <code>CnfFormula</code> with a single call of the <code>add_formula</code> method.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::Solver;
+# let mut solver = Solver::new();
+# let (x, y, z) = solver.new_lits();
+use varisat::{CnfFormula, ExtendFormula};
+let mut formula = CnfFormula::new();
+formula.add_clause(&amp;[x, y, z]);
+formula.add_clause(&amp;[!x, !y]);
+formula.add_clause(&amp;[!y, !z]);
+
+solver.add_formula(&amp;formula);
+#}</code></pre></pre>
+<p>If our formula is stored as <a href="lib/(../formats/dimacs.html">DIMACS CNF</a> in a file, or in another way
+that supports <code>std::io::Read</code>, we can load it into the solver with
+<code>add_dimacs_cnf</code>. This uses incremental parsing, making it more efficient than
+reading the whole formula into a <code>CnfFormula</code> first.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::Solver;
+# let mut solver = Solver::new();
+let dimacs_cnf = b&quot;1 2 3 0\n-1 -2 0\n-2 -3 0\n&quot;;
+
+solver.add_dimacs_cnf(&amp;dimacs_cnf[..]).expect(&quot;parse error&quot;);
+#}</code></pre></pre>
+<a class="header" href="#finding-a-solution" id="finding-a-solution"><h2>Finding a Solution</h2></a>
+<p>After loading a formula, we can ask the solver to find a solution:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::Solver;
+# let mut solver = Solver::new();
+# let dimacs_cnf = b&quot;1 2 3 0\n-1 -2 0\n-2 -3 0\n&quot;;
+# solver.add_dimacs_cnf(&amp;dimacs_cnf[..]).expect(&quot;parse error&quot;);
+let solution = solver.solve().unwrap();
+
+assert_eq!(solution, true); // satisfiable
+#}</code></pre></pre>
+<p>While the solve method returns a <code>Result</code>, in the default configuration it
+cannot fail. This means it is safe to unwrap the result here.</p>
+<p>We might not only be interested in whether the formula is satisfiable, but also
+want to know a satisfying assignment. With the <code>Solver::model</code> method, we can
+query the solver for a set of assignments that make all clauses true.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::{Solver, ExtendFormula};
+# let mut solver = Solver::new();
+# let (x, y, z) = solver.new_lits();
+# let dimacs_cnf = b&quot;1 2 3 0\n-1 -2 0\n-2 -3 0\n&quot;;
+# solver.add_dimacs_cnf(&amp;dimacs_cnf[..]).expect(&quot;parse error&quot;);
+# let solution = solver.solve().unwrap();
+let model = solver.model().unwrap(); // None if solve didn't return Ok(true)
+
+assert!(model.contains(&amp;x) || model.contains(&amp;y) || model.contains(&amp;z));
+assert!(model.contains(&amp;!x) || model.contains(&amp;!y));
+assert!(model.contains(&amp;!y) || model.contains(&amp;!z));
+#}</code></pre></pre>
+<a class="header" href="#incremental-solving" id="incremental-solving"><h1>Incremental Solving</h1></a>
+<p>Incremental solving means changing and re-solving a formula multiple times,
+without starting the search from scratch. This can save a lot of time, when
+many related formulas that differ only slightly have to be solved.</p>
+<p>Varisat supports two features that enable incremental solving. These are
+incremental clause additions and solving under assumptions.</p>
+<a class="header" href="#incremental-clause-additions" id="incremental-clause-additions"><h2>Incremental Clause Additions</h2></a>
+<p>Incremental clause additions simply means that further calls to
+<code>Solver::add_clause</code>, <code>Solver::add_formula</code> or <code>Solver::add_dimacs_cnf</code> are
+allowed after <code>Solver::solve</code> returned. The new clauses are added to the
+clauses that were already present prior to the last <code>solve</code> call.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+use varisat::{ExtendFormula, Solver};
+
+let mut solver = Solver::new();
+
+let (x, y, z) = solver.new_lits();
+
+solver.add_clause(&amp;[!x, y]);
+solver.add_clause(&amp;[!y, z]);
+assert_eq!(solver.solve().unwrap(), true);
+
+solver.add_clause(&amp;[!z, x]);
+assert_eq!(solver.solve().unwrap(), true);
+
+solver.add_clause(&amp;[!z, !y]);
+solver.add_clause(&amp;[z, y]);
+assert_eq!(solver.solve().unwrap(), false);
+#}</code></pre></pre>
+<a class="header" href="#solving-under-assumptions" id="solving-under-assumptions"><h3>Solving Under Assumptions</h3></a>
+<p>Once clauses are added to the solver they cannot be removed anymore. Instead
+assumptions can be used to limit the search to a subset of solutions.
+Assumptions fix the values of certain variables. This is equivalent to adding
+some unit clauses to the formula, with the difference that assumptions can be
+removed again.</p>
+<p>Assumptions are set by calling <code>Solver::assume</code>, which replaces any previous
+assumptions.</p>
+<p>Using additional helper variables, assumptions can be used to emulate removable
+clauses:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+use varisat::{ExtendFormula, Solver};
+
+let mut solver = Solver::new();
+
+let (x, y, z) = solver.new_lits();
+let ignore_clauses = solver.new_lit();
+
+solver.add_clause(&amp;[!x, y]);
+solver.add_clause(&amp;[!y, z]);
+assert_eq!(solver.solve().unwrap(), true);
+
+solver.add_clause(&amp;[!z, x]);
+assert_eq!(solver.solve().unwrap(), true);
+
+solver.add_clause(&amp;[ignore_clauses, !z, !y]);
+solver.add_clause(&amp;[ignore_clauses, z, y]);
+
+solver.assume(&amp;[!ignore_clauses]);
+assert_eq!(solver.solve().unwrap(), false);
+
+solver.assume(&amp;[]); // Clears assumptions
+solver.add_clause(&amp;[ignore_clauses]);
+
+assert_eq!(solver.solve().unwrap(), true);
+#}</code></pre></pre>
+<p>When a formula is unsatisfiable under multiple assumptions, Varisat may be able
+to find a smaller set of assumptions that is sufficient for unsatisfiability.
+Such a sufficient subset of assumptions can be retrieved using
+<code>Solver::failed_core</code>.</p>
+<a class="header" href="#file-formats" id="file-formats"><h1>File Formats</h1></a>
+<p>This section contains descriptions of the file formats used by Varisat.</p>
+<a class="header" href="#dimacs-cnf" id="dimacs-cnf"><h1>DIMACS CNF</h1></a>
+<p>The DIMACS CNF format is a textual representation of a formula in <a href="https://en.wikipedia.org/wiki/Conjunctive_normal_form">conjunctive
+normal form</a>. A formula in conjunctive normal form is a conjunction
+(logical and) of a set of clauses. Each clause is a disjunction (logical or) of
+a set of literals. A literal is a variable or a negation of a variable. DIMACS
+CNF uses positive integers to represent variables and their negation to
+represent the corresponding negated variable. This convention is also used for
+all textual input and output in Varisat.</p>
+<p>There are several variations and extensions of the DIMACS CNF format. Varisat
+tries to accept any variation commonly found. Currently no extensions are
+supported.</p>
+<p>DIMACS CNF is a textual format. Any line that begins with the character <code>c</code> is
+considered a comment. Some other parsers require comments to start with <code>c</code>
+and/or support comments only at the beginning of a file. Varisat supports them
+anywhere in the file.</p>
+<p>A DIMACS file begins with a header line of the form <code>p cnf &lt;variables&gt; &lt;clauses&gt;</code>. Where <code>&lt;variables&gt;</code> and <code>&lt;clauses&gt;</code> are replaced with decimal
+numbers indicating the number of variables and clauses in the formula.</p>
+<p>Varisat does not require a header line. If it is missing, it will infer the
+number of clauses and variables. If a header line is present, though, the
+formula must have the exact number of clauses and may not use variables
+represented by a number larger than indicated.</p>
+<p>Following the header line are the clauses of the formula. The clauses are
+encoded as a sequence of decimal numbers separated by spaces and newlines. For
+each clause the contained literals are listed followed by a <code>0</code>. Usually each
+clause is listed on a separate line, using spaces between each of the literals
+and the final zero. Sometimes long clauses use multiple lines. Varisat will
+accept any combination of spaces and newlines as separators, including multiple
+clauses on the same line.</p>
+<p>As an example the formula (x ∨ y ∨ ¬z) ∧ (¬y ∨ z) could be encoded as this:</p>
+<pre><code class="language-cnf">p cnf 3 2
+1 2 -3 0
+-2 3 0
+</code></pre>
+<p>The <a href="https://web.archive.org/web/20190325181937/https://www.satcompetition.org/2009/format-benchmarks2009.html">simplified DIMACS CNF format</a> used by the
+yearly SAT competitions is a subset of the format parsed by Varisat.</p>
+<a class="header" href="#varisat-proofs" id="varisat-proofs"><h1>Varisat Proofs</h1></a>
+<p>Varisat has its own custom proof format. The format is not documented and may
+change from version to version. Varisat comes with a built in checker for this
+format (<a href="formats/../cli/proofs.html">command line</a> and <a href="formats/../lib/proofs.html">library</a>).</p>
+<p>The format is inspired by the <a href="formats/./lrat-proofs.html">LRAT</a> format but replaces clause ids by clause
+hashes. This makes it simpler to generate and avoids any memory overhead during
+proof generation. More details can be found in this <a href="https://jix.one/refactoring-varisat-5-incremental-solving-and-proofs/">blog-post about Varisat
+proofs</a>.</p>
+<a class="header" href="#drat-proofs" id="drat-proofs"><h1>DRAT Proofs</h1></a>
+<p>DRAT is the de-facto standard format for unsatisfiability proofs. It is required for solvers taking part in the yearly SAT competition. It is a minimal clausal proof format, that lists additions and removals of clauses. It does not contain any justification for clause additions. This makes DRAT proofs easy and efficient to generate, comparatively compact, but involves more work during checking.</p>
+<p>DRAT has an ASCII and a binary encoding, both are supported by Varisat.</p>
+<p>More information about it as well as proof checker can be found on the
+<a href="https://github.com/marijnheule/drat-trim">DRAT-trim</a> page.</p>
+<a class="header" href="#lrat-proofs" id="lrat-proofs"><h1>LRAT Proofs</h1></a>
+<p>LRAT is a proof format that extends DRAT with additional information to
+simplify the checking of clause additions. This makes it possible to write
+efficient formally verified proof checkers.</p>
+<p>LRAT is described in the paper <a href="http://www.cs.utexas.edu/users/marijn/publications/lrat.pdf">&quot;Efficient Certified RAT Verification&quot;</a>
+by Cruz-Filipe, Heule, Hunt, Kaufmann and Schneider-Kamp. The authors suggested
+generating LRAT proofs from <a href="formats/./drat-proofs.html">DRAT</a> proofs. Such a conversion requires checking
+the DRAT proof which is often very time consuming.</p>
+<p>Varisat allows generating LRAT proofs starting from its <a href="formats/./varisat-proofs.html">own proof
+format</a>. As Varisat's proof format is based on LRAT with modifications
+that allow simpler and faster proof generation, such a conversion is much
+faster. For the same solver and parameters, this results in a significant
+reduction in the overall time required for a formally verified unsatisfiability
+proof.</p>
+<p>LRAT also has a more compact binary variant called CLRAT, both are supported by
+Varisat.</p>
+<p>The <a href="http://www.cs.utexas.edu/users/moore/acl2/">ACL2 programming language and theorem prover</a> distribution comes
+with an efficient formally verified CLRAT proof checker. It can be found in the
+subdirectory <code>books/projects/sat/lrat/incremental</code>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+        
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+        
+        
+
+    </body>
+</html>

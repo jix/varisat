@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["initialize_var","Initialize decision heuristics for a new variable."],["make_available","Make a variable available for decisions."],["make_decision","Make a decision and enqueue it."],["remove_var","Remove a variable from the decision heuristics."]],"mod":[["vsids","The VSIDS branching heuristic."]]});

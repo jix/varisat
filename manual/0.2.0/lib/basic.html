@@ -1,0 +1,295 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Basic Solving - Varisat Manual</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body class="light">
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            document.body.className = theme;
+            document.querySelector('html').className = theme + ' js';
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Varisat</a></li><li><a href="../cli/index.html"><strong aria-hidden="true">2.</strong> Command Line Solver</a></li><li><ol class="section"><li><a href="../cli/basic.html"><strong aria-hidden="true">2.1.</strong> Basic Usage</a></li><li><a href="../cli/proofs.html"><strong aria-hidden="true">2.2.</strong> Generating and Checking Proofs</a></li></ol></li><li><a href="../lib/index.html"><strong aria-hidden="true">3.</strong> Rust Library</a></li><li><ol class="section"><li><a href="../lib/formulas.html"><strong aria-hidden="true">3.1.</strong> Formulas</a></li><li><a href="../lib/basic.html" class="active"><strong aria-hidden="true">3.2.</strong> Basic Solving</a></li><li><a href="../lib/incremental.html"><strong aria-hidden="true">3.3.</strong> Incremental Solving</a></li></ol></li><li><a href="../formats/index.html"><strong aria-hidden="true">4.</strong> File Formats</a></li><li><ol class="section"><li><a href="../formats/dimacs.html"><strong aria-hidden="true">4.1.</strong> DIMACS CNF</a></li><li><a href="../formats/varisat-proofs.html"><strong aria-hidden="true">4.2.</strong> Varisat Proofs</a></li><li><a href="../formats/drat-proofs.html"><strong aria-hidden="true">4.3.</strong> DRAT Proofs</a></li><li><a href="../formats/lrat-proofs.html"><strong aria-hidden="true">4.4.</strong> LRAT Proofs</a></li></ol></li></ol>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div id="menu-bar-sticky-container">
+                        <div class="left-buttons">
+                            <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                                <i class="fa fa-bars"></i>
+                            </button>
+                            <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                                <i class="fa fa-paint-brush"></i>
+                            </button>
+                            <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            </ul>
+                            
+                            <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                                <i class="fa fa-search"></i>
+                            </button>
+                            
+                        </div>
+
+                        <h1 class="menu-title">Varisat Manual</h1> 
+
+                        <div class="right-buttons">
+                            <a href="../print.html" title="Print this book" aria-label="Print this book">
+                                <i id="print-button" class="fa fa-print"></i>
+                            </a>
+                            
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <a class="header" href="#basic-solving" id="basic-solving"><h1>Basic Solving</h1></a>
+<p>To solve a formula, we start with creating a SAT solver object.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+use varisat::solver::Solver;
+
+let mut solver = Solver::new();
+#}</code></pre></pre>
+<a class="header" href="#loading-a-formula" id="loading-a-formula"><h2>Loading a Formula</h2></a>
+<p>We can load a formula by adding individual clauses:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::solver::Solver;
+# let mut solver = Solver::new();
+use varisat::lit::Lit;
+
+let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
+
+solver.add_clause(&amp;[x, y, z]);
+solver.add_clause(&amp;[!x, !y]);
+solver.add_clause(&amp;[!y, !z]);
+#}</code></pre></pre>
+<p>By adding a formula:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::solver::Solver;
+# use varisat::lit::Lit;
+# let mut solver = Solver::new();
+# let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
+use varisat::cnf::CnfFormula;
+let mut formula = CnfFormula::new();
+formula.add_clause(&amp;[x, y, z]);
+formula.add_clause(&amp;[!x, !y]);
+formula.add_clause(&amp;[!y, !z]);
+
+solver.add_formula(&amp;formula);
+#}</code></pre></pre>
+<p>Or by directly loading a <a href="(../formats/dimacs.html">DIMACS CNF</a> from anything that implements
+<code>std::io::Read</code>. This uses incremental parsing, making it more efficient than
+reading the whole formula into a <code>CnfFormula</code>.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::solver::Solver;
+# let mut solver = Solver::new();
+let dimacs_cnf = b&quot;1 2 3 0\n-1 -2 0\n-2 -3 0\n&quot;;
+
+solver.add_dimacs_cnf(&amp;dimacs_cnf[..]).expect(&quot;parse error&quot;);
+#}</code></pre></pre>
+<a class="header" href="#finding-a-solution" id="finding-a-solution"><h2>Finding a Solution</h2></a>
+<p>After loading a formula, we can ask the solver to find a solution:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::solver::Solver;
+# let mut solver = Solver::new();
+# let dimacs_cnf = b&quot;1 2 3 0\n-1 -2 0\n-2 -3 0\n&quot;;
+# solver.add_dimacs_cnf(&amp;dimacs_cnf[..]).expect(&quot;parse error&quot;);
+let solution = solver.solve().unwrap();
+
+assert_eq!(solution, true); // satisfiable
+#}</code></pre></pre>
+<p>While the solve method returns a <code>Result</code>, in the default configuration it
+cannot fail. This means it is safe to unwrap the result here.</p>
+<p>We might not only be interested in whether the formula is satisfiable, but also
+want to know a satisfying assignment. With the <code>Solver::model</code> method, we can
+query the solver for a set of assignments that make all clauses true.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+# extern crate varisat;
+# use varisat::solver::Solver;
+# use varisat::lit::Lit;
+# let mut solver = Solver::new();
+# let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
+# let dimacs_cnf = b&quot;1 2 3 0\n-1 -2 0\n-2 -3 0\n&quot;;
+# solver.add_dimacs_cnf(&amp;dimacs_cnf[..]).expect(&quot;parse error&quot;);
+# let solution = solver.solve().unwrap();
+let model = solver.model().unwrap(); // None if solve didn't return Ok(true)
+
+assert!(model.contains(&amp;x) || model.contains(&amp;y) || model.contains(&amp;z));
+assert!(model.contains(&amp;!x) || model.contains(&amp;!y));
+assert!(model.contains(&amp;!y) || model.contains(&amp;!z));
+#}</code></pre></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../lib/formulas.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../lib/incremental.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a href="../lib/formulas.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a href="../lib/incremental.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

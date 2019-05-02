@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["check_clause_with_hashes","Check whether a clause is implied by clauses of the given hashes."]],"struct":[["RupCheck",""],["TraceItem","Propagation of the RUP check."]]});

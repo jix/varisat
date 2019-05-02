@@ -1,0 +1,1 @@
+initSidebarItems({"macro":[["cnf","Shortcut for tests"],["cnf_formula","Shortcut for tests"],["lit","Shortcut for tests"],["lits","Shortcut for tests"],["var","Shortcut for tests"],["vars","Shortcut for tests"]],"mod":[["cnf","CNF formulas."],["lit","Literals and variables."],["test",""]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["WriteLrat","Proof processor that generates an LRAT proof."]]});

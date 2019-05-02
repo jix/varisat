@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["propagate_long","Propagate all literals implied by long clauses watched by the given literal."]]});

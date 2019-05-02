@@ -1,0 +1,272 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Generating and Checking Proofs - Varisat Manual</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body class="light">
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            document.body.className = theme;
+            document.querySelector('html').className = theme + ' js';
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <ol class="chapter"><li><a href="../index.html"><strong aria-hidden="true">1.</strong> Varisat</a></li><li><a href="../cli/index.html"><strong aria-hidden="true">2.</strong> Command Line Solver</a></li><li><ol class="section"><li><a href="../cli/basic.html"><strong aria-hidden="true">2.1.</strong> Basic Usage</a></li><li><a href="../cli/proofs.html" class="active"><strong aria-hidden="true">2.2.</strong> Generating and Checking Proofs</a></li></ol></li><li><a href="../lib/index.html"><strong aria-hidden="true">3.</strong> Rust Library</a></li><li><ol class="section"><li><a href="../lib/formulas.html"><strong aria-hidden="true">3.1.</strong> Formulas</a></li><li><a href="../lib/basic.html"><strong aria-hidden="true">3.2.</strong> Basic Solving</a></li><li><a href="../lib/incremental.html"><strong aria-hidden="true">3.3.</strong> Incremental Solving</a></li></ol></li><li><a href="../formats/index.html"><strong aria-hidden="true">4.</strong> File Formats</a></li><li><ol class="section"><li><a href="../formats/dimacs.html"><strong aria-hidden="true">4.1.</strong> DIMACS CNF</a></li><li><a href="../formats/varisat-proofs.html"><strong aria-hidden="true">4.2.</strong> Varisat Proofs</a></li><li><a href="../formats/drat-proofs.html"><strong aria-hidden="true">4.3.</strong> DRAT Proofs</a></li><li><a href="../formats/lrat-proofs.html"><strong aria-hidden="true">4.4.</strong> LRAT Proofs</a></li></ol></li></ol>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div id="menu-bar-sticky-container">
+                        <div class="left-buttons">
+                            <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                                <i class="fa fa-bars"></i>
+                            </button>
+                            <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                                <i class="fa fa-paint-brush"></i>
+                            </button>
+                            <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            </ul>
+                            
+                            <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                                <i class="fa fa-search"></i>
+                            </button>
+                            
+                        </div>
+
+                        <h1 class="menu-title">Varisat Manual</h1> 
+
+                        <div class="right-buttons">
+                            <a href="../print.html" title="Print this book" aria-label="Print this book">
+                                <i id="print-button" class="fa fa-print"></i>
+                            </a>
+                            
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <a class="header" href="#generating-and-checking-proofs" id="generating-and-checking-proofs"><h1>Generating and Checking Proofs</h1></a>
+<p>SAT solvers are often used to for problems where correctness is critical. For
+this reason SAT solvers are expected to produce proofs of unsatisfiability.
+Such proofs allow us to independently check the solver's result.</p>
+<a class="header" href="#generating-proofs" id="generating-proofs"><h2>Generating Proofs</h2></a>
+<p>Varisat allows generating proofs in three different formats:</p>
+<table><thead><tr><th> Format </th><th> Solving Overhead </th><th> Proof File Size </th><th> Checking Performance </th><th> Notes </th></tr></thead><tbody>
+<tr><td> <a href="../formats/varisat-proofs.html">Varisat</a> </td><td> Low </td><td> Largest </td><td> Fast </td><td> Requires matching solver and checker versions.</td></tr>
+<tr><td> <a href="../formats/drat-proofs.html">DRAT</a> </td><td> Very Low </td><td> Smallest </td><td> Slow </td><td> Supported by most solvers.</td></tr>
+<tr><td> <a href="../formats/lrat-proofs.html">LRAT</a> </td><td> High </td><td> Large </td><td> Fast </td><td> Supports efficient formally verified checking.</td></tr>
+</tbody></table>
+<p>To generate a proof, invoke Varisat with the <code>--proof</code> option followed by a
+target file name. By default Varisat generates proofs in its <a href="../formats/varisat-proofs.html">own custom proof
+format</a>. This can be changed by using the <code>--proof-format</code> option
+followed by one of <code>varisat</code>, <code>drat</code>, <code>binary-drat</code>, <code>lrat</code> or <code>clrat</code> (binary
+variant of <code>lrat</code>).</p>
+<a class="header" href="#checking-proofs" id="checking-proofs"><h2>Checking Proofs</h2></a>
+<p>Varisat has a built in checker for its own proof format. For the other formats
+see the chapters linked from the overview table. While the proof checker is
+built-in, it shares very little code with the solver. This makes it unlikely
+for the same bug to affect checker and solver. The proof format is not stable
+between version. Thus a proof produced by a sufficiently different
+version of Varisat will most likely be rejected as invalid.</p>
+<p>The builtin proof checker is available using the <code>--check</code> subcommand.
+Subcommands have to be the first argument passed on the command line. The input
+formula and proof file are specified in the same way used for solving, except
+that the proof parameter is required for checking.</p>
+<p>If the proof checker is able to successfully verify the proof, it will print
+the line <code>s VERIFEID</code>. Otherwise an error will be printed and a non-zero exit
+code returned.</p>
+<p>The proof checker also has a a built in command line help that can be accessed
+using <code>varisat --check --help</code>.</p>
+<a class="header" href="#self-checking" id="self-checking"><h2>Self Checking</h2></a>
+<p>Varisat can run its built in checker concurrently with the solver. This
+avoids the storage requirements for a proof file, which can become prohibitive
+for long running instances. It also allows aborting a solve as soon as an error
+occurred, producing relevant debugging information. This is enabled by passing the <code>--self-check</code> option to the solver.</p>
+<a class="header" href="#converting-proofs" id="converting-proofs"><h2>Converting Proofs</h2></a>
+<p>Varisat proof files can be converted into the LRAT format during checking. In
+fact, internally, if LRAT proofs are generated during solving, they are
+generated by enabling self checking and conversion into LRAT. With this a
+verified LRAT proof checker can be used.</p>
+<p>To the author's knowledge besides Varisat the only other way of producing LRAT
+proofs is by generating DRAT proofs. Converting DRAT proofs into LRAT proofs
+often takes longer than solving the instance in the first place. Conversion
+from Varisat proof files to LRAT is very efficient and much faster than the
+alternative.</p>
+<p>To convert a Varisat proof, when invoking <code>varisat --check</code>, simply pass the <code>--write-lrat</code> or <code>--write-clrat</code> option followed by a target file name.</p>
+<a class="header" href="#example" id="example"><h2>Example</h2></a>
+<p>This shows an example run for the unsatisfiable formula
+<a href="../examples/sgen1_unsat_57_0.cnf">sgen1_unsat_57_0.cnf</a>:</p>
+<pre><code class="language-txt">$ varisat sgen1_unsat_57_0.cnf --proof sgen1_unsat_57_0.varisat
+c This is varisat [...]
+c   release build - rustc [...]
+c Reading file 'sgen1_unsat_57_0.cnf'
+c Writing varisat proof to file 'sgen1_unsat_57_0.varisat'
+c [...]
+s UNSATISFIABLE
+</code></pre>
+<p>Checking the proof:</p>
+<pre><code class="language-txt">$ varisat --check sgen1_unsat_57_0.cnf --proof sgen1_unsat_57_0.varisat
+c This is varisat [...]
+c   release build - rustc [...]
+c Reading file 'sgen1_unsat_57_0.cnf'
+c Parsed formula with 57 variables and 124 clauses
+c Checking proof file 'sgen1_unsat_57_0.varisat'
+c checking step 100k
+s VERIFIED
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../cli/basic.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../lib/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a href="../cli/basic.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a href="../lib/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

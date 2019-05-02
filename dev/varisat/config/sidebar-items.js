@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["_DERIVE_Default_FOR_SolverConfig",""],["_IMPL_DESERIALIZE_FOR_SolverConfigUpdate",""],["_IMPL_SERIALIZE_FOR_SolverConfigUpdate",""]],"struct":[["SolverConfig","Configurable parameters used during solving."],["SolverConfigUpdate","Updates configuration values of [`SolverConfig`]."]]});

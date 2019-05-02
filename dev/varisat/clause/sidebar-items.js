@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["activity","Clause activity."],["alloc","Clause allocator."],["assess","Clause assessment."],["db","Database for long clauses."],["gc","Garbage collection of long clauses."],["header","Metadata stored in the header of each long clause."],["reduce","Clause database reduction."]],"struct":[["Clause","A clause."]]});

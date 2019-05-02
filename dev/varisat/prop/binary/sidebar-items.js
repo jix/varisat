@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["propagate_binary","Propagate all literals implied by the given literal via binary clauses."]]});

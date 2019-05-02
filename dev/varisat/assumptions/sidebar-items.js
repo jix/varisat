@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["EnqueueAssumption","Return type of [`enqueue_assumption`]."]],"fn":[["analyze_assumption_conflict","Analyze a conflicting set of assumptions."],["enqueue_assumption","Enqueue another assumption if possible."],["set_assumptions","Change the currently active assumptions."]],"struct":[["Assumptions","Incremental solving."]]});

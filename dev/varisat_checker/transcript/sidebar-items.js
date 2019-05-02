@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ProofTranscriptStep","Step of a proof transcript."]],"struct":[["Transcript","Create a transcript from proof steps"]],"trait":[["ProofTranscriptProcessor","Implement to process transcript steps."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["load_clause","Adds a clause to the current formula."]]});
