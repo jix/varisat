@@ -5,9 +5,6 @@ formula in [conjunctive normal form][cnf], it either finds a variable
 assignment that makes the formula true or finds a proof that this is
 impossible.
 
-[cdcl]: https://en.wikipedia.org/wiki/Conflict-Driven_Clause_Learning
-[cnf]: https://en.wikipedia.org/wiki/Conjunctive_normal_form
-
 This is the command line version. Varisat is also available as a library
 ([`varisat` on crates.io][crate-varisat]).
 
@@ -31,7 +28,5 @@ dual licensed as above, without any additional terms or conditions.
 
 [cdcl]: https://en.wikipedia.org/wiki/Conflict-Driven_Clause_Learning
 [cnf]: https://en.wikipedia.org/wiki/Conjunctive_normal_form
-[dev-docs]: https://jix.github.io/varisat/varisat/
-[blog-series]: https://jix.one/tags/refactoring-varisat/
 [crate-varisat]: https://crates.io/crates/varisat
 [crate-varisat-cli]: https://crates.io/crates/varisat-cli
