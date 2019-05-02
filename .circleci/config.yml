@@ -53,7 +53,7 @@ jobs:
           at: /tmp/workspace
       - run: |
           if [ $CIRCLE_BRANCH == staging ]; then
-            bash .circleci/publish_dev_docs.sh /tmp/workspace/dev_docs git@github.com:jix/varisat.git
+            bash .circleci/publish_gh_pages.sh /tmp/workspace/dev_docs git@github.com:jix/varisat.git dev
           fi
 
   build_static_linux:
