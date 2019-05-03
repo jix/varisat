@@ -106,6 +106,22 @@ impl Lit {
         Lit::from_litidx(var.index, negative)
     }
 
+    /// Create a positive literal from a `Var`.
+    pub fn positive(var: Var) -> Lit {
+        Lit::from_var(var, false)
+    }
+
+    /// Create a negative literal from a `Var`.
+    pub fn negative(var: Var) -> Lit {
+        Lit::from_var(var, true)
+    }
+
+    /// Create a literal from a variable index and a `bool` that is `true` when the literal is
+    /// negative.
+    pub fn from_index(index: usize, negative: bool) -> Lit {
+        Lit::from_var(Var::from_index(index), negative)
+    }
+
     /// Create a literal with the given encoding.
     pub fn from_code(code: usize) -> Lit {
         debug_assert!(code <= Var::max_var().index() * 2 + 1);

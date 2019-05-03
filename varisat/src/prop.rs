@@ -59,7 +59,7 @@ mod tests {
     use crate::clause::{db, gc};
     use crate::cnf::{strategy::*, CnfFormula};
     use crate::context::{set_var_count, Context, SolverStateP};
-    use crate::lit::{Lit, Var};
+    use crate::lit::Lit;
     use crate::load::load_clause;
     use crate::state::SatState;
 
@@ -81,7 +81,7 @@ mod tests {
                         negate
                             .into_iter()
                             .enumerate()
-                            .map(|(index, negate)| Lit::from_var(Var::from_index(index), negate))
+                            .map(|(index, negate)| Lit::from_index(index, negate))
                             .collect::<Vec<_>>()
                     })
                     .prop_shuffle();
