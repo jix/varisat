@@ -44,17 +44,26 @@ jobs:
           paths:
             - dev_docs/*
 
-  deploy:
+  doctest:
     docker:
-      - image: circleci/buildpack-deps:stretch
+      - image: jixone/rust-ci:mdbook
     steps:
       - checkout
-      - attach_workspace:
-          at: /tmp/workspace
       - run: |
-          if [ $CIRCLE_BRANCH == staging ]; then
-            bash .circleci/publish_gh_pages.sh /tmp/workspace/dev_docs git@github.com:jix/varisat.git dev
-          fi
+          cargo build
+          cargo test --doc
+          mdbook test -L dependency=target/debug/deps -L target/debug manual
+
+  manual:
+    docker:
+      - image: jixone/rust-ci:mdbook
+    steps:
+      - checkout
+      - run: mdbook build -d /tmp/workspace/manual manual
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - manual/*
 
   build_static_linux:
     docker:
@@ -86,6 +95,21 @@ jobs:
           path: varisat-windows.zip
           destination: varisat-windows.zip
 
+  deploy:
+    docker:
+      - image: circleci/buildpack-deps:stretch
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run: |
+          if [ $CIRCLE_BRANCH == staging ]; then
+            bash .circleci/setup_git.sh
+            bash .circleci/publish_gh_pages.sh git@github.com:jix/varisat.git \
+              /tmp/workspace/dev_docs dev \
+              /tmp/workspace/manual manual/master
+          fi
+
 bors_branches: &bors_branches
   filters:
     branches:
@@ -106,6 +130,10 @@ workflows:
           <<: *bors_branches
       - build_static_windows:
           <<: *bors_branches
+      - manual:
+          <<: *bors_branches
+      - doctest:
+          <<: *bors_branches
       - deploy:
           <<: *bors_branches
           requires:
@@ -113,3 +141,5 @@ workflows:
             - test
             - build_static_linux
             - build_static_windows
+            - manual
+            - doctest
