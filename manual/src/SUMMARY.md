@@ -1,0 +1,15 @@
+# Summary
+
+- [Varisat](./README.md)
+- [Command Line Solver](cli/README.md)
+  - [Basic Usage](cli/basic.md)
+  - [Generating and Checking Proofs](cli/proofs.md)
+- [Rust Library](lib/README.md)
+  - [Formulas](lib/formulas.md)
+  - [Basic Solving](lib/basic.md)
+  - [Incremental Solving](lib/incremental.md)
+- [File Formats](formats/README.md)
+  - [DIMACS CNF](formats/dimacs.md)
+  - [Varisat Proofs](formats/varisat-proofs.md)
+  - [DRAT Proofs](formats/drat-proofs.md)
+  - [LRAT Proofs](formats/lrat-proofs.md)
