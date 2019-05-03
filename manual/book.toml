@@ -1,0 +1,5 @@
+[book]
+authors = ["Jannis Harder"]
+multilingual = false
+src = "src"
+title = "Varisat Manual"

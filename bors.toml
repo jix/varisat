@@ -1,4 +1,11 @@
 status = [
+  "ci/circleci: build",
+  "ci/circleci: test",
+  "ci/circleci: build_dev_docs",
+  "ci/circleci: build_static_linux",
+  "ci/circleci: build_static_windows",
+  "ci/circleci: manual",
+  "ci/circleci: doctest",
   "ci/circleci: deploy"
 ]
 delete_merged_branches = true
