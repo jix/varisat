@@ -4,7 +4,7 @@ use rand::distributions::Bernoulli;
 use rand::seq::SliceRandom;
 
 use crate::cnf::CnfFormula;
-use crate::lit::{Lit, Var};
+use crate::lit::Lit;
 
 /// Generate small hard unsat instances.
 ///
@@ -18,7 +18,7 @@ pub fn sgen_unsat_formula(
             let mut lits = negate
                 .into_iter()
                 .enumerate()
-                .map(|(index, negate)| Lit::from_var(Var::from_index(index), negate))
+                .map(|(index, negate)| Lit::from_index(index, negate))
                 .collect::<Vec<_>>();
 
             for &invert in [false, true].iter() {
@@ -71,7 +71,7 @@ pub fn sat_formula(
                 let lits = negate
                     .into_iter()
                     .enumerate()
-                    .map(|(index, negate)| Lit::from_var(Var::from_index(index), negate))
+                    .map(|(index, negate)| Lit::from_index(index, negate))
                     .collect::<Vec<_>>();
 
                 for _ in 0..clause_count {
@@ -107,7 +107,7 @@ pub fn conditional_pigeon_hole(
             let lits = negate
                 .into_iter()
                 .enumerate()
-                .map(|(index, negate)| Lit::from_var(Var::from_index(index), negate))
+                .map(|(index, negate)| Lit::from_index(index, negate))
                 .collect::<Vec<_>>();
 
             for i in 1..columns + 1 {

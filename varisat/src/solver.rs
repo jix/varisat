@@ -10,7 +10,7 @@ use crate::cnf::CnfFormula;
 use crate::context::{ensure_var_count, AssignmentP, Context, SolverStateP};
 use crate::dimacs::DimacsParser;
 use crate::incremental::set_assumptions;
-use crate::lit::{Lit, Var};
+use crate::lit::Lit;
 use crate::load::load_clause;
 use crate::proof;
 use crate::schedule::schedule_step;
@@ -159,7 +159,7 @@ impl<'a> Solver<'a> {
                     .iter()
                     .enumerate()
                     .flat_map(|(index, assignment)| {
-                        assignment.map(|polarity| Lit::from_var(Var::from_index(index), !polarity))
+                        assignment.map(|polarity| Lit::from_index(index, !polarity))
                     })
                     .collect(),
             )
@@ -243,6 +243,7 @@ mod tests {
     use crate::checker::CheckedProofStep;
     use crate::cnf::CnfFormula;
     use crate::dimacs::write_dimacs;
+    use crate::lit::Var;
 
     use crate::test::{conditional_pigeon_hole, sat_formula, sgen_unsat_formula};
 
@@ -440,7 +441,7 @@ mod tests {
 
             let mut assumptions = enable_row.to_owned();
 
-            assumptions.push(Lit::from_var(Var::from_index(formula.var_count() + 10), false));
+            assumptions.push(Lit::positive(Var::from_index(formula.var_count() + 10)));
 
             solver.assume(&assumptions);
 
