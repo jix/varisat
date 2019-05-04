@@ -139,6 +139,15 @@ jobs:
                 -c $CIRCLE_SHA1 \
                 -delete v$VER \
                 /tmp/workspace/release
+
+              cargo login $CARGO_TOKEN
+
+              for PKG in varisat varisat-cli; do
+                cd $PKG
+                cargo package || { echo retrying && sleep 5 && cargo package; }
+                cargo publish
+                cd ..
+              done
             fi
           fi
 
