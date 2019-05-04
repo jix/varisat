@@ -12,9 +12,9 @@ autobins = false
 [dependencies]
 varisat = { path = "../varisat", version = "0.2.0" }
 
-clap = { version = "2.32.0", features = ["wrap_help"] }
+clap = { version = "2.33.0", features = ["wrap_help"] }
 env_logger = "0.6.1"
-failure = "0.1.3"
+failure = "0.1.5"
 log = "0.4.6"
 
 [[bin]]
