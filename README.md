@@ -24,6 +24,7 @@ Cargo can be installed using [rustup](https://rustup.rs/).
 
 ## Documentation
 
+  * [User Manual](https://jix.github.io/varisat/manual/0.2.0/)
   * [Library API Documentation](https://docs.rs/crate/varisat)
 
 ## Developer Documentation
@@ -31,6 +32,9 @@ Cargo can be installed using [rustup](https://rustup.rs/).
 The internal APIs are documented using rustdoc. It can be generated using
 `cargo doc --document-private-items --all --exclude varisat-cli` or [viewed
 online (master)][dev-docs].
+
+A version of the [user manual built from the master branch][manual-master] is
+also available.
 
 You can also read [a series of blog posts about the development of
 varisat][blog-series].
@@ -59,3 +63,4 @@ dual licensed as above, without any additional terms or conditions.
 [blog-series]: https://jix.one/tags/refactoring-varisat/
 [crate-varisat]: https://crates.io/crates/varisat
 [crate-varisat-cli]: https://crates.io/crates/varisat-cli
+[manual-master]: https://jix.github.io/varisat/manual/master/

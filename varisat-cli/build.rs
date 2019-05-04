@@ -19,15 +19,15 @@ fn main() {
     if Path::new("../.git").exists() {
         if let Some(git_revision) = Command::new("git")
             .arg("describe")
-            .arg("--dirty=*")
+            .arg("--match=v[0-9]*")
+            .arg("--dirty=-d")
+            .arg("--always")
             .output()
             .ok()
             .filter(|result| result.status.success())
         {
-            println!(
-                "cargo:rustc-env=VARISAT_VERSION={}",
-                from_utf8(git_revision.stdout.as_slice()).unwrap()
-            );
+            let version = from_utf8(git_revision.stdout.as_slice()).unwrap();
+            println!("cargo:rustc-env=VARISAT_VERSION={}", &version[1..]);
             use_package_version = false;
         }
     }

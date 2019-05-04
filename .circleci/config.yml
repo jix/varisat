@@ -71,14 +71,23 @@ jobs:
     steps:
       - checkout
       - run: |
+          bash .circleci/setup_git.sh
+          VER=$(bash .circleci/tag_release.sh)
           sed -i -e '/^debug = true/d' Cargo.toml
+          git update-index --assume-unchanged Cargo.toml
+
           cargo build --target x86_64-unknown-linux-musl -p varisat-cli --release
-          mkdir varisat-linux
-          cp target/x86_64-unknown-linux-musl/release/varisat varisat-linux
-          tar czf varisat-linux.tar.gz varisat-linux
+
+          mkdir "varisat-linux-$VER"
+          cp target/x86_64-unknown-linux-musl/release/varisat "varisat-linux-$VER"
+          mkdir -p /tmp/workspace/release
+          tar czf "/tmp/workspace/release/varisat-linux-$VER.tar.gz" "varisat-linux-$VER"
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - release/*
       - store_artifacts:
-          path: varisat-linux.tar.gz
-          destination: varisat-linux.tar.gz
+          path: /tmp/workspace/release
 
   build_static_windows:
     docker:
@@ -86,14 +95,22 @@ jobs:
     steps:
       - checkout
       - run: |
+          bash .circleci/setup_git.sh
+          VER=$(bash .circleci/tag_release.sh)
           sed -i -e '/^debug = true/d' Cargo.toml
+          git update-index --assume-unchanged Cargo.toml
+
           cargo build --target x86_64-pc-windows-gnu -p varisat-cli --release
-          mkdir varisat-windows
+
           cp target/x86_64-pc-windows-gnu/release/varisat.exe .
-          zip varisat-windows.zip varisat.exe
+          mkdir -p /tmp/workspace/release
+          zip "/tmp/workspace/release/varisat-windows-$VER.tar.gz" varisat.exe
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - release/*
       - store_artifacts:
-          path: varisat-windows.zip
-          destination: varisat-windows.zip
+          path: /tmp/workspace/release
 
   deploy:
     docker:
@@ -105,9 +122,15 @@ jobs:
       - run: |
           if [ $CIRCLE_BRANCH == staging ]; then
             bash .circleci/setup_git.sh
+            VER=$(bash .circleci/tag_release.sh)
+
+            if [[ $VER == *-* ]]; then
+              VER=master
+            fi
+
             bash .circleci/publish_gh_pages.sh git@github.com:jix/varisat.git \
               /tmp/workspace/dev_docs dev \
-              /tmp/workspace/manual manual/master
+              /tmp/workspace/manual manual/$VER
           fi
 
 bors_branches: &bors_branches
