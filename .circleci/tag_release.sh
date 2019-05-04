@@ -34,4 +34,4 @@ if ! git tag -l v$VER | grep -q .; then
     git tag -a v$VER -m "Release of version $VER"
 fi
 
-git describe --match='v[0-9]*' --dirty='-d' '--always' | sed 's/^v//'
+git describe --tags --match='v[0-9]*' --dirty='-d' '--always' | sed 's/^v//'
