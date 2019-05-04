@@ -22,6 +22,9 @@ Varisat is available using rust's package manager cargo. The command line
 solver can be installed or updated using `cargo install --force varisat-cli`.
 Cargo can be installed using [rustup](https://rustup.rs/).
 
+The command line solver is also available as a [pre-compiled binary][releases]
+for Linux and Windows.
+
 ## Documentation
 
   * [User Manual](https://jix.github.io/varisat/manual/0.2.0/)
@@ -64,3 +67,4 @@ dual licensed as above, without any additional terms or conditions.
 [crate-varisat]: https://crates.io/crates/varisat
 [crate-varisat-cli]: https://crates.io/crates/varisat-cli
 [manual-master]: https://jix.github.io/varisat/manual/master/
+[releases]: https://github.com/jix/varisat/releases
