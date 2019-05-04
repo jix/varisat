@@ -30,6 +30,20 @@ for FILE in "${FILES[@]}"; do
     fi
 done
 
+FILES=(
+    README.md
+    varisat/README.md
+    manual/src/lib/README.md
+    manual/src/README.md
+)
+
+for FILE in "${FILES[@]}"; do
+    if ! fgrep -q https://docs.rs/varisat/$VER/varisat/ $FILE; then
+        echo "API docs link in $FILE is not up to date" >&2
+        exit 1
+    fi
+done
+
 if ! git tag -l v$VER | grep -q .; then
     git tag -a v$VER -m "Release of version $VER"
 fi
