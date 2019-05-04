@@ -104,7 +104,7 @@ jobs:
 
           cp target/x86_64-pc-windows-gnu/release/varisat.exe .
           mkdir -p /tmp/workspace/release
-          zip "/tmp/workspace/release/varisat-windows-$VER.tar.gz" varisat.exe
+          zip "/tmp/workspace/release/varisat-windows-$VER.zip" varisat.exe
       - persist_to_workspace:
           root: /tmp/workspace
           paths:
