@@ -114,7 +114,7 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/buildpack-deps:stretch
+      - image: jixone/rust-ci:rust-deploy
     steps:
       - checkout
       - attach_workspace:
@@ -131,6 +131,15 @@ jobs:
             bash .circleci/publish_gh_pages.sh git@github.com:jix/varisat.git \
               /tmp/workspace/dev_docs dev \
               /tmp/workspace/manual manual/$VER
+
+            if [[ $VER != master ]]; then
+              ghr -t $GITHUB_TOKEN \
+                -u $CIRCLE_PROJECT_USERNAME \
+                -r $CIRCLE_PROJECT_REPONAME \
+                -c $CIRCLE_SHA1 \
+                -delete v$VER \
+                /tmp/workspace/release
+            fi
           fi
 
 bors_branches: &bors_branches
