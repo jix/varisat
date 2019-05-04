@@ -19,6 +19,7 @@ fn main() {
     if Path::new("../.git").exists() {
         if let Some(git_revision) = Command::new("git")
             .arg("describe")
+            .arg("--tags")
             .arg("--match=v[0-9]*")
             .arg("--dirty=-d")
             .arg("--always")
