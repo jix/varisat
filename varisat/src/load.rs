@@ -118,7 +118,9 @@ pub fn load_clause<'a>(
     lits.extend_from_slice(&false_lits);
 
     if clause_is_true {
-        proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits[..].into()));
+        if lits.len() > 1 {
+            proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits[..].into()));
+        }
         return;
     }
 
