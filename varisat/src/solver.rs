@@ -334,6 +334,20 @@ mod tests {
         solver.enable_self_checking();
     }
 
+    #[test]
+    fn self_check_duplicated_unit_clauses() {
+        let mut solver = Solver::new();
+
+        solver.enable_self_checking();
+
+        solver.add_formula(&cnf_formula![
+            4;
+            4;
+        ]);
+
+        assert_eq!(solver.solve().ok(), Some(true));
+    }
+
     proptest! {
         #[test]
         fn sgen_unsat(
