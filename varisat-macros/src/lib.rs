@@ -1,38 +1,61 @@
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse_quote, Expr, Lit, LitStr, Meta, MetaNameValue};
+use syn::{
+    parse_quote, punctuated::Punctuated, Attribute, Expr, Fields, Ident, Lit, LitStr, Meta,
+    MetaNameValue, Token,
+};
 use synstructure::decl_derive;
 
+/// Get the doc comment as LitStr from the attributes
+fn doc_from_attrs(attrs: &[Attribute]) -> Vec<LitStr> {
+    let mut lines = vec![];
+
+    for attr in attrs.iter() {
+        if let Ok(Meta::NameValue(MetaNameValue {
+            ident,
+            lit: Lit::Str(doc_str),
+            ..
+        })) = attr.parse_meta()
+        {
+            if ident == "doc" {
+                lines.push(doc_str);;
+            }
+        }
+    }
+
+    lines
+}
+
+/// Find a field inside the doc comment
+fn get_doc_field(name: &str, attrs: &[Attribute]) -> Option<LitStr> {
+    let re = regex::Regex::new(&format!(r"\b{}: ([^;]+)", regex::escape(name))).unwrap();
+
+    for doc_str in doc_from_attrs(attrs) {
+        if let Some(expr_str) = re.captures(&doc_str.value()) {
+            let expr_str = expr_str.get(1).unwrap().as_str();
+            let expr_str = LitStr::new(expr_str, doc_str.span());
+            return Some(expr_str);
+        }
+    }
+
+    None
+}
+
 /// Derives a default instance from the documentation.
-fn derive_doc_default(s: synstructure::Structure) -> proc_macro2::TokenStream {
+fn derive_doc_default(s: synstructure::Structure) -> TokenStream {
     let variant = match s.variants() {
         [variant] => variant,
         _ => panic!("DocDefault requires a struct"),
     };
 
-    let default_re = regex::Regex::new(r"\(Default: (.*)\)").unwrap();
-
     let body = variant.construct(|field, _| {
-        let mut default_value: Expr = parse_quote!(Default::default());
-        for attr in field.attrs.iter() {
-            if let Ok(Meta::NameValue(MetaNameValue {
-                ident,
-                lit: Lit::Str(doc_str),
-                ..
-            })) = attr.parse_meta()
-            {
-                if ident != "doc" {
-                    continue;
-                }
-                if let Some(default_str) = default_re.captures(&doc_str.value()) {
-                    let default_str = default_str.get(1).unwrap().as_str();
-                    let default_str = LitStr::new(default_str, doc_str.span());
-                    default_value = default_str
-                        .parse()
-                        .expect("error parsing default expression");
-                }
-            }
-        }
-        default_value
+        get_doc_field("Default", &field.attrs)
+            .map(|expr_str| {
+                expr_str
+                    .parse::<Expr>()
+                    .expect("error parsing default expression")
+            })
+            .unwrap_or(parse_quote!(Default::default()))
     });
 
     s.gen_impl(quote! {
@@ -45,3 +68,97 @@ fn derive_doc_default(s: synstructure::Structure) -> proc_macro2::TokenStream {
 }
 
 decl_derive!([DocDefault] => derive_doc_default);
+
+/// Derives an update struct and method for a config struct.
+fn derive_config_update(s: synstructure::Structure) -> TokenStream {
+    let variant = match s.variants() {
+        [variant] => variant,
+        _ => panic!("ConfigUpdate requires a struct"),
+    };
+
+    let fields = match variant.ast().fields {
+        Fields::Named(fields_named) => &fields_named.named,
+        _ => panic!("ConfigUpdate requires named fields"),
+    };
+
+    assert!(
+        s.referenced_ty_params().is_empty(),
+        "ConfigUpdate doesn't support type parameters"
+    );
+
+    let ident = &s.ast().ident;
+    let update_struct_ident = Ident::new(&format!("{}Update", ident), ident.span());
+
+    let vis = &s.ast().vis;
+
+    let update_struct_body = fields
+        .iter()
+        .map(|field| {
+            let ty = &field.ty;
+            let mut field = field.clone();
+            field.ty = parse_quote!(Option<#ty>);
+            field
+        })
+        .collect::<Punctuated<_, Token![,]>>();
+
+    let check_ranges = fields
+        .iter()
+        .map(|field| {
+            if let Some(range) = get_doc_field("Range", &field.attrs) {
+                // TODO use toml instead of fmt::Debug for errors?
+                let ident = &field.ident;
+                let error_msg = format!(
+                    "{} must be in range {} but was set to {{:?}}",
+                    quote!(#ident),
+                    range.value()
+                );
+                let range = range
+                    .parse::<Expr>()
+                    .expect("error parsing range expression");
+                quote! {
+                    if let Some(value) = &self.#ident {
+                        failure::ensure!((#range).contains(value), #error_msg, value);
+                    }
+                }
+            } else {
+                quote!()
+            }
+        })
+        .collect::<TokenStream>();
+
+    let apply_updates = fields
+        .iter()
+        .map(|field| {
+            let ident = &field.ident;
+            quote! {
+                if let Some(value) = &self.#ident {
+                    config.#ident = value.clone();
+                }
+            }
+        })
+        .collect::<TokenStream>();
+
+    let doc = format!("Updates configuration values of [`{}`].", ident);
+
+    quote! {
+        #[doc = #doc]
+        #[derive(serde::Serialize, serde::Deserialize)]
+        #[serde(deny_unknown_fields)]
+        #vis struct #update_struct_ident {
+            #update_struct_body
+        }
+
+        impl #update_struct_ident {
+            /// Apply the configuration update.
+            ///
+            /// If an error occurs, the configuration is not changed.
+            pub fn apply(&self, config: &mut #ident) -> Result<(), failure::Error> {
+                #check_ranges
+                #apply_updates
+                Ok(())
+            }
+        }
+    }
+}
+
+decl_derive!([ConfigUpdate] => derive_config_update);
