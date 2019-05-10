@@ -18,7 +18,7 @@ itoa = "0.4.4"
 log = "0.4.6"
 ordered-float = "1.0.2"
 partial_ref = "0.3.1"
-serde = { version = "1.0.90", features = ["derive"] }
+serde = { version = "1.0.91", features = ["derive"] }
 leb128 = "0.2.3"
 hashbrown = "0.3.0"
 smallvec = "0.6.9"
