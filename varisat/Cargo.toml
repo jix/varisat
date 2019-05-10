@@ -22,6 +22,7 @@ serde = { version = "1.0.91", features = ["derive"] }
 leb128 = "0.2.3"
 hashbrown = "0.3.0"
 smallvec = "0.6.9"
+varisat-macros = { path = "../varisat-macros", version = "=0.2.0" }
 
 [dev-dependencies]
 proptest = "0.9.3"

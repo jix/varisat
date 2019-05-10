@@ -4,6 +4,7 @@ set -eu
 PACKAGES=(
     varisat
     varisat-cli
+    varisat-macros
 )
 
 VER=$(sed -ne 's/^version = "\(.*\)".*/\1/;T;p;q' varisat/Cargo.toml)

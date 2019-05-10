@@ -12,6 +12,7 @@
 pub mod lit;
 pub mod checker;
 pub mod cnf;
+pub mod config;
 pub mod dimacs;
 pub mod solver;
 

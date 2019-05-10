@@ -2,6 +2,7 @@
 members = [
     "varisat",
     "varisat-cli",
+    "varisat-macros",
 ]
 
 [profile.dev]
