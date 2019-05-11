@@ -1,15 +1,15 @@
 use std::env;
 use std::fs;
-use std::io;
-use std::io::Write;
+use std::io::{self, Read, Write};
 
-use clap::{App, AppSettings, Arg};
+use clap::{values_t, App, AppSettings, Arg};
 use env_logger::{fmt, Builder, Target};
 use failure::Error;
 use log::{error, info};
 use log::{Level, LevelFilter, Record};
 
 use varisat::checker::WriteLrat;
+use varisat::config::SolverConfigUpdate;
 use varisat::solver::{ProofFormat, Solver};
 
 mod check;
@@ -63,6 +63,14 @@ fn main_with_err() -> Result<i32, Error> {
         .setting(AppSettings::ArgsNegateSubcommands)
         .setting(AppSettings::VersionlessSubcommands)
         .arg_from_usage("[INPUT] 'The input file to use (stdin if omitted)'")
+        .arg_from_usage("[config-file] --config=[FILE] 'Read parameters from configuration file")
+        .arg(
+            Arg::from_usage(
+                "[config-option] -C --config-option=[OPTION] 'Specify a single config option'",
+            )
+            .multiple(true)
+            .number_of_values(1),
+        )
         .arg_from_usage("[proof-file] --proof=[FILE] 'Write a proof to the specified file'")
         .arg(
             Arg::from_usage(
@@ -85,9 +93,24 @@ fn main_with_err() -> Result<i32, Error> {
     init_logging();
     banner();
 
+    let mut config_update = SolverConfigUpdate::new();
+
+    if let Some(config_path) = matches.value_of("config-file") {
+        let mut config_contents = String::new();
+        fs::File::open(config_path)?.read_to_string(&mut config_contents)?;
+
+        config_update.merge(toml::from_str(&config_contents)?);
+    }
+
+    for config_option in values_t!(matches, "config-option", String).unwrap_or(vec![]) {
+        config_update.merge(toml::from_str(&config_option)?);
+    }
+
     let mut lrat_processor;
 
     let mut solver = Solver::new();
+
+    solver.config(&config_update)?;
 
     let stdin = io::stdin();
 

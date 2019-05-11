@@ -18,6 +18,7 @@ clap = { version = "2.33.0", features = ["wrap_help"] }
 env_logger = "0.6.1"
 failure = "0.1.5"
 log = "0.4.6"
+toml = "0.5.0"
 
 [[bin]]
 name = "varisat"

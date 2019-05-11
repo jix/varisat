@@ -138,17 +138,34 @@ fn derive_config_update(s: synstructure::Structure) -> TokenStream {
         })
         .collect::<TokenStream>();
 
+    let merge_updates = fields
+        .iter()
+        .map(|field| {
+            let ident = &field.ident;
+            quote! {
+                if let Some(value) = config_update.#ident {
+                    self.#ident = Some(value);
+                }
+            }
+        })
+        .collect::<TokenStream>();
+
     let doc = format!("Updates configuration values of [`{}`].", ident);
 
     quote! {
         #[doc = #doc]
-        #[derive(serde::Serialize, serde::Deserialize)]
+        #[derive(Default, serde::Serialize, serde::Deserialize)]
         #[serde(deny_unknown_fields)]
         #vis struct #update_struct_ident {
             #update_struct_body
         }
 
         impl #update_struct_ident {
+            /// Create an empty config update.
+            pub fn new() -> #update_struct_ident {
+                #update_struct_ident::default()
+            }
+
             /// Apply the configuration update.
             ///
             /// If an error occurs, the configuration is not changed.
@@ -156,6 +173,13 @@ fn derive_config_update(s: synstructure::Structure) -> TokenStream {
                 #check_ranges
                 #apply_updates
                 Ok(())
+            }
+
+            /// Merge two configuration updates.
+            ///
+            /// Add the given update, overwriting values of the receiving update.
+            pub fn merge(&mut self, config_update: #update_struct_ident) {
+                #merge_updates
             }
         }
     }
