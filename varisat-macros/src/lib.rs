@@ -30,7 +30,7 @@ fn doc_from_attrs(attrs: &[Attribute]) -> Vec<LitStr> {
 
 /// Find a field inside the doc comment
 fn get_doc_field(name: &str, attrs: &[Attribute]) -> Option<LitStr> {
-    let re = regex::Regex::new(&format!(r"\b{}: ([^;]+)", regex::escape(name))).unwrap();
+    let re = regex::Regex::new(&format!(r"\[{}: (.+?)\](  |$)", regex::escape(name))).unwrap();
 
     for doc_str in doc_from_attrs(attrs) {
         if let Some(expr_str) = re.captures(&doc_str.value()) {
@@ -51,7 +51,7 @@ fn derive_doc_default(s: synstructure::Structure) -> TokenStream {
     };
 
     let body = variant.construct(|field, _| {
-        get_doc_field("Default", &field.attrs)
+        get_doc_field("default", &field.attrs)
             .map(|expr_str| {
                 expr_str
                     .parse::<TokenStream>()
@@ -106,7 +106,7 @@ fn derive_config_update(s: synstructure::Structure) -> TokenStream {
     let check_ranges = fields
         .iter()
         .map(|field| {
-            if let Some(range) = get_doc_field("Range", &field.attrs) {
+            if let Some(range) = get_doc_field("range", &field.attrs) {
                 // TODO use toml instead of fmt::Debug for errors?
                 let ident = &field.ident;
                 let error_msg = format!(
