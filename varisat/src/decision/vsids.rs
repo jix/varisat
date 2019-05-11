@@ -14,6 +14,7 @@
 
 use ordered_float::OrderedFloat;
 
+use crate::config::SolverConfig;
 use crate::lit::Var;
 
 /// The VSIDS branching heuristic.
@@ -43,7 +44,7 @@ impl Default for Vsids {
             heap: vec![],
             position: vec![],
             bump: 1.0,
-            inv_decay: 1.0 / 0.95,
+            inv_decay: 1.0 / SolverConfig::default().vsids_decay,
         }
     }
 }

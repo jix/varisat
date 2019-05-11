@@ -1,6 +1,7 @@
 //! Clause activity.
 use partial_ref::{partial, PartialRef};
 
+use crate::config::SolverConfig;
 use crate::context::{ClauseActivityP, ClauseAllocP, ClauseDbP, Context};
 
 use super::ClauseRef;
@@ -20,7 +21,7 @@ impl Default for ClauseActivity {
     fn default() -> ClauseActivity {
         ClauseActivity {
             bump: 1.0,
-            inv_decay: 1.0 / 0.999,
+            inv_decay: 1.0 / SolverConfig::default().clause_activity_decay,
         }
     }
 }
