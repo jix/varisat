@@ -16,6 +16,8 @@ for line in output.split('\n'):
     executable = line.get('executable')
     if executable is None:
         continue
+    if 'proc-macro' in line['target'].get('kind', []):
+        continue
     package_name = line['package_id'].split()[0]
     executable_name = line['target']['name']
     if line['profile']['test']:

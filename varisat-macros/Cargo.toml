@@ -1,0 +1,20 @@
+[package]
+name = "varisat-macros"
+description = "internal macros for varisat"
+homepage = "https://jix.one/project/varisat/"
+repository = "https://github.com/jix/varisat"
+version = "0.2.0"
+authors = ["Jannis Harder <me@jix.one>"]
+license = "MIT/Apache-2.0"
+readme = "README.md"
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+synstructure = "0.10.1"
+proc-macro2 = "0.4.30"
+syn = "0.15.34"
+quote = "0.6.12"
+regex = "1.1.6"

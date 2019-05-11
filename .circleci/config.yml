@@ -142,7 +142,7 @@ jobs:
 
               cargo login $CARGO_TOKEN
 
-              for PKG in varisat varisat-cli; do
+              for PKG in varisat-macros varisat varisat-cli; do
                 cd $PKG
                 cargo package || { echo retrying && sleep 5 && cargo package; }
                 cargo publish
