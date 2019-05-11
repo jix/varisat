@@ -231,16 +231,6 @@ impl<'a> Solver<'a> {
         );
         self.ctx.proof.add_processor(processor);
     }
-
-    /// Enables a test schedule that triggers steps early
-    #[cfg(test)]
-    fn enable_test_schedule(&mut self) {
-        use crate::context::ScheduleP;
-        self.ctx
-            .into_partial_ref_mut()
-            .part_mut(ScheduleP)
-            .test_schedule = true;
-    }
 }
 
 #[cfg(test)]
@@ -255,6 +245,14 @@ mod tests {
     use crate::lit::Var;
 
     use crate::test::{conditional_pigeon_hole, sat_formula, sgen_unsat_formula};
+
+    fn enable_test_schedule(solver: &mut Solver) {
+        let mut config = SolverConfigUpdate::new();
+        config.reduce_locals_interval = Some(150);
+        config.reduce_mids_interval = Some(100);
+
+        solver.config(&config).unwrap();
+    }
 
     #[test]
     #[should_panic(expected = "solve() called after encountering an unrecoverable error")]
@@ -368,7 +366,7 @@ mod tests {
             solver.add_formula(&formula);
 
             if test_schedule {
-                solver.enable_test_schedule();
+                enable_test_schedule(&mut solver);
             }
 
             prop_assert_eq!(solver.solve().ok(), Some(false));
@@ -386,7 +384,7 @@ mod tests {
             solver.add_formula(&formula);
 
             if test_schedule {
-                solver.enable_test_schedule();
+                enable_test_schedule(&mut solver);
             }
 
             prop_assert_eq!(solver.solve().ok(), Some(false));
@@ -402,7 +400,7 @@ mod tests {
             solver.add_formula(&formula);
 
             if test_schedule {
-                solver.enable_test_schedule();
+                enable_test_schedule(&mut solver);
             }
 
             prop_assert_eq!(solver.solve().ok(), Some(true));

@@ -27,8 +27,6 @@ pub struct Schedule {
     next_restart: u64,
     restarts: u64,
     luby: LubySequence,
-    #[cfg(test)]
-    pub test_schedule: bool,
 }
 
 /// Perform one step of the schedule.
@@ -88,17 +86,6 @@ pub fn schedule_step<'a>(
         }
         if schedule.conflicts % config.reduce_mids_interval == 0 {
             reduce_mids(ctx.borrow());
-        }
-
-        #[cfg(test)]
-        {
-            if schedule.test_schedule {
-                if schedule.conflicts == 100 {
-                    reduce_mids(ctx.borrow());
-                } else if schedule.conflicts == 150 {
-                    reduce_locals(ctx.borrow());
-                }
-            }
         }
 
         collect_garbage(ctx.borrow());
