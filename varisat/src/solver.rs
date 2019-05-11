@@ -7,7 +7,8 @@ use failure::{Error, Fail};
 
 use crate::checker::ProofProcessor;
 use crate::cnf::CnfFormula;
-use crate::context::{ensure_var_count, AssignmentP, Context, SolverStateP};
+use crate::config::SolverConfigUpdate;
+use crate::context::{config_changed, ensure_var_count, AssignmentP, Context, SolverStateP};
 use crate::dimacs::DimacsParser;
 use crate::incremental::set_assumptions;
 use crate::lit::Lit;
@@ -58,6 +59,14 @@ impl<'a> Solver<'a> {
     /// Create a new solver.
     pub fn new() -> Solver<'a> {
         Solver::default()
+    }
+
+    /// Change the solver configuration.
+    pub fn config(&mut self, config_update: &SolverConfigUpdate) -> Result<(), Error> {
+        config_update.apply(&mut self.ctx.solver_config)?;
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        config_changed(ctx.borrow(), config_update);
+        Ok(())
     }
 
     /// Add a formula to the solver.

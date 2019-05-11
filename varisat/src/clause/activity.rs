@@ -25,6 +25,15 @@ impl Default for ClauseActivity {
     }
 }
 
+impl ClauseActivity {
+    /// Change the decay factor.
+    pub fn set_decay(&mut self, decay: f32) {
+        assert!(decay < 1.0);
+        assert!(decay > 1.0 / 16.0);
+        self.inv_decay = 1.0 / decay;
+    }
+}
+
 /// Rescale activities if any value exceeds this value.
 fn rescale_limit() -> f32 {
     std::f32::MAX / 16.0

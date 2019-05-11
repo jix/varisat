@@ -10,8 +10,8 @@ use crate::clause::reduce::{reduce_locals, reduce_mids};
 use crate::clause::{collect_garbage, Tier};
 use crate::context::{
     AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseActivityP, ClauseAllocP, ClauseDbP,
-    Context, ImplGraphP, IncrementalP, ProofP, ScheduleP, SolverStateP, TmpDataP, TrailP, VsidsP,
-    WatchlistsP,
+    Context, ImplGraphP, IncrementalP, ProofP, ScheduleP, SolverConfigP, SolverStateP, TmpDataP,
+    TrailP, VsidsP, WatchlistsP,
 };
 use crate::prop::restart;
 use crate::state::SatState;
@@ -50,9 +50,11 @@ pub fn schedule_step<'a>(
         mut TrailP,
         mut VsidsP,
         mut WatchlistsP,
+        SolverConfigP
     ),
 ) -> bool {
     let (schedule, mut ctx) = ctx.split_part_mut(ScheduleP);
+    let (config, mut ctx) = ctx.split_part(SolverConfigP);
 
     if ctx.part(SolverStateP).sat_state != SatState::Unknown {
         false
@@ -78,13 +80,13 @@ pub fn schedule_step<'a>(
         if schedule.next_restart == schedule.conflicts {
             restart(ctx.borrow());
             schedule.restarts += 1;
-            schedule.next_restart += 128 * schedule.luby.advance();
+            schedule.next_restart += config.luby_restart_interval_scale * schedule.luby.advance();
         }
 
-        if schedule.conflicts % 15000 == 0 {
+        if schedule.conflicts % config.reduce_locals_interval == 0 {
             reduce_locals(ctx.borrow());
         }
-        if schedule.conflicts % 10000 == 0 {
+        if schedule.conflicts % config.reduce_mids_interval == 0 {
             reduce_mids(ctx.borrow());
         }
 

@@ -1,9 +1,14 @@
 //! Central solver data structure.
+//!
+//! This module defines the `Context` data structure which holds all data used by the solver. It
+//! also contains global notification functions that likely need to be extended when new parts are
+//! added to the solver.
 use partial_ref::{part, partial, PartialRef, PartialRefTarget};
 
 use crate::analyze_conflict::AnalyzeConflict;
 use crate::binary::BinaryClauses;
 use crate::clause::{ClauseActivity, ClauseAlloc, ClauseDb};
+use crate::config::{SolverConfig, SolverConfigUpdate};
 use crate::decision::vsids::Vsids;
 use crate::incremental::Incremental;
 use crate::proof::Proof;
@@ -26,6 +31,7 @@ mod parts {
     part!(pub IncrementalP: Incremental);
     part!(pub ProofP<'a>: Proof<'a>);
     part!(pub ScheduleP: Schedule);
+    part!(pub SolverConfigP: SolverConfig);
     part!(pub SolverStateP: SolverState);
     part!(pub TmpDataP: TmpData);
     part!(pub TrailP: Trail);
@@ -63,6 +69,8 @@ pub struct Context<'a> {
     pub proof: Proof<'a>,
     #[part(ScheduleP)]
     pub schedule: Schedule,
+    #[part(SolverConfigP)]
+    pub solver_config: SolverConfig,
     #[part(SolverStateP)]
     pub solver_state: SolverState,
     #[part(TmpDataP)]
@@ -115,4 +123,15 @@ pub fn ensure_var_count(
     if count > ctx.part_mut(AssignmentP).assignment().len() {
         set_var_count(ctx.borrow(), count)
     }
+}
+
+/// The solver configuration has changed.
+pub fn config_changed(
+    mut ctx: partial!(Context, mut VsidsP, mut ClauseActivityP, SolverConfigP),
+    _update: &SolverConfigUpdate,
+) {
+    let (config, mut ctx) = ctx.split_part(SolverConfigP);
+    ctx.part_mut(VsidsP).set_decay(config.vsids_decay);
+    ctx.part_mut(ClauseActivityP)
+        .set_decay(config.clause_activity_decay);
 }
