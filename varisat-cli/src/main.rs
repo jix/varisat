@@ -9,7 +9,7 @@ use log::{error, info};
 use log::{Level, LevelFilter, Record};
 
 use varisat::checker::WriteLrat;
-use varisat::config::SolverConfigUpdate;
+use varisat::config::{SolverConfig, SolverConfigUpdate};
 use varisat::solver::{ProofFormat, Solver};
 
 mod check;
@@ -63,13 +63,15 @@ fn main_with_err() -> Result<i32, Error> {
         .setting(AppSettings::ArgsNegateSubcommands)
         .setting(AppSettings::VersionlessSubcommands)
         .arg_from_usage("[INPUT] 'The input file to use (stdin if omitted)'")
-        .arg_from_usage("[config-file] --config=[FILE] 'Read parameters from configuration file")
+        .arg_from_usage("[config-file] --config=[FILE] 'Read parameters from configuration file'")
         .arg(
-            Arg::from_usage(
-                "[config-option] -C --config-option=[OPTION] 'Specify a single config option'",
-            )
-            .multiple(true)
-            .number_of_values(1),
+            Arg::from_usage("[config-option] -C --config-option")
+                .value_name("OPTION>=<VALUE")
+                .help(
+                    "Specify a single config option, see 'varisat -C help' for a list of options.",
+                )
+                .multiple(true)
+                .number_of_values(1),
         )
         .arg_from_usage("[proof-file] --proof=[FILE] 'Write a proof to the specified file'")
         .arg(
@@ -88,6 +90,15 @@ fn main_with_err() -> Result<i32, Error> {
 
     if let Some(matches) = matches.subcommand_matches("--check") {
         return check::check_main(matches);
+    }
+
+    if values_t!(matches, "config-option", String)
+        .unwrap_or(vec![])
+        .iter()
+        .any(|option| option == "help")
+    {
+        print!("{}", SolverConfig::help());
+        return Ok(0);
     }
 
     init_logging();

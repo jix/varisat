@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
@@ -150,6 +152,21 @@ fn derive_config_update(s: synstructure::Structure) -> TokenStream {
         })
         .collect::<TokenStream>();
 
+    let mut help_str = String::new();
+
+    for field in fields.iter() {
+        let ident = &field.ident;
+        writeln!(&mut help_str, "{}:", quote!(#ident)).unwrap();
+        for line in doc_from_attrs(&field.attrs).iter() {
+            if line.value().is_empty() {
+                writeln!(&mut help_str, "").unwrap();
+            } else {
+                writeln!(&mut help_str, "   {}", line.value()).unwrap();
+            }
+        }
+        writeln!(&mut help_str, "").unwrap();
+    }
+
     let doc = format!("Updates configuration values of [`{}`].", ident);
 
     quote! {
@@ -158,6 +175,13 @@ fn derive_config_update(s: synstructure::Structure) -> TokenStream {
         #[serde(deny_unknown_fields)]
         #vis struct #update_struct_ident {
             #update_struct_body
+        }
+
+        impl #ident {
+            /// Return a string describing all supported configuration options.
+            pub fn help() -> &'static str {
+                #help_str
+            }
         }
 
         impl #update_struct_ident {
