@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
-    parse_quote, punctuated::Punctuated, Attribute, Expr, Fields, Ident, Lit, LitStr, Meta,
+    parse_quote, punctuated::Punctuated, Attribute, Fields, Ident, Lit, LitStr, Meta,
     MetaNameValue, Token,
 };
 use synstructure::decl_derive;
@@ -52,7 +52,7 @@ fn derive_doc_default(s: synstructure::Structure) -> TokenStream {
         get_doc_field("Default", &field.attrs)
             .map(|expr_str| {
                 expr_str
-                    .parse::<Expr>()
+                    .parse::<TokenStream>()
                     .expect("error parsing default expression")
             })
             .unwrap_or(parse_quote!(Default::default()))
@@ -113,7 +113,7 @@ fn derive_config_update(s: synstructure::Structure) -> TokenStream {
                     range.value()
                 );
                 let range = range
-                    .parse::<Expr>()
+                    .parse::<TokenStream>()
                     .expect("error parsing range expression");
                 quote! {
                     if let Some(value) = &self.#ident {
