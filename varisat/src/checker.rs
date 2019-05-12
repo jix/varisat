@@ -1,6 +1,8 @@
 //! Check unsatisfiability proofs.
 
+use std::convert::TryInto;
 use std::io;
+use std::mem::{replace, transmute};
 use std::ops::Range;
 
 use failure::{Error, Fail};
@@ -91,11 +93,67 @@ pub trait ProofProcessor {
     fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error>;
 }
 
-/// Avoid indirection for small clauses.
-type LitVec = SmallVec<[Lit; 4]>;
+const INLINE_LITS: usize = 3;
+
+/// Literals of a clause, either inline or an index into a buffer
+struct ClauseLits {
+    length: LitIdx,
+    inline: [LitIdx; INLINE_LITS],
+}
+
+impl ClauseLits {
+    /// Create a new ClauseLits, storing them in the given buffer if necessary
+    fn new(lits: &[Lit], buffer: &mut Vec<Lit>) -> ClauseLits {
+        let mut inline = [0; INLINE_LITS];
+        let length = lits.len();
+
+        if length > INLINE_LITS {
+            inline[0] = buffer
+                .len()
+                .try_into()
+                .expect("exceeded maximal literal buffer size");
+            buffer.extend(lits);
+        } else {
+            let lits = unsafe {
+                // Lit is a repr(transparent) wrapper of LitIdx
+                transmute::<&[Lit], &[LitIdx]>(lits)
+            };
+            inline[..length].copy_from_slice(lits);
+        }
+
+        ClauseLits {
+            length: length as LitIdx,
+            inline,
+        }
+    }
+
+    /// Returns the literals as a slice given a storage buffer
+    fn slice<'a, 'b, 'c>(&'a self, buffer: &'b [Lit]) -> &'c [Lit]
+    where
+        'a: 'c,
+        'b: 'c,
+    {
+        if self.length > INLINE_LITS as LitIdx {
+            &buffer[self.inline[0] as usize..][..self.length as usize]
+        } else {
+            unsafe {
+                // Lit is a repr(transparent) wrapper of LitIdx
+                transmute::<&[LitIdx], &[Lit]>(&self.inline[..self.length as usize])
+            }
+        }
+    }
+
+    /// Literals stored in the literal buffer
+    fn buffer_used(&self) -> usize {
+        if self.length > INLINE_LITS as LitIdx {
+            self.length as usize
+        } else {
+            0
+        }
+    }
+}
 
 /// Literals and metadata for non-unit clauses.
-#[derive(Debug)]
 struct Clause {
     /// LRAT clause id.
     id: u64,
@@ -105,7 +163,7 @@ struct Clause {
     /// solver might not check for duplicated clauses.
     ref_count: u32,
     /// Clause's literals.
-    lits: LitVec,
+    lits: ClauseLits,
 }
 
 /// Identifies the origin of a unit clause.
@@ -137,6 +195,10 @@ pub struct Checker<'a> {
     step: u64,
     /// Next clause id to use.
     next_clause_id: u64,
+    /// Literal storage for clauses,
+    literal_buffer: Vec<Lit>,
+    /// Number of literals in the buffer which are from deleted clauses.
+    garbage_size: usize,
     /// Stores all known non-unit clauses indexed by their hash.
     clauses: HashMap<ClauseHash, SmallVec<[Clause; 1]>>,
     /// Stores known unit clauses and propagations during a clause check.
@@ -183,14 +245,16 @@ impl<'a> Checker<'a> {
             return Ok(());
         }
 
-        let mut lits = LitVec::from_slice(clause);
-        lits.sort_unstable();
-        lits.dedup();
+        let mut tmp = replace(&mut self.tmp, vec![]);
+        tmp.clear();
+        tmp.extend_from_slice(&clause);
 
-        self.tmp.clear();
-        self.tmp.extend_from_slice(&lits);
+        tmp.sort_unstable();
+        tmp.dedup();
 
-        let (id, added) = self.store_clause(lits);
+        let (id, added) = self.store_clause(&tmp);
+
+        self.tmp = tmp;
 
         if added {
             Self::process_step(
@@ -248,7 +312,7 @@ impl<'a> Checker<'a> {
     ///
     /// Returns the id of the added clause and a boolean that is true if the clause wasn't already
     /// present.
-    fn store_clause(&mut self, lits: LitVec) -> (u64, bool) {
+    fn store_clause(&mut self, lits: &[Lit]) -> (u64, bool) {
         match lits[..] {
             [] => {
                 let id = self.next_clause_id;
@@ -264,7 +328,7 @@ impl<'a> Checker<'a> {
                 let candidates = self.clauses.entry(hash).or_default();
 
                 for candidate in candidates.iter_mut() {
-                    if candidate.lits == lits {
+                    if candidate.lits.slice(&self.literal_buffer) == &lits[..] {
                         candidate.ref_count = candidate
                             .ref_count
                             .checked_add(1)
@@ -278,7 +342,7 @@ impl<'a> Checker<'a> {
                 candidates.push(Clause {
                     id,
                     ref_count: 1,
-                    lits,
+                    lits: ClauseLits::new(&lits, &mut self.literal_buffer),
                 });
 
                 self.next_clause_id += 1;
@@ -354,11 +418,15 @@ impl<'a> Checker<'a> {
 
         let mut result = None;
 
+        let literal_buffer = &self.literal_buffer;
+        let garbage_size = &mut self.garbage_size;
+
         candidates.retain(|candidate| {
-            if deleted || &candidate.lits[..] != lits {
+            if deleted || candidate.lits.slice(literal_buffer) != lits {
                 true
             } else {
                 deleted = true;
+                *garbage_size += candidate.lits.buffer_used();
                 candidate.ref_count -= 1;
                 if candidate.ref_count == 0 {
                     result = Some(candidate.id);
@@ -378,9 +446,33 @@ impl<'a> Checker<'a> {
                 step: self.step,
                 clause: lits.to_owned(),
             });
-        } else {
-            Ok(result)
         }
+
+        self.collect_garbage();
+
+        Ok(result)
+    }
+
+    /// Perform a garbage collection if required
+    fn collect_garbage(&mut self) {
+        if self.garbage_size * 2 <= self.literal_buffer.len() {
+            return;
+        }
+
+        let mut new_buffer = vec![];
+
+        new_buffer.reserve(self.literal_buffer.len());
+
+        for (_, candidates) in self.clauses.iter_mut() {
+            for clause in candidates.iter_mut() {
+                let new_lits =
+                    ClauseLits::new(clause.lits.slice(&self.literal_buffer), &mut new_buffer);
+                clause.lits = new_lits;
+            }
+        }
+
+        self.literal_buffer = new_buffer;
+        self.garbage_size = 0;
     }
 
     /// Check whether a clause is implied by clauses of the given hashes.
@@ -430,7 +522,7 @@ impl<'a> Checker<'a> {
 
                 let range_begin = self.trace_edges.len();
 
-                for &lit in clause.lits.iter() {
+                for &lit in clause.lits.slice(&self.literal_buffer).iter() {
                     match self.lit_value(lit) {
                         Some((true, _)) => {
                             continue 'candidates;
@@ -535,42 +627,49 @@ impl<'a> Checker<'a> {
                 clause,
                 propagation_hashes,
             } => {
-                let mut clause = LitVec::from_vec(clause.into_owned());
-                clause.sort_unstable();
-                clause.dedup();
+                let mut tmp = replace(&mut self.tmp, vec![]);
+                tmp.clear();
+                tmp.extend_from_slice(&clause);
 
-                self.check_clause_with_hashes(&clause, &*propagation_hashes)?;
+                tmp.sort_unstable();
+                tmp.dedup();
 
-                self.tmp.clear();
-                self.tmp.extend_from_slice(&clause[..]);
+                self.check_clause_with_hashes(&tmp, &*propagation_hashes)?;
 
-                let (id, added) = self.store_clause(clause);
+                let (id, added) = self.store_clause(&tmp);
 
                 if added {
                     Self::process_step(
                         &mut self.processors,
                         &CheckedProofStep::AtClause {
                             id: id,
-                            clause: &self.tmp,
+                            clause: &tmp,
                             propagations: &self.trace_ids,
                         },
                     )?;
                 }
+
+                self.tmp = tmp;
             }
             ProofStep::DeleteClause(clause) => {
-                let mut clause = clause.into_owned();
-                clause.sort_unstable();
-                clause.dedup();
+                let mut tmp = replace(&mut self.tmp, vec![]);
+                tmp.clear();
+                tmp.extend_from_slice(&clause);
 
-                if let Some(id) = self.delete_clause(&clause)? {
+                tmp.sort_unstable();
+                tmp.dedup();
+
+                if let Some(id) = self.delete_clause(&tmp)? {
                     Self::process_step(
                         &mut self.processors,
                         &CheckedProofStep::DeleteClause {
                             id: id,
-                            clause: &clause,
+                            clause: &tmp,
                         },
                     )?;
                 }
+
+                self.tmp = tmp;
             }
             ProofStep::UnitClauses(units) => {
                 for &(lit, hash) in units.iter() {
