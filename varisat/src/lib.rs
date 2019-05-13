@@ -31,6 +31,7 @@ mod schedule;
 mod simplify;
 mod state;
 mod tmp;
+mod vli_enc;
 
 mod vec_mut_scan;
 

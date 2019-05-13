@@ -1,6 +1,8 @@
 //! Check unsatisfiability proofs.
 
+use std::convert::TryInto;
 use std::io;
+use std::mem::{replace, transmute};
 use std::ops::Range;
 
 use failure::{Error, Fail};
@@ -10,7 +12,7 @@ use smallvec::SmallVec;
 use crate::cnf::CnfFormula;
 use crate::dimacs::DimacsParser;
 use crate::lit::{Lit, LitIdx};
-use crate::proof::{clause_hash, ClauseHash, ProofStep};
+use crate::proof::{clause_hash, varisat::Parser, ClauseHash, ProofStep};
 
 mod write_lrat;
 
@@ -24,6 +26,12 @@ pub enum CheckerError {
         step
     )]
     ProofIncomplete { step: u64 },
+    #[fail(display = "step {}: Error reading proof file: {}", step, cause)]
+    IoError {
+        step: u64,
+        #[cause]
+        cause: io::Error,
+    },
     #[fail(display = "step {}: Could not parse proof step: {}", step, cause)]
     PraseError {
         step: u64,
@@ -91,11 +99,67 @@ pub trait ProofProcessor {
     fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error>;
 }
 
-/// Avoid indirection for small clauses.
-type LitVec = SmallVec<[Lit; 4]>;
+const INLINE_LITS: usize = 3;
+
+/// Literals of a clause, either inline or an index into a buffer
+struct ClauseLits {
+    length: LitIdx,
+    inline: [LitIdx; INLINE_LITS],
+}
+
+impl ClauseLits {
+    /// Create a new ClauseLits, storing them in the given buffer if necessary
+    fn new(lits: &[Lit], buffer: &mut Vec<Lit>) -> ClauseLits {
+        let mut inline = [0; INLINE_LITS];
+        let length = lits.len();
+
+        if length > INLINE_LITS {
+            inline[0] = buffer
+                .len()
+                .try_into()
+                .expect("exceeded maximal literal buffer size");
+            buffer.extend(lits);
+        } else {
+            let lits = unsafe {
+                // Lit is a repr(transparent) wrapper of LitIdx
+                transmute::<&[Lit], &[LitIdx]>(lits)
+            };
+            inline[..length].copy_from_slice(lits);
+        }
+
+        ClauseLits {
+            length: length as LitIdx,
+            inline,
+        }
+    }
+
+    /// Returns the literals as a slice given a storage buffer
+    fn slice<'a, 'b, 'c>(&'a self, buffer: &'b [Lit]) -> &'c [Lit]
+    where
+        'a: 'c,
+        'b: 'c,
+    {
+        if self.length > INLINE_LITS as LitIdx {
+            &buffer[self.inline[0] as usize..][..self.length as usize]
+        } else {
+            unsafe {
+                // Lit is a repr(transparent) wrapper of LitIdx
+                transmute::<&[LitIdx], &[Lit]>(&self.inline[..self.length as usize])
+            }
+        }
+    }
+
+    /// Literals stored in the literal buffer
+    fn buffer_used(&self) -> usize {
+        if self.length > INLINE_LITS as LitIdx {
+            self.length as usize
+        } else {
+            0
+        }
+    }
+}
 
 /// Literals and metadata for non-unit clauses.
-#[derive(Debug)]
 struct Clause {
     /// LRAT clause id.
     id: u64,
@@ -105,7 +169,7 @@ struct Clause {
     /// solver might not check for duplicated clauses.
     ref_count: u32,
     /// Clause's literals.
-    lits: LitVec,
+    lits: ClauseLits,
 }
 
 /// Identifies the origin of a unit clause.
@@ -131,12 +195,15 @@ struct TraceItem {
 }
 
 /// A checker for unsatisfiability proofs in the native varisat format.
-#[derive(Default)]
 pub struct Checker<'a> {
     /// Current step number.
     step: u64,
     /// Next clause id to use.
     next_clause_id: u64,
+    /// Literal storage for clauses,
+    literal_buffer: Vec<Lit>,
+    /// Number of literals in the buffer which are from deleted clauses.
+    garbage_size: usize,
     /// Stores all known non-unit clauses indexed by their hash.
     clauses: HashMap<ClauseHash, SmallVec<[Clause; 1]>>,
     /// Stores known unit clauses and propagations during a clause check.
@@ -160,6 +227,30 @@ pub struct Checker<'a> {
     unit_conflict: Option<[u64; 2]>,
     /// Temporary storage for literals.
     tmp: Vec<Lit>,
+    /// How many bits are used for storing clause hashes.
+    hash_bits: u32,
+}
+
+impl<'a> Default for Checker<'a> {
+    fn default() -> Checker<'a> {
+        Checker {
+            step: 0,
+            next_clause_id: 0,
+            literal_buffer: vec![],
+            garbage_size: 0,
+            clauses: Default::default(),
+            unit_clauses: vec![],
+            trail: vec![],
+            unsat: false,
+            trace: vec![],
+            trace_edges: vec![],
+            trace_ids: vec![],
+            processors: vec![],
+            unit_conflict: None,
+            tmp: vec![],
+            hash_bits: 64,
+        }
+    }
 }
 
 impl<'a> Checker<'a> {
@@ -183,14 +274,16 @@ impl<'a> Checker<'a> {
             return Ok(());
         }
 
-        let mut lits = LitVec::from_slice(clause);
-        lits.sort_unstable();
-        lits.dedup();
+        let mut tmp = replace(&mut self.tmp, vec![]);
+        tmp.clear();
+        tmp.extend_from_slice(&clause);
 
-        self.tmp.clear();
-        self.tmp.extend_from_slice(&lits);
+        tmp.sort_unstable();
+        tmp.dedup();
 
-        let (id, added) = self.store_clause(lits);
+        let (id, added) = self.store_clause(&tmp);
+
+        self.tmp = tmp;
 
         if added {
             Self::process_step(
@@ -234,6 +327,12 @@ impl<'a> Checker<'a> {
         Ok(())
     }
 
+    /// Compute a clause hash of the current bit size
+    fn clause_hash(&self, lits: &[Lit]) -> ClauseHash {
+        let shift_bits = ClauseHash::max_value().count_ones() - self.hash_bits;
+        clause_hash(lits) >> shift_bits
+    }
+
     /// Value of a literal if known from unit clauses.
     fn lit_value(&self, lit: Lit) -> Option<(bool, UnitClause)> {
         self.unit_clauses
@@ -248,7 +347,7 @@ impl<'a> Checker<'a> {
     ///
     /// Returns the id of the added clause and a boolean that is true if the clause wasn't already
     /// present.
-    fn store_clause(&mut self, lits: LitVec) -> (u64, bool) {
+    fn store_clause(&mut self, lits: &[Lit]) -> (u64, bool) {
         match lits[..] {
             [] => {
                 let id = self.next_clause_id;
@@ -259,12 +358,12 @@ impl<'a> Checker<'a> {
             }
             [lit] => self.store_unit_clause(lit),
             _ => {
-                let hash = clause_hash(&lits);
+                let hash = self.clause_hash(&lits);
 
                 let candidates = self.clauses.entry(hash).or_default();
 
                 for candidate in candidates.iter_mut() {
-                    if candidate.lits == lits {
+                    if candidate.lits.slice(&self.literal_buffer) == &lits[..] {
                         candidate.ref_count = candidate
                             .ref_count
                             .checked_add(1)
@@ -278,7 +377,7 @@ impl<'a> Checker<'a> {
                 candidates.push(Clause {
                     id,
                     ref_count: 1,
-                    lits,
+                    lits: ClauseLits::new(&lits, &mut self.literal_buffer),
                 });
 
                 self.next_clause_id += 1;
@@ -346,7 +445,7 @@ impl<'a> Checker<'a> {
             });
         }
 
-        let hash = clause_hash(lits);
+        let hash = self.clause_hash(lits);
 
         let candidates = self.clauses.entry(hash).or_default();
 
@@ -354,11 +453,15 @@ impl<'a> Checker<'a> {
 
         let mut result = None;
 
+        let literal_buffer = &self.literal_buffer;
+        let garbage_size = &mut self.garbage_size;
+
         candidates.retain(|candidate| {
-            if deleted || &candidate.lits[..] != lits {
+            if deleted || candidate.lits.slice(literal_buffer) != lits {
                 true
             } else {
                 deleted = true;
+                *garbage_size += candidate.lits.buffer_used();
                 candidate.ref_count -= 1;
                 if candidate.ref_count == 0 {
                     result = Some(candidate.id);
@@ -378,8 +481,45 @@ impl<'a> Checker<'a> {
                 step: self.step,
                 clause: lits.to_owned(),
             });
-        } else {
-            Ok(result)
+        }
+
+        self.collect_garbage();
+
+        Ok(result)
+    }
+
+    /// Perform a garbage collection if required
+    fn collect_garbage(&mut self) {
+        if self.garbage_size * 2 <= self.literal_buffer.len() {
+            return;
+        }
+
+        let mut new_buffer = vec![];
+
+        new_buffer.reserve(self.literal_buffer.len());
+
+        for (_, candidates) in self.clauses.iter_mut() {
+            for clause in candidates.iter_mut() {
+                let new_lits =
+                    ClauseLits::new(clause.lits.slice(&self.literal_buffer), &mut new_buffer);
+                clause.lits = new_lits;
+            }
+        }
+
+        self.literal_buffer = new_buffer;
+        self.garbage_size = 0;
+    }
+
+    /// Recompute all clause hashes
+    fn rehash(&mut self) {
+        let mut old_clauses = replace(&mut self.clauses, Default::default());
+
+        for (_, mut candidates) in old_clauses.drain() {
+            for clause in candidates.drain() {
+                let hash = self.clause_hash(clause.lits.slice(&self.literal_buffer));
+                let candidates = self.clauses.entry(hash).or_default();
+                candidates.push(clause);
+            }
         }
     }
 
@@ -430,7 +570,7 @@ impl<'a> Checker<'a> {
 
                 let range_begin = self.trace_edges.len();
 
-                for &lit in clause.lits.iter() {
+                for &lit in clause.lits.slice(&self.literal_buffer).iter() {
                     match self.lit_value(lit) {
                         Some((true, _)) => {
                             continue 'candidates;
@@ -535,42 +675,49 @@ impl<'a> Checker<'a> {
                 clause,
                 propagation_hashes,
             } => {
-                let mut clause = LitVec::from_vec(clause.into_owned());
-                clause.sort_unstable();
-                clause.dedup();
+                let mut tmp = replace(&mut self.tmp, vec![]);
+                tmp.clear();
+                tmp.extend_from_slice(&clause);
 
-                self.check_clause_with_hashes(&clause, &*propagation_hashes)?;
+                tmp.sort_unstable();
+                tmp.dedup();
 
-                self.tmp.clear();
-                self.tmp.extend_from_slice(&clause[..]);
+                self.check_clause_with_hashes(&tmp, &*propagation_hashes)?;
 
-                let (id, added) = self.store_clause(clause);
+                let (id, added) = self.store_clause(&tmp);
 
                 if added {
                     Self::process_step(
                         &mut self.processors,
                         &CheckedProofStep::AtClause {
                             id: id,
-                            clause: &self.tmp,
+                            clause: &tmp,
                             propagations: &self.trace_ids,
                         },
                     )?;
                 }
+
+                self.tmp = tmp;
             }
             ProofStep::DeleteClause(clause) => {
-                let mut clause = clause.into_owned();
-                clause.sort_unstable();
-                clause.dedup();
+                let mut tmp = replace(&mut self.tmp, vec![]);
+                tmp.clear();
+                tmp.extend_from_slice(&clause);
 
-                if let Some(id) = self.delete_clause(&clause)? {
+                tmp.sort_unstable();
+                tmp.dedup();
+
+                if let Some(id) = self.delete_clause(&tmp)? {
                     Self::process_step(
                         &mut self.processors,
                         &CheckedProofStep::DeleteClause {
                             id: id,
-                            clause: &clause,
+                            clause: &tmp,
                         },
                     )?;
                 }
+
+                self.tmp = tmp;
             }
             ProofStep::UnitClauses(units) => {
                 for &(lit, hash) in units.iter() {
@@ -591,6 +738,10 @@ impl<'a> Checker<'a> {
                         )?;
                     }
                 }
+            }
+            ProofStep::ChangeHashBits(bits) => {
+                self.hash_bits = bits;
+                self.rehash();
             }
         }
 
@@ -615,6 +766,7 @@ impl<'a> Checker<'a> {
     /// Using this avoids creating a temporary [`CnfFormula`].
     pub fn check_proof(&mut self, input: impl io::Read) -> Result<(), CheckerError> {
         let mut buffer = io::BufReader::new(input);
+        let mut parser = Parser::default();
 
         while !self.unsat {
             self.step += 1;
@@ -623,15 +775,20 @@ impl<'a> Checker<'a> {
                 log::info!("checking step {}k", self.step / 1000);
             }
 
-            match bincode::deserialize_from(&mut buffer) {
+            match parser.parse_step(&mut buffer) {
                 Ok(step) => self.check_step(step)?,
-                Err(err) => match *err {
-                    bincode::ErrorKind::Io(ref io_err)
-                        if io_err.kind() == io::ErrorKind::UnexpectedEof =>
-                    {
-                        return Err(CheckerError::ProofIncomplete { step: self.step })
+                Err(err) => match err.downcast::<io::Error>() {
+                    Ok(io_err) => {
+                        if io_err.kind() == io::ErrorKind::UnexpectedEof {
+                            return Err(CheckerError::ProofIncomplete { step: self.step });
+                        } else {
+                            return Err(CheckerError::IoError {
+                                step: self.step,
+                                cause: io_err,
+                            });
+                        }
                     }
-                    _ => {
+                    Err(err) => {
                         return Err(CheckerError::PraseError {
                             step: self.step,
                             cause: err.into(),

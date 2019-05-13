@@ -57,7 +57,7 @@ pub fn simplify_binary<'a>(
                     // This check avoids deleting binary clauses twice if both literals are assigned.
                     if (!lit) < other_lit {
                         let lits = [!lit, other_lit];
-                        proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits[..].into()));
+                        proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(&lits[..]));
                     }
                 }
             }
@@ -69,7 +69,7 @@ pub fn simplify_binary<'a>(
                 // This check avoids deleting binary clauses twice if both literals are assigned.
                 if ctx.part(ProofP).is_active() && !retain && (!lit) < other_lit {
                     let lits = [!lit, other_lit];
-                    proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits[..].into()));
+                    proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(&lits[..]));
                 }
 
                 retain

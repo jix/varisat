@@ -69,7 +69,7 @@ pub fn load_clause<'a>(
 
     for &lit in lits.iter() {
         if last == Some(!lit) {
-            proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits[..].into()));
+            proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits));
             return;
         }
         last = Some(lit);
@@ -119,7 +119,7 @@ pub fn load_clause<'a>(
 
     if clause_is_true {
         if lits.len() > 1 {
-            proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits[..].into()));
+            proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits));
         }
         return;
     }

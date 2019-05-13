@@ -55,7 +55,7 @@ pub fn prove_units<'a>(
         trail.clear();
 
         if !unit_proofs.is_empty() {
-            proof::add_step(ctx.borrow(), &ProofStep::UnitClauses(unit_proofs.into()));
+            proof::add_step(ctx.borrow(), &ProofStep::UnitClauses(&unit_proofs));
         }
     }
 
@@ -107,10 +107,7 @@ pub fn simplify<'a>(
             match assignment.lit_value(lit) {
                 None => new_lits.push(lit),
                 Some(true) => {
-                    proof::add_step(
-                        proof_ctx.borrow(),
-                        &ProofStep::DeleteClause(clause.lits().into()),
-                    );
+                    proof::add_step(proof_ctx.borrow(), &ProofStep::DeleteClause(clause.lits()));
                     return false;
                 }
                 Some(false) => (),
@@ -122,14 +119,11 @@ pub fn simplify<'a>(
                 proof::add_step(
                     proof_ctx.borrow(),
                     &ProofStep::AtClause {
-                        clause: new_lits[..].into(),
-                        propagation_hashes: hash[..].into(),
+                        clause: &new_lits,
+                        propagation_hashes: &hash[..],
                     },
                 );
-                proof::add_step(
-                    proof_ctx.borrow(),
-                    &ProofStep::DeleteClause(clause.lits().into()),
-                );
+                proof::add_step(proof_ctx.borrow(), &ProofStep::DeleteClause(clause.lits()));
             }
 
             match new_lits[..] {
