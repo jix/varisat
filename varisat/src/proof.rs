@@ -10,6 +10,7 @@ use crate::lit::Lit;
 use crate::solver::SolverError;
 
 mod drat;
+mod map_step;
 pub mod varisat;
 
 /// Proof formats that can be generated during solving.
@@ -72,6 +73,33 @@ pub enum ProofStep<'a> {
     UnitClauses(&'a [(Lit, ClauseHash)]),
     /// Delete a clause consisting of the given literals.
     DeleteClause(&'a [Lit]),
+    /// Change the number of clause hash bits used
+    ChangeHashBits(u32),
+}
+
+impl<'a> ProofStep<'a> {
+    /// Number of added or removed clauses.
+    pub fn clause_count_delta(&self) -> isize {
+        match self {
+            ProofStep::AtClause { clause, .. } => {
+                if clause.len() > 1 {
+                    1
+                } else {
+                    0
+                }
+            }
+            ProofStep::DeleteClause(clause) => {
+                if clause.len() > 1 {
+                    -1
+                } else {
+                    0
+                }
+            }
+
+            ProofStep::UnitClauses(..) => 0,
+            ProofStep::ChangeHashBits(..) => 0,
+        }
+    }
 }
 
 /// Proof generation.
@@ -79,6 +107,15 @@ pub struct Proof<'a> {
     format: Option<ProofFormat>,
     target: BufWriter<Box<dyn Write + 'a>>,
     checker: Option<Checker<'a>>,
+    map_step: map_step::MapStep,
+    /// How many bits are used for storing clause hashes.
+    hash_bits: u32,
+    /// How many clauses are currently in the db.
+    ///
+    /// This is used to pick a good number of hash_bits
+    clause_count: isize,
+    /// Whether we're finished with the initial loading of clauses.
+    initial_load_complete: bool,
 }
 
 impl<'a> Default for Proof<'a> {
@@ -87,6 +124,10 @@ impl<'a> Default for Proof<'a> {
             format: None,
             target: BufWriter::new(Box::new(sink())),
             checker: None,
+            map_step: Default::default(),
+            hash_bits: 64,
+            clause_count: 0,
+            initial_load_complete: false,
         }
     }
 }
@@ -150,6 +191,9 @@ pub fn add_clause<'a>(
         let result = checker.add_clause(clause);
         handle_self_check_result(ctx.borrow(), result);
     }
+    if clause.len() > 1 {
+        ctx.part_mut(ProofP).clause_count += 1;
+    }
 }
 
 /// Add a step to the proof.
@@ -160,20 +204,80 @@ pub fn add_step<'a, 's>(
     step: &'s ProofStep<'s>,
 ) {
     let proof = ctx.part_mut(ProofP);
+
+    // This is a crude hack, as delete steps are the only ones emitted during loading. We need this
+    // to avoid triggering a hash size adjustment during the initial load. The checker has already
+    // loaded the complete formula, so our clause count doesn't match the checker's and we could
+    // cause way too many collisions, causing the checker to have quadratic runtime.
+    match step {
+        ProofStep::DeleteClause(..) => {}
+        _ => proof.initial_load_complete = true,
+    }
+
     let io_result = match proof.format {
+        Some(ProofFormat::Varisat) => write_varisat_step(ctx.borrow(), step),
+        Some(ProofFormat::Drat) => {
+            let step = proof.map_step.map(step, |lit| lit, |hash| hash);
+            drat::write_step(&mut proof.target, &step)
+        }
+        Some(ProofFormat::BinaryDrat) => {
+            let step = proof.map_step.map(step, |lit| lit, |hash| hash);
+            drat::write_binary_step(&mut proof.target, &step)
+        }
         None => Ok(()),
-        Some(ProofFormat::Varisat) => varisat::write_step(&mut proof.target, step),
-        Some(ProofFormat::Drat) => drat::write_step(&mut proof.target, step),
-        Some(ProofFormat::BinaryDrat) => drat::write_binary_step(&mut proof.target, step),
     };
 
-    handle_io_errors(ctx.borrow(), io_result);
-
-    let proof = ctx.part_mut(ProofP);
-    if let Some(checker) = &mut proof.checker {
-        let result = checker.check_step(step.clone());
-        handle_self_check_result(ctx.borrow(), result);
+    if io_result.is_ok() {
+        let proof = ctx.part_mut(ProofP);
+        if let Some(checker) = &mut proof.checker {
+            let step = proof.map_step.map(step, |lit| lit, |hash| hash);
+            let result = checker.check_step(step);
+            handle_self_check_result(ctx.borrow(), result);
+        }
     }
+
+    handle_io_errors(ctx.borrow(), io_result);
+}
+
+/// Write a step using our native format
+fn write_varisat_step<'a, 's>(
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP),
+    step: &'s ProofStep<'s>,
+) -> io::Result<()> {
+    let proof = ctx.part_mut(ProofP);
+
+    proof.clause_count += step.clause_count_delta();
+
+    let mut rehash = false;
+    // Should we change the hash size?
+    while proof.clause_count > (1 << (proof.hash_bits / 2)) {
+        proof.hash_bits += 2;
+        rehash = true;
+    }
+    if proof.initial_load_complete {
+        while proof.hash_bits > 6 && proof.clause_count * 4 < (1 << (proof.hash_bits / 2)) {
+            proof.hash_bits -= 2;
+            rehash = true;
+        }
+    }
+
+    if rehash {
+        varisat::write_step(
+            &mut proof.target,
+            &ProofStep::ChangeHashBits(proof.hash_bits),
+        )?;
+    }
+
+    let shift_bits = ClauseHash::max_value().count_ones() - proof.hash_bits;
+
+    let map_hash = |hash| hash >> shift_bits;
+    let step = proof.map_step.map(step, |lit| lit, map_hash);
+
+    if proof.format == Some(ProofFormat::Varisat) {
+        varisat::write_step(&mut proof.target, &step)?;
+    }
+
+    Ok(())
 }
 
 /// Flush buffers used for writing proof steps.

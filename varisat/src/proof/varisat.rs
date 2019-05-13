@@ -10,6 +10,7 @@ use super::{ClauseHash, ProofStep};
 const CODE_AT_CLAUSE: u64 = 0;
 const CODE_UNIT_CLAUSES: u64 = 1;
 const CODE_DELETE_CLAUSE: u64 = 2;
+const CODE_CHANGE_HASH_BITS: u64 = 3;
 
 /// Writes a proof step in the varisat format
 pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::Result<()> {
@@ -31,6 +32,11 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
         ProofStep::DeleteClause(clause) => {
             write_u64(&mut *target, CODE_DELETE_CLAUSE)?;
             write_literals(&mut *target, clause)?;
+        }
+
+        ProofStep::ChangeHashBits(bits) => {
+            write_u64(&mut *target, CODE_CHANGE_HASH_BITS)?;
+            write_u64(&mut *target, *bits as u64)?;
         }
     }
 
@@ -62,6 +68,10 @@ impl Parser {
             CODE_DELETE_CLAUSE => {
                 read_literals(&mut *source, &mut self.lit_buf)?;
                 Ok(ProofStep::DeleteClause(&self.lit_buf))
+            }
+            CODE_CHANGE_HASH_BITS => {
+                let bits = read_u64(&mut *source)? as u32;
+                Ok(ProofStep::ChangeHashBits(bits))
             }
             _ => failure::bail!("parse error"),
         }

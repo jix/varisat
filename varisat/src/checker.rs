@@ -195,7 +195,6 @@ struct TraceItem {
 }
 
 /// A checker for unsatisfiability proofs in the native varisat format.
-#[derive(Default)]
 pub struct Checker<'a> {
     /// Current step number.
     step: u64,
@@ -228,6 +227,30 @@ pub struct Checker<'a> {
     unit_conflict: Option<[u64; 2]>,
     /// Temporary storage for literals.
     tmp: Vec<Lit>,
+    /// How many bits are used for storing clause hashes.
+    hash_bits: u32,
+}
+
+impl<'a> Default for Checker<'a> {
+    fn default() -> Checker<'a> {
+        Checker {
+            step: 0,
+            next_clause_id: 0,
+            literal_buffer: vec![],
+            garbage_size: 0,
+            clauses: Default::default(),
+            unit_clauses: vec![],
+            trail: vec![],
+            unsat: false,
+            trace: vec![],
+            trace_edges: vec![],
+            trace_ids: vec![],
+            processors: vec![],
+            unit_conflict: None,
+            tmp: vec![],
+            hash_bits: 64,
+        }
+    }
 }
 
 impl<'a> Checker<'a> {
@@ -304,6 +327,12 @@ impl<'a> Checker<'a> {
         Ok(())
     }
 
+    /// Compute a clause hash of the current bit size
+    fn clause_hash(&self, lits: &[Lit]) -> ClauseHash {
+        let shift_bits = ClauseHash::max_value().count_ones() - self.hash_bits;
+        clause_hash(lits) >> shift_bits
+    }
+
     /// Value of a literal if known from unit clauses.
     fn lit_value(&self, lit: Lit) -> Option<(bool, UnitClause)> {
         self.unit_clauses
@@ -329,7 +358,7 @@ impl<'a> Checker<'a> {
             }
             [lit] => self.store_unit_clause(lit),
             _ => {
-                let hash = clause_hash(&lits);
+                let hash = self.clause_hash(&lits);
 
                 let candidates = self.clauses.entry(hash).or_default();
 
@@ -416,7 +445,7 @@ impl<'a> Checker<'a> {
             });
         }
 
-        let hash = clause_hash(lits);
+        let hash = self.clause_hash(lits);
 
         let candidates = self.clauses.entry(hash).or_default();
 
@@ -479,6 +508,19 @@ impl<'a> Checker<'a> {
 
         self.literal_buffer = new_buffer;
         self.garbage_size = 0;
+    }
+
+    /// Recompute all clause hashes
+    fn rehash(&mut self) {
+        let mut old_clauses = replace(&mut self.clauses, Default::default());
+
+        for (_, mut candidates) in old_clauses.drain() {
+            for clause in candidates.drain() {
+                let hash = self.clause_hash(clause.lits.slice(&self.literal_buffer));
+                let candidates = self.clauses.entry(hash).or_default();
+                candidates.push(clause);
+            }
+        }
     }
 
     /// Check whether a clause is implied by clauses of the given hashes.
@@ -696,6 +738,10 @@ impl<'a> Checker<'a> {
                         )?;
                     }
                 }
+            }
+            ProofStep::ChangeHashBits(bits) => {
+                self.hash_bits = bits;
+                self.rehash();
             }
         }
 
