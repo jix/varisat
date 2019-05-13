@@ -67,7 +67,7 @@ pub fn conflict_step<'a>(
         ctx.borrow(),
         &ProofStep::AtClause {
             clause: clause.into(),
-            propagation_hashes: analyze.clause_hashes().into(),
+            propagation_hashes: analyze.clause_hashes(),
         },
     );
 

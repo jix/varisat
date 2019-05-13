@@ -1,9 +1,6 @@
 //! Proof generation.
 
-use std::borrow::Cow;
 use std::io::{self, sink, BufWriter, Write};
-
-use serde::{Deserialize, Serialize};
 
 use partial_ref::{partial, PartialRef};
 
@@ -11,6 +8,9 @@ use crate::checker::{Checker, CheckerError, ProofProcessor};
 use crate::context::{Context, ProofP, SolverStateP};
 use crate::lit::Lit;
 use crate::solver::SolverError;
+
+mod drat;
+pub mod varisat;
 
 /// Proof formats that can be generated during solving.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -46,7 +46,7 @@ pub fn clause_hash(lits: &[Lit]) -> ClauseHash {
 /// A single proof step.
 ///
 /// Represents a mutation of the current formula and a justification for the mutation's validity.
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Debug)]
 pub enum ProofStep<'a> {
     /// Add a clause that is an asymmetric tautoligy (AT).
     ///
@@ -58,8 +58,8 @@ pub enum ProofStep<'a> {
     ///
     /// When generating DRAT proofs the second slice is ignored and may be empty.
     AtClause {
-        clause: Cow<'a, [Lit]>,
-        propagation_hashes: Cow<'a, [ClauseHash]>,
+        clause: &'a [Lit],
+        propagation_hashes: &'a [ClauseHash],
     },
     /// Unit clauses found by top-level unit-propagation.
     ///
@@ -69,9 +69,9 @@ pub enum ProofStep<'a> {
     /// for DRAT proofs.
     ///
     /// Ignored when generating DRAT proofs.
-    UnitClauses(Cow<'a, [(Lit, ClauseHash)]>),
+    UnitClauses(&'a [(Lit, ClauseHash)]),
     /// Delete a clause consisting of the given literals.
-    DeleteClause(Cow<'a, [Lit]>),
+    DeleteClause(&'a [Lit]),
 }
 
 /// Proof generation.
@@ -137,70 +137,6 @@ impl<'a> Proof<'a> {
                 None => false,
             }
     }
-
-    /// Writes a proof step in our own format.
-    fn write_varisat_step<'s>(&'s mut self, step: &'s ProofStep<'s>) -> io::Result<()> {
-        match bincode::serialize_into(&mut self.target, step) {
-            Ok(()) => Ok(()),
-            Err(err) => match *err {
-                bincode::ErrorKind::Io(err) => Err(err),
-                err => panic!("proof serialization error: {}", err),
-            },
-        }
-    }
-
-    /// Writes a proof step in DRAT or binary DRAT format.
-    fn write_drat_step<'s>(&'s mut self, step: &'s ProofStep<'s>) -> io::Result<()> {
-        match step {
-            ProofStep::AtClause { clause, .. } => {
-                self.drat_add_clause()?;
-                self.drat_literals(&clause)?;
-            }
-            ProofStep::DeleteClause(clause) => {
-                self.drat_delete_clause()?;
-                self.drat_literals(&clause[..])?;
-            }
-            ProofStep::UnitClauses(..) => (),
-        }
-
-        Ok(())
-    }
-
-    /// Writes an add clause step to the DRAT proof.
-    fn drat_add_clause(&mut self) -> io::Result<()> {
-        if self.format == Some(ProofFormat::BinaryDrat) {
-            self.target.write_all(b"a")?;
-        }
-        Ok(())
-    }
-
-    /// Writes a delete clause step to the DRAT proof.
-    fn drat_delete_clause(&mut self) -> io::Result<()> {
-        if self.format == Some(ProofFormat::BinaryDrat) {
-            self.target.write_all(b"d")?;
-        } else {
-            self.target.write_all(b"d ")?;
-        }
-        Ok(())
-    }
-
-    /// Writes the literals of a clause for a step in a DRAT proof.
-    fn drat_literals(&mut self, literals: &[Lit]) -> io::Result<()> {
-        if self.format == Some(ProofFormat::BinaryDrat) {
-            for &lit in literals {
-                let drat_code = lit.code() as u64 + 2;
-                leb128::write::unsigned(&mut self.target, drat_code)?;
-            }
-            self.target.write_all(&[0])?;
-        } else {
-            for &lit in literals {
-                itoa::write(&mut self.target, lit.to_dimacs())?;
-                self.target.write_all(b" ")?;
-            }
-            self.target.write_all(b"0\n")?;
-        }
-        Ok(())
-    }
 }
 
 /// Call when adding an external clause.
@@ -226,8 +162,9 @@ pub fn add_step<'a, 's>(
     let proof = ctx.part_mut(ProofP);
     let io_result = match proof.format {
         None => Ok(()),
-        Some(ProofFormat::Varisat) => proof.write_varisat_step(step),
-        Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => proof.write_drat_step(step),
+        Some(ProofFormat::Varisat) => varisat::write_step(&mut proof.target, step),
+        Some(ProofFormat::Drat) => drat::write_step(&mut proof.target, step),
+        Some(ProofFormat::BinaryDrat) => drat::write_binary_step(&mut proof.target, step),
     };
 
     handle_io_errors(ctx.borrow(), io_result);

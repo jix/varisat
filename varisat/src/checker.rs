@@ -12,7 +12,7 @@ use smallvec::SmallVec;
 use crate::cnf::CnfFormula;
 use crate::dimacs::DimacsParser;
 use crate::lit::{Lit, LitIdx};
-use crate::proof::{clause_hash, ClauseHash, ProofStep};
+use crate::proof::{clause_hash, varisat::Parser, ClauseHash, ProofStep};
 
 mod write_lrat;
 
@@ -26,6 +26,12 @@ pub enum CheckerError {
         step
     )]
     ProofIncomplete { step: u64 },
+    #[fail(display = "step {}: Error reading proof file: {}", step, cause)]
+    IoError {
+        step: u64,
+        #[cause]
+        cause: io::Error,
+    },
     #[fail(display = "step {}: Could not parse proof step: {}", step, cause)]
     PraseError {
         step: u64,
@@ -714,6 +720,7 @@ impl<'a> Checker<'a> {
     /// Using this avoids creating a temporary [`CnfFormula`].
     pub fn check_proof(&mut self, input: impl io::Read) -> Result<(), CheckerError> {
         let mut buffer = io::BufReader::new(input);
+        let mut parser = Parser::default();
 
         while !self.unsat {
             self.step += 1;
@@ -722,15 +729,20 @@ impl<'a> Checker<'a> {
                 log::info!("checking step {}k", self.step / 1000);
             }
 
-            match bincode::deserialize_from(&mut buffer) {
+            match parser.parse_step(&mut buffer) {
                 Ok(step) => self.check_step(step)?,
-                Err(err) => match *err {
-                    bincode::ErrorKind::Io(ref io_err)
-                        if io_err.kind() == io::ErrorKind::UnexpectedEof =>
-                    {
-                        return Err(CheckerError::ProofIncomplete { step: self.step })
+                Err(err) => match err.downcast::<io::Error>() {
+                    Ok(io_err) => {
+                        if io_err.kind() == io::ErrorKind::UnexpectedEof {
+                            return Err(CheckerError::ProofIncomplete { step: self.step });
+                        } else {
+                            return Err(CheckerError::IoError {
+                                step: self.step,
+                                cause: io_err,
+                            });
+                        }
                     }
-                    _ => {
+                    Err(err) => {
                         return Err(CheckerError::PraseError {
                             step: self.step,
                             cause: err.into(),

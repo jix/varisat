@@ -73,7 +73,7 @@ pub fn reduce_locals<'a>(
                 if ctx.part(ProofP).is_active() {
                     let (alloc, mut ctx) = ctx.split_part(ClauseAllocP);
                     let lits = alloc.clause(*cref).lits();
-                    proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits.into()));
+                    proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits));
                 }
 
                 cref.remove();

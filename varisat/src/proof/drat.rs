@@ -1,0 +1,58 @@
+use std::io::{self, Write};
+
+use crate::lit::Lit;
+
+use super::ProofStep;
+
+/// Writes a proof step in DRAT format
+pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::Result<()> {
+    match step {
+        ProofStep::AtClause { clause, .. } => {
+            write_literals(target, &clause)?;
+        }
+        ProofStep::DeleteClause(clause) => {
+            target.write_all(b"d ")?;
+            write_literals(target, &clause[..])?;
+        }
+        ProofStep::UnitClauses(..) => (),
+    }
+
+    Ok(())
+}
+
+/// Writes a proof step in binary DRAT format
+pub fn write_binary_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::Result<()> {
+    match step {
+        ProofStep::AtClause { clause, .. } => {
+            target.write_all(b"a")?;
+            write_binary_literals(target, &clause)?;
+        }
+        ProofStep::DeleteClause(clause) => {
+            target.write_all(b"d")?;
+            write_binary_literals(target, &clause[..])?;
+        }
+        ProofStep::UnitClauses(..) => (),
+    }
+
+    Ok(())
+}
+
+/// Writes the literals of a clause for a step in a DRAT proof.
+fn write_literals(target: &mut impl Write, literals: &[Lit]) -> io::Result<()> {
+    for &lit in literals {
+        itoa::write(&mut *target, lit.to_dimacs())?;
+        target.write_all(b" ")?;
+    }
+    target.write_all(b"0\n")?;
+    Ok(())
+}
+
+/// Writes the literals of a clause for a step in a binary DRAT proof.
+fn write_binary_literals(target: &mut impl Write, literals: &[Lit]) -> io::Result<()> {
+    for &lit in literals {
+        let drat_code = lit.code() as u64 + 2;
+        leb128::write::unsigned(target, drat_code)?;
+    }
+    target.write_all(&[0])?;
+    Ok(())
+}
