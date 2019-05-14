@@ -9,7 +9,7 @@ use crate::context::{
     SolverStateP, TrailP, WatchlistsP,
 };
 use crate::lit::Lit;
-use crate::proof::{self, clause_hash, lit_hash, ProofStep};
+use crate::proof::{self, clause_hash, lit_hash, DeleteClauseProof, ProofStep};
 use crate::prop::{enqueue_assignment, Reason};
 
 /// Remove satisfied clauses and false literals.
@@ -102,12 +102,23 @@ pub fn simplify<'a>(
 
     filter_clauses(ctx_2, |alloc, cref| {
         let clause = alloc.clause_mut(cref);
+        let redundant = clause.header().redundant();
         new_lits.clear();
         for &lit in clause.lits() {
             match assignment.lit_value(lit) {
                 None => new_lits.push(lit),
                 Some(true) => {
-                    proof::add_step(proof_ctx.borrow(), &ProofStep::DeleteClause(clause.lits()));
+                    proof::add_step(
+                        proof_ctx.borrow(),
+                        &ProofStep::DeleteClause {
+                            clause: clause.lits(),
+                            proof: if redundant {
+                                DeleteClauseProof::Redundant
+                            } else {
+                                DeleteClauseProof::Satisfied
+                            },
+                        },
+                    );
                     return false;
                 }
                 Some(false) => (),
@@ -119,11 +130,22 @@ pub fn simplify<'a>(
                 proof::add_step(
                     proof_ctx.borrow(),
                     &ProofStep::AtClause {
+                        redundant: redundant && new_lits.len() > 2,
                         clause: &new_lits,
                         propagation_hashes: &hash[..],
                     },
                 );
-                proof::add_step(proof_ctx.borrow(), &ProofStep::DeleteClause(clause.lits()));
+                proof::add_step(
+                    proof_ctx.borrow(),
+                    &ProofStep::DeleteClause {
+                        clause: clause.lits(),
+                        proof: if redundant {
+                            DeleteClauseProof::Redundant
+                        } else {
+                            DeleteClauseProof::Simplified
+                        },
+                    },
+                );
             }
 
             match new_lits[..] {

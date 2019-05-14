@@ -66,6 +66,7 @@ pub fn conflict_step<'a>(
     proof::add_step(
         ctx.borrow(),
         &ProofStep::AtClause {
+            redundant: clause.len() > 2,
             clause: clause.into(),
             propagation_hashes: analyze.clause_hashes(),
         },

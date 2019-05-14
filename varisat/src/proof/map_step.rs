@@ -23,8 +23,9 @@ impl MapStep {
         'a: 's,
         'b: 's,
     {
-        match step {
+        match *step {
             ProofStep::AtClause {
+                redundant,
                 clause,
                 propagation_hashes,
             } => {
@@ -34,6 +35,7 @@ impl MapStep {
                 self.hash_buf
                     .extend(propagation_hashes.iter().cloned().map(map_hash));
                 ProofStep::AtClause {
+                    redundant,
                     clause: &self.lit_buf,
                     propagation_hashes: &self.hash_buf,
                 }
@@ -49,10 +51,13 @@ impl MapStep {
                 ProofStep::UnitClauses(&self.unit_buf)
             }
 
-            ProofStep::DeleteClause(clause) => {
+            ProofStep::DeleteClause { clause, proof } => {
                 self.lit_buf.clear();
                 self.lit_buf.extend(clause.iter().cloned().map(map_lit));
-                ProofStep::DeleteClause(&self.lit_buf)
+                ProofStep::DeleteClause {
+                    clause: &self.lit_buf,
+                    proof,
+                }
             }
             ProofStep::ChangeHashBits(..) => step.clone(),
         }

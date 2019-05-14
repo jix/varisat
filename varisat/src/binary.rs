@@ -3,7 +3,7 @@
 use partial_ref::{partial, PartialRef};
 
 use crate::context::{AssignmentP, BinaryClausesP, Context, ProofP, SolverStateP};
-use crate::proof::{self, ProofStep};
+use crate::proof::{self, DeleteClauseProof, ProofStep};
 
 use crate::lit::Lit;
 
@@ -57,7 +57,13 @@ pub fn simplify_binary<'a>(
                     // This check avoids deleting binary clauses twice if both literals are assigned.
                     if (!lit) < other_lit {
                         let lits = [!lit, other_lit];
-                        proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(&lits[..]));
+                        proof::add_step(
+                            ctx.borrow(),
+                            &ProofStep::DeleteClause {
+                                clause: &lits[..],
+                                proof: DeleteClauseProof::Satisfied,
+                            },
+                        );
                     }
                 }
             }
@@ -69,7 +75,13 @@ pub fn simplify_binary<'a>(
                 // This check avoids deleting binary clauses twice if both literals are assigned.
                 if ctx.part(ProofP).is_active() && !retain && (!lit) < other_lit {
                     let lits = [!lit, other_lit];
-                    proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(&lits[..]));
+                    proof::add_step(
+                        ctx.borrow(),
+                        &ProofStep::DeleteClause {
+                            clause: &lits[..],
+                            proof: DeleteClauseProof::Satisfied,
+                        },
+                    );
                 }
 
                 retain
