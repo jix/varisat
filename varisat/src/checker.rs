@@ -38,14 +38,12 @@ pub enum CheckerError {
         #[cause]
         cause: Error,
     },
-    #[fail(display = "step {}: Delete of unknown clause {:?}", step, clause)]
-    InvalidDelete { step: u64, clause: Vec<Lit> },
-    #[fail(display = "step {}: No clause with hash {:x} found", step, hash)]
-    ClauseNotFound { step: u64, hash: ClauseHash },
-    #[fail(display = "step {}: Checking proof for {:?} failed", step, clause)]
-    ClauseCheckFailed { step: u64, clause: Vec<Lit> },
-    #[fail(display = "step {}: Checking proof failed", step)]
-    CheckFailed { step: u64 },
+    #[fail(display = "step {}: Checking proof failed: {}", step, msg)]
+    CheckFailed {
+        step: u64,
+        msg: String,
+        debug_step: String,
+    },
     #[fail(display = "Error in proof processor: {}", cause)]
     ProofProcessorError {
         #[cause]
@@ -54,6 +52,17 @@ pub enum CheckerError {
     #[doc(hidden)]
     #[fail(display = "__Nonexhaustive")]
     __Nonexhaustive,
+}
+
+impl CheckerError {
+    /// Generate a CheckFailed error with an empty debug_step
+    fn check_failed(step: u64, msg: String) -> CheckerError {
+        CheckerError::CheckFailed {
+            step,
+            msg,
+            debug_step: String::new(),
+        }
+    }
 }
 
 /// A single step of a proof.
@@ -454,10 +463,10 @@ impl<'a> Checker<'a> {
         redundant: bool,
     ) -> Result<Option<u64>, CheckerError> {
         if lits.len() < 2 {
-            return Err(CheckerError::InvalidDelete {
-                step: self.step,
-                clause: lits.to_owned(),
-            });
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!("delete of unit or empty clause {:?}", lits),
+            ));
         }
 
         let hash = self.clause_hash(lits);
@@ -502,11 +511,12 @@ impl<'a> Checker<'a> {
         }
 
         if !deleted {
-            // TODO differentiate between not found and red/irred mismatch
-            return Err(CheckerError::InvalidDelete {
-                step: self.step,
-                clause: lits.to_owned(),
-            });
+            let msg = match (found, redundant) {
+                (false, _) => format!("delete of unknown clause {:?}", lits),
+                (_, true) => format!("delete of redundant clause {:?} which is irredundant", lits),
+                (_, false) => format!("delete of irredundant clause {:?} which is redundant", lits),
+            };
+            return Err(CheckerError::check_failed(self.step, msg));
         }
 
         self.collect_garbage();
@@ -582,10 +592,10 @@ impl<'a> Checker<'a> {
             let candidates = match self.clauses.get(&hash) {
                 Some(candidates) if !candidates.is_empty() => candidates,
                 _ => {
-                    return Err(CheckerError::ClauseNotFound {
-                        step: self.step,
-                        hash,
-                    })
+                    return Err(CheckerError::check_failed(
+                        self.step,
+                        format!("no clause found for hash {:x}", hash),
+                    ))
                 }
             };
 
@@ -687,10 +697,10 @@ impl<'a> Checker<'a> {
         if rup_is_unsat {
             Ok(())
         } else {
-            Err(CheckerError::ClauseCheckFailed {
-                step: self.step,
-                clause: lits.to_owned(),
-            })
+            Err(CheckerError::check_failed(
+                self.step,
+                format!("AT check failed for {:?}", lits),
+            ))
         }
     }
 
@@ -732,111 +742,149 @@ impl<'a> Checker<'a> {
 
     /// Check a single proof step
     pub(crate) fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
-        match step {
+        let mut result = match step {
             ProofStep::AtClause {
                 redundant,
                 clause,
                 propagation_hashes,
-            } => {
-                let mut tmp = replace(&mut self.tmp, vec![]);
-                tmp.clear();
-                tmp.extend_from_slice(&clause);
-
-                tmp.sort_unstable();
-                tmp.dedup();
-
-                self.check_clause_with_hashes(&tmp, &*propagation_hashes)?;
-
-                let (id, added) = self.store_clause(&tmp, redundant);
-
-                if !redundant {
-                    self.previous_irred_clause.clear();
-                    self.previous_irred_clause.extend_from_slice(&tmp);
-                }
-
-                if added {
-                    Self::process_step(
-                        &mut self.processors,
-                        &CheckedProofStep::AtClause {
-                            id: id,
-                            clause: &tmp,
-                            propagations: &self.trace_ids,
-                        },
-                    )?;
-                }
-
-                self.tmp = tmp;
-            }
+            } => self.check_at_clause_step(redundant, clause, propagation_hashes),
             ProofStep::DeleteClause { clause, proof } => {
-                let mut tmp = replace(&mut self.tmp, vec![]);
-                tmp.clear();
-                tmp.extend_from_slice(&clause);
-
-                tmp.sort_unstable();
-                tmp.dedup();
-
-                let redundant = proof == DeleteClauseProof::Redundant;
-
-                match proof {
-                    DeleteClauseProof::Redundant => (),
-                    DeleteClauseProof::Satisfied => {
-                        if !tmp.iter().any(|&lit| {
-                            if let Some((true, _)) = self.lit_value(lit) {
-                                true
-                            } else {
-                                false
-                            }
-                        }) {
-                            return Err(CheckerError::CheckFailed { step: self.step });
-                        }
-                    }
-                    DeleteClauseProof::Simplified => {
-                        if !self.subsumed_by_previous_irred_clause(&tmp) {
-                            return Err(CheckerError::CheckFailed { step: self.step });
-                        }
-                    }
-                }
-
-                self.previous_irred_clause.clear();
-
-                if let Some(id) = self.delete_clause(&tmp, redundant)? {
-                    Self::process_step(
-                        &mut self.processors,
-                        &CheckedProofStep::DeleteClause {
-                            id: id,
-                            clause: &tmp,
-                        },
-                    )?;
-                }
-
-                self.tmp = tmp;
+                self.check_delete_clause_step(clause, proof)
             }
-            ProofStep::UnitClauses(units) => {
-                for &(lit, hash) in units.iter() {
-                    let clause = [lit];
-                    let propagation_hashes = [hash];
-                    self.check_clause_with_hashes(&clause[..], &propagation_hashes[..])?;
-
-                    let (id, added) = self.store_unit_clause(lit);
-
-                    if added {
-                        Self::process_step(
-                            &mut self.processors,
-                            &CheckedProofStep::AtClause {
-                                id: id,
-                                clause: &clause,
-                                propagations: &self.trace_ids,
-                            },
-                        )?;
-                    }
-                }
-            }
+            ProofStep::UnitClauses(units) => self.check_unit_clauses_step(units),
             ProofStep::ChangeHashBits(bits) => {
                 self.hash_bits = bits;
                 self.rehash();
+                Ok(())
+            }
+        };
+
+        if let Err(CheckerError::CheckFailed {
+            ref mut debug_step, ..
+        }) = result
+        {
+            *debug_step = format!("{:?}", step)
+        }
+        result
+    }
+
+    /// Check an AtClause step
+    fn check_at_clause_step(
+        &mut self,
+        redundant: bool,
+        clause: &[Lit],
+        propagation_hashes: &[ClauseHash],
+    ) -> Result<(), CheckerError> {
+        let mut tmp = replace(&mut self.tmp, vec![]);
+        tmp.clear();
+        tmp.extend_from_slice(&clause);
+
+        tmp.sort_unstable();
+        tmp.dedup();
+
+        self.check_clause_with_hashes(&tmp, &*propagation_hashes)?;
+
+        let (id, added) = self.store_clause(&tmp, redundant);
+
+        if !redundant {
+            self.previous_irred_clause.clear();
+            self.previous_irred_clause.extend_from_slice(&tmp);
+        }
+
+        if added {
+            Self::process_step(
+                &mut self.processors,
+                &CheckedProofStep::AtClause {
+                    id: id,
+                    clause: &tmp,
+                    propagations: &self.trace_ids,
+                },
+            )?;
+        }
+
+        self.tmp = tmp;
+
+        Ok(())
+    }
+
+    fn check_delete_clause_step(
+        &mut self,
+        clause: &[Lit],
+        proof: DeleteClauseProof,
+    ) -> Result<(), CheckerError> {
+        let mut tmp = replace(&mut self.tmp, vec![]);
+        tmp.clear();
+        tmp.extend_from_slice(&clause);
+
+        tmp.sort_unstable();
+        tmp.dedup();
+
+        let redundant = proof == DeleteClauseProof::Redundant;
+
+        match proof {
+            DeleteClauseProof::Redundant => (),
+            DeleteClauseProof::Satisfied => {
+                if !tmp.iter().any(|&lit| {
+                    if let Some((true, _)) = self.lit_value(lit) {
+                        true
+                    } else {
+                        false
+                    }
+                }) {
+                    return Err(CheckerError::check_failed(
+                        self.step,
+                        format!("deleted clause {:?} is not satisfied", clause),
+                    ));
+                }
+            }
+            DeleteClauseProof::Simplified => {
+                if !self.subsumed_by_previous_irred_clause(&tmp) {
+                    return Err(CheckerError::check_failed(
+                        self.step,
+                        format!(
+                            "deleted clause {:?} is not subsumed by previous clause {:?}",
+                            clause, self.previous_irred_clause
+                        ),
+                    ));
+                }
             }
         }
 
+        self.previous_irred_clause.clear();
+
+        if let Some(id) = self.delete_clause(&tmp, redundant)? {
+            Self::process_step(
+                &mut self.processors,
+                &CheckedProofStep::DeleteClause {
+                    id: id,
+                    clause: &tmp,
+                },
+            )?;
+        }
+
+        self.tmp = tmp;
+        Ok(())
+    }
+
+    fn check_unit_clauses_step(&mut self, units: &[(Lit, ClauseHash)]) -> Result<(), CheckerError> {
+        for &(lit, hash) in units.iter() {
+            let clause = [lit];
+            let propagation_hashes = [hash];
+            self.check_clause_with_hashes(&clause[..], &propagation_hashes[..])?;
+
+            let (id, added) = self.store_unit_clause(lit);
+
+            if added {
+                Self::process_step(
+                    &mut self.processors,
+                    &CheckedProofStep::AtClause {
+                        id: id,
+                        clause: &clause,
+                        propagations: &self.trace_ids,
+                    },
+                )?;
+            }
+        }
         Ok(())
     }
 
@@ -930,6 +978,13 @@ mod tests {
 
     use crate::solver::{ProofFormat, Solver};
 
+    fn expect_check_failed(result: Result<(), CheckerError>, contains: &str) {
+        match result {
+            Err(CheckerError::CheckFailed { ref msg, .. }) if msg.contains(contains) => (),
+            err => panic!("expected {:?} error but got {:?}", contains, err),
+        }
+    }
+
     #[test]
     fn conflicting_units() {
         let mut checker = Checker::new();
@@ -955,13 +1010,13 @@ mod tests {
             ])
             .unwrap();
 
-        match checker.check_step(ProofStep::DeleteClause {
-            clause: &lits![-5, 4],
-            proof: DeleteClauseProof::Redundant,
-        }) {
-            Err(CheckerError::InvalidDelete { .. }) => (),
-            _ => panic!("expected InvalidDelete error"),
-        }
+        expect_check_failed(
+            checker.check_step(ProofStep::DeleteClause {
+                clause: &lits![-5, 4],
+                proof: DeleteClauseProof::Redundant,
+            }),
+            "unknown clause",
+        );
     }
 
     #[test]
@@ -1001,13 +1056,13 @@ mod tests {
             })
             .unwrap();
 
-        match checker.check_step(ProofStep::DeleteClause {
-            clause: lits,
-            proof: DeleteClauseProof::Satisfied,
-        }) {
-            Err(CheckerError::InvalidDelete { .. }) => (),
-            _ => panic!("expected InvalidDelete error"),
-        }
+        expect_check_failed(
+            checker.check_step(ProofStep::DeleteClause {
+                clause: lits,
+                proof: DeleteClauseProof::Satisfied,
+            }),
+            "unknown clause",
+        );
     }
 
     #[test]
@@ -1019,14 +1074,14 @@ mod tests {
             ])
             .unwrap();
 
-        match checker.check_step(ProofStep::AtClause {
-            redundant: false,
-            clause: [][..].into(),
-            propagation_hashes: [0][..].into(),
-        }) {
-            Err(CheckerError::ClauseNotFound { .. }) => (),
-            _ => panic!("expected ClauseNotFound error"),
-        }
+        expect_check_failed(
+            checker.check_step(ProofStep::AtClause {
+                redundant: false,
+                clause: [][..].into(),
+                propagation_hashes: [0][..].into(),
+            }),
+            "no clause found",
+        )
     }
 
     #[test]
@@ -1038,14 +1093,14 @@ mod tests {
             ])
             .unwrap();
 
-        match checker.check_step(ProofStep::AtClause {
-            redundant: false,
-            clause: [][..].into(),
-            propagation_hashes: [][..].into(),
-        }) {
-            Err(CheckerError::ClauseCheckFailed { .. }) => (),
-            _ => panic!("expected ClauseCheckFailed error"),
-        }
+        expect_check_failed(
+            checker.check_step(ProofStep::AtClause {
+                redundant: false,
+                clause: [][..].into(),
+                propagation_hashes: [][..].into(),
+            }),
+            "AT check failed",
+        )
     }
 
     #[test]
@@ -1057,13 +1112,13 @@ mod tests {
             ])
             .unwrap();
 
-        match checker.check_step(ProofStep::DeleteClause {
-            clause: &lits![1, 2, 3],
-            proof: DeleteClauseProof::Redundant,
-        }) {
-            Err(CheckerError::CheckFailed { .. }) => (),
-            _ => panic!("expected CheckFailed error"),
-        }
+        expect_check_failed(
+            checker.check_step(ProofStep::DeleteClause {
+                clause: &lits![1, 2, 3],
+                proof: DeleteClauseProof::Redundant,
+            }),
+            "is irredundant",
+        )
     }
 
     #[test]
@@ -1077,13 +1132,13 @@ mod tests {
             ])
             .unwrap();
 
-        match checker.check_step(ProofStep::DeleteClause {
-            clause: &lits![1, 2, 3],
-            proof: DeleteClauseProof::Satisfied,
-        }) {
-            Err(CheckerError::CheckFailed { .. }) => (),
-            _ => panic!("expected CheckFailed error"),
-        }
+        expect_check_failed(
+            checker.check_step(ProofStep::DeleteClause {
+                clause: &lits![1, 2, 3],
+                proof: DeleteClauseProof::Satisfied,
+            }),
+            "not satisfied",
+        )
     }
 
     #[test]
@@ -1109,13 +1164,13 @@ mod tests {
             })
             .unwrap();
 
-        match checker.check_step(ProofStep::DeleteClause {
-            clause: &lits![1, 2, 3],
-            proof: DeleteClauseProof::Simplified,
-        }) {
-            Err(CheckerError::CheckFailed { .. }) => (),
-            _ => panic!("expected CheckFailed error"),
-        }
+        expect_check_failed(
+            checker.check_step(ProofStep::DeleteClause {
+                clause: &lits![1, 2, 3],
+                proof: DeleteClauseProof::Simplified,
+            }),
+            "not subsumed",
+        )
     }
 
     proptest! {

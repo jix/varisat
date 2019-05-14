@@ -335,7 +335,16 @@ fn handle_self_check_result<'a>(
                 Some(SolverError::ProofProcessorError { cause });
             *ctx.part_mut(ProofP) = Proof::default();
         }
-        result => result.expect("self check failure"),
+        Err(err) => {
+            log::error!("{}", err);
+            if let CheckerError::CheckFailed { debug_step, .. } = err {
+                if !debug_step.is_empty() {
+                    log::error!("failed step was {}", debug_step)
+                }
+            }
+            panic!("self check failure");
+        }
+        Ok(()) => (),
     }
 }
 
