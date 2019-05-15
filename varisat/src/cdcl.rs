@@ -10,6 +10,7 @@ use crate::context::{
 };
 use crate::decision::make_decision;
 use crate::incremental::{enqueue_assumption, EnqueueAssumption};
+use crate::lit::Lit;
 use crate::proof::{self, ProofStep};
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
 use crate::simplify::{prove_units, simplify};
@@ -39,6 +40,21 @@ pub fn conflict_step<'a>(
 
     let conflict = match conflict {
         Ok(()) => {
+            if ctx.part(ProofP).models_in_proof() {
+                let (tmp, mut ctx) = ctx.split_part_mut(TmpDataP);
+                let model = &mut tmp.lits;
+                model.clear();
+                model.extend(
+                    ctx.part(AssignmentP)
+                        .assignment()
+                        .iter()
+                        .enumerate()
+                        .flat_map(|(index, assignment)| {
+                            assignment.map(|polarity| Lit::from_index(index, !polarity))
+                        }),
+                );
+                proof::add_step(ctx.borrow(), &ProofStep::Model(&model));
+            }
             ctx.part_mut(SolverStateP).sat_state = SatState::Sat;
             return;
         }

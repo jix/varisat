@@ -92,6 +92,8 @@ pub enum ProofStep<'a> {
     },
     /// Change the number of clause hash bits used
     ChangeHashBits(u32),
+    /// A (partial) assignment that satisfies all clauses.
+    Model(&'a [Lit]),
 }
 
 impl<'a> ProofStep<'a> {
@@ -112,9 +114,7 @@ impl<'a> ProofStep<'a> {
                     0
                 }
             }
-
-            ProofStep::UnitClauses(..) => 0,
-            ProofStep::ChangeHashBits(..) => 0,
+            ProofStep::UnitClauses(..) | ProofStep::ChangeHashBits(..) | ProofStep::Model(..) => 0,
         }
     }
 }
@@ -176,24 +176,28 @@ impl<'a> Proof<'a> {
         self.checker.is_some() || self.format.is_some()
     }
 
-    /// Whether clause hashes are required for steps that support them.
-    pub fn clause_hashes_required(&self) -> bool {
+    /// Are we emitting or checking our native format.
+    pub fn native_format(&self) -> bool {
         self.checker.is_some()
             || match self.format {
                 Some(ProofFormat::Varisat) => true,
-                Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => false,
-                None => false,
+                _ => false,
             }
+    }
+
+    /// Whether clause hashes are required for steps that support them.
+    pub fn clause_hashes_required(&self) -> bool {
+        self.native_format()
     }
 
     /// Whether unit clauses discovered through unit propagation have to be proven.
     pub fn prove_propagated_unit_clauses(&self) -> bool {
-        self.checker.is_some()
-            || match self.format {
-                Some(ProofFormat::Varisat) => true,
-                Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => false,
-                None => false,
-            }
+        self.native_format()
+    }
+
+    /// Whether found models are included in the proof.
+    pub fn models_in_proof(&self) -> bool {
+        self.native_format()
     }
 }
 

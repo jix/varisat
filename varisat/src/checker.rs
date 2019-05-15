@@ -6,7 +6,7 @@ use std::mem::{replace, transmute};
 use std::ops::Range;
 
 use failure::{Error, Fail};
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
 use smallvec::SmallVec;
 
 use crate::cnf::CnfFormula;
@@ -108,6 +108,8 @@ pub enum CheckedProofStep<'a> {
     },
     /// Make a redundant clause irredundant.
     MakeIrredundant { id: u64, clause: &'a [Lit] },
+    /// A (partial) assignment that satisfies all clauses.
+    Model { assignment: &'a [Lit] },
 }
 
 /// Implement to process proof steps.
@@ -799,6 +801,7 @@ impl<'a> Checker<'a> {
                 self.rehash();
                 Ok(())
             }
+            ProofStep::Model(model) => self.check_model_step(model),
         };
 
         if let Err(CheckerError::CheckFailed {
@@ -978,6 +981,40 @@ impl<'a> Checker<'a> {
                 }
                 StoreClauseResult::Duplicate => (),
                 StoreClauseResult::NewlyIrredundant => unreachable!(),
+            }
+        }
+        Ok(())
+    }
+
+    /// Check a Model step
+    fn check_model_step(&mut self, model: &[Lit]) -> Result<(), CheckerError> {
+        let mut assignments = HashSet::new();
+
+        for &lit in model.iter() {
+            if let Some((false, _)) = self.lit_value(lit) {
+                return Err(CheckerError::check_failed(
+                    self.step,
+                    format!("model assignment conflicts with unit clause {:?}", !lit),
+                ));
+            }
+            if assignments.contains(&!lit) {
+                return Err(CheckerError::check_failed(
+                    self.step,
+                    format!("model contains conflicting assignment {:?}", !lit),
+                ));
+            }
+            assignments.insert(lit);
+        }
+
+        for (_, candidates) in self.clauses.iter() {
+            for clause in candidates.iter() {
+                let lits = clause.lits.slice(&self.literal_buffer);
+                if !lits.iter().any(|lit| assignments.contains(&lit)) {
+                    return Err(CheckerError::check_failed(
+                        self.step,
+                        format!("model does not satisfy clause {:?}", lits),
+                    ));
+                }
             }
         }
         Ok(())
@@ -1267,6 +1304,54 @@ mod tests {
                 proof: DeleteClauseProof::Simplified,
             }),
             "not subsumed",
+        )
+    }
+
+    #[test]
+    fn model_unit_conflict() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                1;
+                2, 3;
+            ])
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::Model(&lits![-1, 2, -3])),
+            "conflicts with unit clause",
+        )
+    }
+
+    #[test]
+    fn model_internal_conflict() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                2, 3;
+            ])
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::Model(&lits![-1, 1, 2, -3])),
+            "conflicting assignment",
+        )
+    }
+
+    #[test]
+    fn model_clause_unsat() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                1, 2, 3;
+                -1, -2, 3;
+                1, -2, -3;
+            ])
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::Model(&lits![-1, 2, 3])),
+            "does not satisfy clause",
         )
     }
 

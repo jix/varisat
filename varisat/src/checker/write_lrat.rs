@@ -75,7 +75,7 @@ impl<'a> ProofProcessor for WriteLrat<'a> {
                 self.open_delete()?;
                 self.write_ids(&[id])?;
             }
-            &CheckedProofStep::MakeIrredundant { .. } => (),
+            &CheckedProofStep::MakeIrredundant { .. } | &CheckedProofStep::Model { .. } => (),
         }
         Ok(())
     }

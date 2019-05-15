@@ -14,6 +14,7 @@ const CODE_DELETE_CLAUSE_REDUNDANT: u64 = 3;
 const CODE_DELETE_CLAUSE_SIMPLIFIED: u64 = 4;
 const CODE_DELETE_CLAUSE_SATISFIED: u64 = 5;
 const CODE_CHANGE_HASH_BITS: u64 = 6;
+const CODE_MODEL: u64 = 7;
 
 /// Writes a proof step in the varisat format
 pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::Result<()> {
@@ -56,6 +57,11 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
         ProofStep::ChangeHashBits(bits) => {
             write_u64(&mut *target, CODE_CHANGE_HASH_BITS)?;
             write_u64(&mut *target, bits as u64)?;
+        }
+
+        ProofStep::Model(model) => {
+            write_u64(&mut *target, CODE_MODEL)?;
+            write_literals(&mut *target, model)?;
         }
     }
 
@@ -104,6 +110,10 @@ impl Parser {
             CODE_CHANGE_HASH_BITS => {
                 let bits = read_u64(&mut *source)? as u32;
                 Ok(ProofStep::ChangeHashBits(bits))
+            }
+            CODE_MODEL => {
+                read_literals(&mut *source, &mut self.lit_buf)?;
+                Ok(ProofStep::Model(&self.lit_buf))
             }
             _ => failure::bail!("parse error"),
         }
