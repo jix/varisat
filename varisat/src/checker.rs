@@ -1021,6 +1021,12 @@ impl<'a> Checker<'a> {
                 }
             }
         }
+
+        Self::process_step(
+            &mut self.processors,
+            &CheckedProofStep::Model { assignment: model },
+        )?;
+
         Ok(())
     }
 
