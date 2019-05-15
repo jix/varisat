@@ -8,6 +8,8 @@ use varisat::checker::{Checker, CheckerError, WriteLrat};
 
 use super::{banner, init_logging};
 
+mod transcript;
+
 pub fn check_args() -> App<'static, 'static> {
     SubCommand::with_name("--check")
         .arg_from_usage("[INPUT] 'The input file to use (stdin if omitted)'")
@@ -41,6 +43,10 @@ pub fn check_main(matches: &ArgMatches) -> Result<i32, Error> {
             &mut locked_stdin as &mut io::Read
         }
     };
+
+    let mut transcript = transcript::Transcript::default();
+
+    checker.add_processor(&mut transcript);
 
     let mut lrat_processor;
 
