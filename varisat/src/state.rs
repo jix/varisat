@@ -23,6 +23,8 @@ impl Default for SatState {
 pub struct SolverState {
     pub sat_state: SatState,
     pub formula_is_empty: bool,
+    /// Whether solve was called at least once.
+    pub solver_invoked: bool,
     pub state_is_invalid: bool,
     pub solver_error: Option<SolverError>,
 }
@@ -32,6 +34,7 @@ impl Default for SolverState {
         SolverState {
             sat_state: SatState::Unknown,
             formula_is_empty: true,
+            solver_invoked: false,
             state_is_invalid: false,
             solver_error: None,
         }

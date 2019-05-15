@@ -15,6 +15,7 @@ const CODE_DELETE_CLAUSE_SIMPLIFIED: u64 = 4;
 const CODE_DELETE_CLAUSE_SATISFIED: u64 = 5;
 const CODE_CHANGE_HASH_BITS: u64 = 6;
 const CODE_MODEL: u64 = 7;
+const CODE_ADD_CLAUSE: u64 = 8;
 
 // Using a random value here makes it unlikely that a corrupted proof will be silently truncated and
 // accepted
@@ -23,6 +24,11 @@ const CODE_END: u64 = 0x9ac3391f4294c211;
 /// Writes a proof step in the varisat format
 pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::Result<()> {
     match *step {
+        ProofStep::AddClause { clause } => {
+            write_u64(&mut *target, CODE_ADD_CLAUSE)?;
+            write_literals(&mut *target, clause)?;
+        }
+
         ProofStep::AtClause {
             redundant,
             clause,
@@ -87,6 +93,12 @@ impl Parser {
     pub fn parse_step<'a>(&'a mut self, source: &mut impl BufRead) -> Result<ProofStep<'a>, Error> {
         let code = read_u64(&mut *source)?;
         match code {
+            CODE_ADD_CLAUSE => {
+                read_literals(&mut *source, &mut self.lit_buf)?;
+                Ok(ProofStep::AddClause {
+                    clause: &self.lit_buf,
+                })
+            }
             CODE_AT_CLAUSE_IRRED | CODE_AT_CLAUSE_RED => {
                 read_literals(&mut *source, &mut self.lit_buf)?;
                 read_hashes(&mut *source, &mut self.hash_buf)?;

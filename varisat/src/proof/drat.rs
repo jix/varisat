@@ -18,6 +18,10 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
         | ProofStep::ChangeHashBits(..)
         | ProofStep::Model(..)
         | ProofStep::End => (),
+        ProofStep::AddClause { .. } => {
+            // TODO allow error handling here?
+            panic!("incremental clause additions not supported by DRAT proofs");
+        }
     }
 
     Ok(())
@@ -38,6 +42,10 @@ pub fn write_binary_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -
         | ProofStep::ChangeHashBits(..)
         | ProofStep::Model(..)
         | ProofStep::End => (),
+        ProofStep::AddClause { .. } => {
+            // TODO allow error handling here?
+            panic!("incremental clause additions not supported by DRAT proofs");
+        }
     }
 
     Ok(())

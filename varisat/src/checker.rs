@@ -787,6 +787,7 @@ impl<'a> Checker<'a> {
     /// Check a single proof step
     pub(crate) fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
         let mut result = match step {
+            ProofStep::AddClause { clause } => self.add_clause(clause),
             ProofStep::AtClause {
                 redundant,
                 clause,
@@ -1391,5 +1392,65 @@ mod tests {
 
             checker.check_proof(&mut &proof[..]).unwrap();
         }
+
+        #[test]
+        fn sgen_checked_unsat_incremental_clauses(formula in sgen_unsat_formula(1..7usize)) {
+            let mut proof = vec![];
+
+            let mut solver = Solver::new();
+            solver.write_proof(&mut proof, ProofFormat::Varisat);
+
+            let mut expected_models = 0;
+
+            // Add all clauses incrementally so they are recorded in the proof
+            solver.solve().unwrap();
+            expected_models += 1;
+
+            let mut last_state = Some(true);
+
+            for clause in formula.iter() {
+                solver.add_clause(clause);
+
+                let state = solver.solve().ok();
+                if state != last_state {
+                    prop_assert_eq!(state, Some(false));
+                    prop_assert_eq!(last_state, Some(true));
+                    last_state = state;
+                }
+                if state == Some(true) {
+                    expected_models += 1;
+                }
+            }
+
+            prop_assert_eq!(last_state, Some(false));
+
+            drop(solver);
+
+            #[derive(Default)]
+            struct FoundModels {
+                counter: usize,
+                unsat: bool,
+            }
+
+            impl ProofProcessor for FoundModels {
+                fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error> {
+                    if let CheckedProofStep::Model { .. } = step {
+                        self.counter += 1;
+                    } else if let CheckedProofStep::AtClause { clause: &[], .. } = step {
+                        self.unsat = true;
+                    }
+                    Ok(())
+                }
+            }
+
+            let mut found_models = FoundModels::default();
+            let mut checker = Checker::new();
+            checker.add_processor(&mut found_models);
+            checker.check_proof(&mut &proof[..]).unwrap();
+
+            prop_assert_eq!(found_models.counter, expected_models);
+            prop_assert!(found_models.unsat);
+        }
+
     }
 }

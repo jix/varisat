@@ -24,6 +24,14 @@ impl MapStep {
         'b: 's,
     {
         match *step {
+            ProofStep::AddClause { clause } => {
+                self.lit_buf.clear();
+                self.lit_buf.extend(clause.iter().cloned().map(map_lit));
+                ProofStep::AddClause {
+                    clause: &self.lit_buf,
+                }
+            }
+
             ProofStep::AtClause {
                 redundant,
                 clause,
