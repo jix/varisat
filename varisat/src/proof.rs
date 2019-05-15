@@ -94,6 +94,11 @@ pub enum ProofStep<'a> {
     ChangeHashBits(u32),
     /// A (partial) assignment that satisfies all clauses.
     Model(&'a [Lit]),
+    /// Signals the end of a proof.
+    ///
+    /// A varisat proof must end with this command or else the checker will complain about an
+    /// incomplete proof.
+    End,
 }
 
 impl<'a> ProofStep<'a> {
@@ -114,7 +119,10 @@ impl<'a> ProofStep<'a> {
                     0
                 }
             }
-            ProofStep::UnitClauses(..) | ProofStep::ChangeHashBits(..) | ProofStep::Model(..) => 0,
+            ProofStep::UnitClauses(..)
+            | ProofStep::ChangeHashBits(..)
+            | ProofStep::Model(..)
+            | ProofStep::End => 0,
         }
     }
 }
@@ -310,6 +318,7 @@ pub fn flush_proof<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut Solver
 
 /// Stop writing proof steps.
 pub fn close_proof<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP)) {
+    add_step(ctx.borrow(), &ProofStep::End);
     flush_proof(ctx.borrow());
     ctx.part_mut(ProofP).format = None;
     ctx.part_mut(ProofP).target = BufWriter::new(Box::new(sink()));

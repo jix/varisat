@@ -16,6 +16,10 @@ const CODE_DELETE_CLAUSE_SATISFIED: u64 = 5;
 const CODE_CHANGE_HASH_BITS: u64 = 6;
 const CODE_MODEL: u64 = 7;
 
+// Using a random value here makes it unlikely that a corrupted proof will be silently truncated and
+// accepted
+const CODE_END: u64 = 0x9ac3391f4294c211;
+
 /// Writes a proof step in the varisat format
 pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::Result<()> {
     match *step {
@@ -62,6 +66,10 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
         ProofStep::Model(model) => {
             write_u64(&mut *target, CODE_MODEL)?;
             write_literals(&mut *target, model)?;
+        }
+
+        ProofStep::End => {
+            write_u64(&mut *target, CODE_END)?;
         }
     }
 
@@ -115,6 +123,7 @@ impl Parser {
                 read_literals(&mut *source, &mut self.lit_buf)?;
                 Ok(ProofStep::Model(&self.lit_buf))
             }
+            CODE_END => Ok(ProofStep::End),
             _ => failure::bail!("parse error"),
         }
     }

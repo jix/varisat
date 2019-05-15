@@ -21,10 +21,7 @@ pub use write_lrat::WriteLrat;
 /// Possible errors while checking a varisat proof.
 #[derive(Debug, Fail)]
 pub enum CheckerError {
-    #[fail(
-        display = "step {}: Proof ended without deriving unsatisfiability",
-        step
-    )]
+    #[fail(display = "step {}: Unexpected end of proof file", step)]
     ProofIncomplete { step: u64 },
     #[fail(display = "step {}: Error reading proof file: {}", step, cause)]
     IoError {
@@ -246,6 +243,8 @@ pub struct Checker<'a> {
     trail: Vec<(Lit, Option<UnitClause>)>,
     /// Whether unsatisfiability was proven.
     unsat: bool,
+    /// Whether an end of proof step was checked.
+    ended: bool,
     /// Involved clauses during the last check.
     trace: Vec<TraceItem>,
     /// Edges of the trace implication graph.
@@ -282,6 +281,7 @@ impl<'a> Default for Checker<'a> {
             unit_clauses: vec![],
             trail: vec![],
             unsat: false,
+            ended: false,
             trace: vec![],
             trace_edges: vec![],
             trace_ids: vec![],
@@ -802,6 +802,10 @@ impl<'a> Checker<'a> {
                 Ok(())
             }
             ProofStep::Model(model) => self.check_model_step(model),
+            ProofStep::End => {
+                self.ended = true;
+                Ok(())
+            }
         };
 
         if let Err(CheckerError::CheckFailed {
@@ -1041,7 +1045,7 @@ impl<'a> Checker<'a> {
         let mut buffer = io::BufReader::new(input);
         let mut parser = Parser::default();
 
-        while !self.unsat {
+        while !self.ended {
             self.step += 1;
 
             if self.step % 100000 == 0 {

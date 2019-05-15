@@ -59,13 +59,14 @@ impl MapStep {
                     proof,
                 }
             }
-            ProofStep::ChangeHashBits(..) => step.clone(),
 
             ProofStep::Model(model) => {
                 self.lit_buf.clear();
                 self.lit_buf.extend(model.iter().cloned().map(map_lit));
                 ProofStep::Model(&self.lit_buf)
             }
+
+            ProofStep::ChangeHashBits(..) | ProofStep::End => step.clone(),
         }
     }
 }

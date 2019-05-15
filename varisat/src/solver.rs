@@ -233,6 +233,12 @@ impl<'a> Solver<'a> {
     }
 }
 
+impl<'a> Drop for Solver<'a> {
+    fn drop(&mut self) {
+        let _ = self.close_proof();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
