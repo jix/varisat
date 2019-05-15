@@ -2,7 +2,7 @@
 use std::io::{BufWriter, Write};
 use std::mem::replace;
 
-use failure::{bail, Error};
+use failure::Error;
 
 use crate::lit::Lit;
 
@@ -50,6 +50,7 @@ impl<'a> ProofProcessor for WriteLrat<'a> {
                 id,
                 clause,
                 propagations,
+                ..
             } => {
                 self.close_delete()?;
                 self.last_added_id = id;
@@ -60,12 +61,21 @@ impl<'a> ProofProcessor for WriteLrat<'a> {
                 self.write_ids(propagations)?;
                 self.write_end()?;
             }
+            &CheckedProofStep::DeleteAtClause {
+                id,
+                keep_as_redundant,
+                ..
+            } => {
+                if !keep_as_redundant {
+                    self.open_delete()?;
+                    self.write_ids(&[id])?;
+                }
+            }
             &CheckedProofStep::DeleteClause { id, .. } => {
                 self.open_delete()?;
-
                 self.write_ids(&[id])?;
             }
-            _ => bail!("LRAT doesn't support proof step {:?}", step),
+            &CheckedProofStep::MakeIrredundant { .. } | &CheckedProofStep::Model { .. } => (),
         }
         Ok(())
     }

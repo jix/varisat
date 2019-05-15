@@ -8,7 +8,7 @@ use partial_ref::{partial, PartialRef};
 use crate::context::{
     AssignmentP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, ProofP, SolverStateP, WatchlistsP,
 };
-use crate::proof::{self, ProofStep};
+use crate::proof::{self, DeleteClauseProof, ProofStep};
 
 use crate::vec_mut_scan::VecMutScan;
 
@@ -73,7 +73,13 @@ pub fn reduce_locals<'a>(
                 if ctx.part(ProofP).is_active() {
                     let (alloc, mut ctx) = ctx.split_part(ClauseAllocP);
                     let lits = alloc.clause(*cref).lits();
-                    proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits));
+                    proof::add_step(
+                        ctx.borrow(),
+                        &ProofStep::DeleteClause {
+                            clause: lits,
+                            proof: DeleteClauseProof::Redundant,
+                        },
+                    );
                 }
 
                 cref.remove();

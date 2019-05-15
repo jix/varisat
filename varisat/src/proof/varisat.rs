@@ -5,21 +5,34 @@ use failure::Error;
 use crate::lit::Lit;
 use crate::vli_enc::{read_u64, write_u64};
 
-use super::{ClauseHash, ProofStep};
+use super::{ClauseHash, DeleteClauseProof, ProofStep};
 
-const CODE_AT_CLAUSE: u64 = 0;
-const CODE_UNIT_CLAUSES: u64 = 1;
-const CODE_DELETE_CLAUSE: u64 = 2;
-const CODE_CHANGE_HASH_BITS: u64 = 3;
+const CODE_AT_CLAUSE_RED: u64 = 0;
+const CODE_AT_CLAUSE_IRRED: u64 = 1;
+const CODE_UNIT_CLAUSES: u64 = 2;
+const CODE_DELETE_CLAUSE_REDUNDANT: u64 = 3;
+const CODE_DELETE_CLAUSE_SIMPLIFIED: u64 = 4;
+const CODE_DELETE_CLAUSE_SATISFIED: u64 = 5;
+const CODE_CHANGE_HASH_BITS: u64 = 6;
+const CODE_MODEL: u64 = 7;
+
+// Using a random value here makes it unlikely that a corrupted proof will be silently truncated and
+// accepted
+const CODE_END: u64 = 0x9ac3391f4294c211;
 
 /// Writes a proof step in the varisat format
 pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::Result<()> {
-    match step {
+    match *step {
         ProofStep::AtClause {
+            redundant,
             clause,
             propagation_hashes,
         } => {
-            write_u64(&mut *target, CODE_AT_CLAUSE)?;
+            if redundant {
+                write_u64(&mut *target, CODE_AT_CLAUSE_RED)?;
+            } else {
+                write_u64(&mut *target, CODE_AT_CLAUSE_IRRED)?;
+            }
             write_literals(&mut *target, clause)?;
             write_hashes(&mut *target, propagation_hashes)?;
         }
@@ -29,14 +42,34 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
             write_unit_clauses(&mut *target, units)?;
         }
 
-        ProofStep::DeleteClause(clause) => {
-            write_u64(&mut *target, CODE_DELETE_CLAUSE)?;
+        ProofStep::DeleteClause { clause, proof } => {
+            match proof {
+                DeleteClauseProof::Redundant => {
+                    write_u64(&mut *target, CODE_DELETE_CLAUSE_REDUNDANT)?;
+                }
+                DeleteClauseProof::Simplified => {
+                    write_u64(&mut *target, CODE_DELETE_CLAUSE_SIMPLIFIED)?;
+                }
+                DeleteClauseProof::Satisfied => {
+                    write_u64(&mut *target, CODE_DELETE_CLAUSE_SATISFIED)?;
+                }
+            }
+
             write_literals(&mut *target, clause)?;
         }
 
         ProofStep::ChangeHashBits(bits) => {
             write_u64(&mut *target, CODE_CHANGE_HASH_BITS)?;
-            write_u64(&mut *target, *bits as u64)?;
+            write_u64(&mut *target, bits as u64)?;
+        }
+
+        ProofStep::Model(model) => {
+            write_u64(&mut *target, CODE_MODEL)?;
+            write_literals(&mut *target, model)?;
+        }
+
+        ProofStep::End => {
+            write_u64(&mut *target, CODE_END)?;
         }
     }
 
@@ -52,11 +85,13 @@ pub struct Parser {
 
 impl Parser {
     pub fn parse_step<'a>(&'a mut self, source: &mut impl BufRead) -> Result<ProofStep<'a>, Error> {
-        match read_u64(&mut *source)? {
-            CODE_AT_CLAUSE => {
+        let code = read_u64(&mut *source)?;
+        match code {
+            CODE_AT_CLAUSE_IRRED | CODE_AT_CLAUSE_RED => {
                 read_literals(&mut *source, &mut self.lit_buf)?;
                 read_hashes(&mut *source, &mut self.hash_buf)?;
                 Ok(ProofStep::AtClause {
+                    redundant: code == CODE_AT_CLAUSE_RED,
                     clause: &self.lit_buf,
                     propagation_hashes: &self.hash_buf,
                 })
@@ -65,14 +100,30 @@ impl Parser {
                 read_unit_clauses(&mut *source, &mut self.unit_buf)?;
                 Ok(ProofStep::UnitClauses(&self.unit_buf))
             }
-            CODE_DELETE_CLAUSE => {
+            CODE_DELETE_CLAUSE_REDUNDANT
+            | CODE_DELETE_CLAUSE_SIMPLIFIED
+            | CODE_DELETE_CLAUSE_SATISFIED => {
+                let proof = match code {
+                    CODE_DELETE_CLAUSE_REDUNDANT => DeleteClauseProof::Redundant,
+                    CODE_DELETE_CLAUSE_SIMPLIFIED => DeleteClauseProof::Simplified,
+                    CODE_DELETE_CLAUSE_SATISFIED => DeleteClauseProof::Satisfied,
+                    _ => unreachable!(),
+                };
                 read_literals(&mut *source, &mut self.lit_buf)?;
-                Ok(ProofStep::DeleteClause(&self.lit_buf))
+                Ok(ProofStep::DeleteClause {
+                    clause: &self.lit_buf,
+                    proof,
+                })
             }
             CODE_CHANGE_HASH_BITS => {
                 let bits = read_u64(&mut *source)? as u32;
                 Ok(ProofStep::ChangeHashBits(bits))
             }
+            CODE_MODEL => {
+                read_literals(&mut *source, &mut self.lit_buf)?;
+                Ok(ProofStep::Model(&self.lit_buf))
+            }
+            CODE_END => Ok(ProofStep::End),
             _ => failure::bail!("parse error"),
         }
     }

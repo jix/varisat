@@ -10,11 +10,14 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
         ProofStep::AtClause { clause, .. } => {
             write_literals(target, &clause)?;
         }
-        ProofStep::DeleteClause(clause) => {
+        ProofStep::DeleteClause { clause, .. } => {
             target.write_all(b"d ")?;
             write_literals(target, &clause[..])?;
         }
-        ProofStep::UnitClauses(..) | ProofStep::ChangeHashBits(..) => (),
+        ProofStep::UnitClauses(..)
+        | ProofStep::ChangeHashBits(..)
+        | ProofStep::Model(..)
+        | ProofStep::End => (),
     }
 
     Ok(())
@@ -27,11 +30,14 @@ pub fn write_binary_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -
             target.write_all(b"a")?;
             write_binary_literals(target, &clause)?;
         }
-        ProofStep::DeleteClause(clause) => {
+        ProofStep::DeleteClause { clause, .. } => {
             target.write_all(b"d")?;
             write_binary_literals(target, &clause[..])?;
         }
-        ProofStep::UnitClauses(..) | ProofStep::ChangeHashBits(..) => (),
+        ProofStep::UnitClauses(..)
+        | ProofStep::ChangeHashBits(..)
+        | ProofStep::Model(..)
+        | ProofStep::End => (),
     }
 
     Ok(())

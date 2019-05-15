@@ -79,6 +79,11 @@ impl ClauseHeader {
         *word = (*word & !(TIER_MASK << TIER_OFFSET)) | ((tier as LitIdx) << TIER_OFFSET);
     }
 
+    /// Whether the clause is redundant.
+    pub fn redundant(&self) -> bool {
+        self.tier() != Tier::Irred
+    }
+
     /// Whether the clause is marked.
     ///
     /// The mark is a temporary bit that can be set by various routines, but should always be reset

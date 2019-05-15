@@ -44,10 +44,23 @@ pub fn clause_hash(lits: &[Lit]) -> ClauseHash {
     hash
 }
 
+/// Justifications for a simple clause deletion.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum DeleteClauseProof {
+    /// The clause is known to be redundant.
+    Redundant,
+    /// The clause is irred and subsumed by the clause added in the previous step.
+    Simplified,
+    /// The clause contains a true literal.
+    ///
+    /// Also used to justify deletion of tautological clauses.
+    Satisfied,
+}
+
 /// A single proof step.
 ///
 /// Represents a mutation of the current formula and a justification for the mutation's validity.
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum ProofStep<'a> {
     /// Add a clause that is an asymmetric tautoligy (AT).
     ///
@@ -59,6 +72,7 @@ pub enum ProofStep<'a> {
     ///
     /// When generating DRAT proofs the second slice is ignored and may be empty.
     AtClause {
+        redundant: bool,
         clause: &'a [Lit],
         propagation_hashes: &'a [ClauseHash],
     },
@@ -72,9 +86,19 @@ pub enum ProofStep<'a> {
     /// Ignored when generating DRAT proofs.
     UnitClauses(&'a [(Lit, ClauseHash)]),
     /// Delete a clause consisting of the given literals.
-    DeleteClause(&'a [Lit]),
+    DeleteClause {
+        clause: &'a [Lit],
+        proof: DeleteClauseProof,
+    },
     /// Change the number of clause hash bits used
     ChangeHashBits(u32),
+    /// A (partial) assignment that satisfies all clauses.
+    Model(&'a [Lit]),
+    /// Signals the end of a proof.
+    ///
+    /// A varisat proof must end with this command or else the checker will complain about an
+    /// incomplete proof.
+    End,
 }
 
 impl<'a> ProofStep<'a> {
@@ -88,16 +112,17 @@ impl<'a> ProofStep<'a> {
                     0
                 }
             }
-            ProofStep::DeleteClause(clause) => {
+            ProofStep::DeleteClause { clause, .. } => {
                 if clause.len() > 1 {
                     -1
                 } else {
                     0
                 }
             }
-
-            ProofStep::UnitClauses(..) => 0,
-            ProofStep::ChangeHashBits(..) => 0,
+            ProofStep::UnitClauses(..)
+            | ProofStep::ChangeHashBits(..)
+            | ProofStep::Model(..)
+            | ProofStep::End => 0,
         }
     }
 }
@@ -159,24 +184,28 @@ impl<'a> Proof<'a> {
         self.checker.is_some() || self.format.is_some()
     }
 
-    /// Whether clause hashes are required for steps that support them.
-    pub fn clause_hashes_required(&self) -> bool {
+    /// Are we emitting or checking our native format.
+    pub fn native_format(&self) -> bool {
         self.checker.is_some()
             || match self.format {
                 Some(ProofFormat::Varisat) => true,
-                Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => false,
-                None => false,
+                _ => false,
             }
+    }
+
+    /// Whether clause hashes are required for steps that support them.
+    pub fn clause_hashes_required(&self) -> bool {
+        self.native_format()
     }
 
     /// Whether unit clauses discovered through unit propagation have to be proven.
     pub fn prove_propagated_unit_clauses(&self) -> bool {
-        self.checker.is_some()
-            || match self.format {
-                Some(ProofFormat::Varisat) => true,
-                Some(ProofFormat::Drat) | Some(ProofFormat::BinaryDrat) => false,
-                None => false,
-            }
+        self.native_format()
+    }
+
+    /// Whether found models are included in the proof.
+    pub fn models_in_proof(&self) -> bool {
+        self.native_format()
     }
 }
 
@@ -210,7 +239,7 @@ pub fn add_step<'a, 's>(
     // loaded the complete formula, so our clause count doesn't match the checker's and we could
     // cause way too many collisions, causing the checker to have quadratic runtime.
     match step {
-        ProofStep::DeleteClause(..) => {}
+        ProofStep::DeleteClause { .. } => {}
         _ => proof.initial_load_complete = true,
     }
 
@@ -289,6 +318,7 @@ pub fn flush_proof<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut Solver
 
 /// Stop writing proof steps.
 pub fn close_proof<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP)) {
+    add_step(ctx.borrow(), &ProofStep::End);
     flush_proof(ctx.borrow());
     ctx.part_mut(ProofP).format = None;
     ctx.part_mut(ProofP).target = BufWriter::new(Box::new(sink()));
@@ -318,7 +348,16 @@ fn handle_self_check_result<'a>(
                 Some(SolverError::ProofProcessorError { cause });
             *ctx.part_mut(ProofP) = Proof::default();
         }
-        result => result.expect("self check failure"),
+        Err(err) => {
+            log::error!("{}", err);
+            if let CheckerError::CheckFailed { debug_step, .. } = err {
+                if !debug_step.is_empty() {
+                    log::error!("failed step was {}", debug_step)
+                }
+            }
+            panic!("self check failure");
+        }
+        Ok(()) => (),
     }
 }
 

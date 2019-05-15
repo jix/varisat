@@ -7,7 +7,7 @@ use crate::context::{
     ProofP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
 use crate::lit::Lit;
-use crate::proof::{self, ProofStep};
+use crate::proof::{self, DeleteClauseProof, ProofStep};
 use crate::prop::{assignment, full_restart, Reason};
 use crate::simplify::resurrect_unit;
 use crate::state::SatState;
@@ -69,7 +69,13 @@ pub fn load_clause<'a>(
 
     for &lit in lits.iter() {
         if last == Some(!lit) {
-            proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits));
+            proof::add_step(
+                ctx.borrow(),
+                &ProofStep::DeleteClause {
+                    clause: lits,
+                    proof: DeleteClauseProof::Satisfied,
+                },
+            );
             return;
         }
         last = Some(lit);
@@ -119,7 +125,13 @@ pub fn load_clause<'a>(
 
     if clause_is_true {
         if lits.len() > 1 {
-            proof::add_step(ctx.borrow(), &ProofStep::DeleteClause(lits));
+            proof::add_step(
+                ctx.borrow(),
+                &ProofStep::DeleteClause {
+                    clause: lits,
+                    proof: DeleteClauseProof::Satisfied,
+                },
+            );
         }
         return;
     }

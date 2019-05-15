@@ -4,7 +4,7 @@ use std::io;
 use clap::{App, ArgMatches, SubCommand};
 use failure::Error;
 
-use varisat::checker::{Checker, WriteLrat};
+use varisat::checker::{Checker, CheckerError, WriteLrat};
 
 use super::{banner, init_logging};
 
@@ -66,6 +66,11 @@ pub fn check_main(matches: &ArgMatches) -> Result<i32, Error> {
         Ok(()) => println!("s VERIFIED"),
         Err(err) => {
             log::error!("{}", err);
+            if let CheckerError::CheckFailed { debug_step, .. } = err {
+                if !debug_step.is_empty() {
+                    log::error!("failed step was {}", debug_step)
+                }
+            }
             println!("s NOT VERIFIED");
             return Ok(1);
         }
