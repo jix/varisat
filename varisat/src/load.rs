@@ -1,4 +1,6 @@
 //! Loading a formula into the solver.
+use vec_mut_scan::VecMutScan;
+
 use partial_ref::{partial, PartialRef};
 
 use crate::clause::{db, ClauseHeader, Tier};
@@ -11,8 +13,6 @@ use crate::proof::{self, DeleteClauseProof, ProofStep};
 use crate::prop::{assignment, full_restart, Reason};
 use crate::simplify::resurrect_unit;
 use crate::state::SatState;
-
-use crate::vec_mut_scan::VecMutScan;
 
 /// Adds a clause to the current formula.
 ///
