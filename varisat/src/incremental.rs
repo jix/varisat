@@ -3,10 +3,11 @@
 use partial_ref::{partial, PartialRef};
 
 use crate::context::{
-    AssignmentP, ClauseAllocP, Context, ImplGraphP, IncrementalP, SolverStateP, TmpDataP, TrailP,
-    VsidsP,
+    AssignmentP, ClauseAllocP, Context, ImplGraphP, IncrementalP, ProofP, SolverStateP, TmpDataP,
+    TrailP, VsidsP,
 };
 use crate::lit::Lit;
+use crate::proof::{self, clause_hash, lit_hash, ClauseHash, ProofStep};
 use crate::prop::{enqueue_assignment, full_restart, Reason};
 use crate::state::SatState;
 
@@ -16,6 +17,7 @@ pub struct Incremental {
     assumptions: Vec<Lit>,
     failed_core: Vec<Lit>,
     assumption_levels: usize,
+    failed_propagation_hashes: Vec<ClauseHash>,
 }
 
 impl Incremental {
@@ -43,13 +45,14 @@ pub enum EnqueueAssumption {
 }
 
 /// Change the currently active assumptions.
-pub fn set_assumptions(
+pub fn set_assumptions<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut AssignmentP,
         mut IncrementalP,
         mut SolverStateP,
         mut TrailP,
+        mut ProofP<'a>,
         mut VsidsP,
     ),
     assumptions: &[Lit],
@@ -67,18 +70,22 @@ pub fn set_assumptions(
 
     incremental.assumptions.clear();
     incremental.assumptions.extend_from_slice(assumptions);
+
+    proof::add_step(ctx.borrow(), &ProofStep::Assumptions(assumptions));
 }
 
 /// Enqueue another assumption if possible.
 ///
 /// Returns whether an assumption was enqueued, whether no assumptions are left or whether the
 /// assumptions result in a conflict.
-pub fn enqueue_assumption(
+pub fn enqueue_assumption<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut AssignmentP,
         mut ImplGraphP,
         mut IncrementalP,
+        mut ProofP<'a>,
+        mut SolverStateP,
         mut TmpDataP,
         mut TrailP,
         ClauseAllocP,
@@ -116,10 +123,12 @@ pub fn enqueue_assumption(
 ///
 /// Compute a set of incompatible assumptions given an assumption that is incompatible with the
 /// assumptions enqueued so far.
-fn analyze_assumption_conflict(
+fn analyze_assumption_conflict<'a>(
     mut ctx: partial!(
-        Context,
+        Context<'a>,
         mut IncrementalP,
+        mut ProofP<'a>,
+        mut SolverStateP,
         mut TmpDataP,
         ClauseAllocP,
         ImplGraphP,
@@ -128,29 +137,41 @@ fn analyze_assumption_conflict(
     assumption: Lit,
 ) {
     let (incremental, mut ctx) = ctx.split_part_mut(IncrementalP);
-    let (tmp, ctx) = ctx.split_part_mut(TmpDataP);
+    let (tmp, mut ctx) = ctx.split_part_mut(TmpDataP);
+    let (trail, mut ctx) = ctx.split_part(TrailP);
+    let (impl_graph, mut ctx) = ctx.split_part(ImplGraphP);
 
     let flags = &mut tmp.flags;
 
     incremental.failed_core.clear();
     incremental.failed_core.push(assumption);
 
+    incremental.failed_propagation_hashes.clear();
+
     flags[assumption.index()] = true;
     let mut flag_count = 1;
 
-    for &lit in ctx.part(TrailP).trail().iter().rev() {
+    for &lit in trail.trail().iter().rev() {
         if flags[lit.index()] {
             flags[lit.index()] = false;
             flag_count -= 1;
 
-            match ctx.part(ImplGraphP).reason(lit.var()) {
+            match impl_graph.reason(lit.var()) {
                 Reason::Unit => {
-                    if ctx.part(ImplGraphP).level(lit.var()) > 0 {
+                    if impl_graph.level(lit.var()) > 0 {
                         incremental.failed_core.push(lit);
                     }
                 }
                 reason => {
-                    for &reason_lit in reason.lits(&ctx.clone().borrow()) {
+                    let (ctx_lits, ctx) = ctx.split_borrow();
+                    let reason_lits = reason.lits(&ctx_lits);
+
+                    if ctx.part(ProofP).clause_hashes_required() {
+                        let hash = clause_hash(reason_lits) ^ lit_hash(lit);
+                        incremental.failed_propagation_hashes.push(hash);
+                    }
+
+                    for &reason_lit in reason_lits {
                         if !flags[reason_lit.index()] {
                             flags[reason_lit.index()] = true;
                             flag_count += 1;
@@ -164,6 +185,16 @@ fn analyze_assumption_conflict(
             }
         }
     }
+
+    incremental.failed_propagation_hashes.reverse();
+
+    proof::add_step(
+        ctx.borrow(),
+        &ProofStep::FailedAssumptions {
+            failed_core: &incremental.failed_core,
+            propagation_hashes: &incremental.failed_propagation_hashes,
+        },
+    );
 }
 
 #[cfg(test)]

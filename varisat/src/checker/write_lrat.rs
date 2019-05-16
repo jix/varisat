@@ -35,7 +35,8 @@ impl<'a> ProofProcessor for WriteLrat<'a> {
             &CheckedProofStep::AddClause { id, .. } => {
                 self.last_added_id = id;
             }
-            &CheckedProofStep::DuplicatedClause { id, .. } => {
+            &CheckedProofStep::DuplicatedClause { id, .. }
+            | &CheckedProofStep::TautologicalClause { id, .. } => {
                 self.last_added_id = id;
                 if self.binary {
                     self.open_delete()?;
@@ -75,7 +76,10 @@ impl<'a> ProofProcessor for WriteLrat<'a> {
                 self.open_delete()?;
                 self.write_ids(&[id])?;
             }
-            &CheckedProofStep::MakeIrredundant { .. } | &CheckedProofStep::Model { .. } => (),
+            &CheckedProofStep::MakeIrredundant { .. }
+            | &CheckedProofStep::Model { .. }
+            | &CheckedProofStep::Assumptions { .. }
+            | &CheckedProofStep::FailedAssumptions { .. } => (),
         }
         Ok(())
     }

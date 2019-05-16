@@ -62,6 +62,10 @@ pub enum DeleteClauseProof {
 /// Represents a mutation of the current formula and a justification for the mutation's validity.
 #[derive(Copy, Clone, Debug)]
 pub enum ProofStep<'a> {
+    /// Add a new input clause.
+    ///
+    /// This is only emitted for clauses added incrementally after an initial solve call.
+    AddClause { clause: &'a [Lit] },
     /// Add a clause that is an asymmetric tautoligy (AT).
     ///
     /// Assuming the negation of the clause's literals leads to a unit propagation conflict.
@@ -92,8 +96,17 @@ pub enum ProofStep<'a> {
     },
     /// Change the number of clause hash bits used
     ChangeHashBits(u32),
-    /// A (partial) assignment that satisfies all clauses.
+    /// A (partial) assignment that satisfies all clauses and assumptions.
     Model(&'a [Lit]),
+    /// Change the active set of assumptions.
+    ///
+    /// This is checked against future model or failed assumptions steps.
+    Assumptions(&'a [Lit]),
+    /// A subset of the assumptions that make the formula unsat.
+    FailedAssumptions {
+        failed_core: &'a [Lit],
+        propagation_hashes: &'a [ClauseHash],
+    },
     /// Signals the end of a proof.
     ///
     /// A varisat proof must end with this command or else the checker will complain about an
@@ -105,7 +118,7 @@ impl<'a> ProofStep<'a> {
     /// Number of added or removed clauses.
     pub fn clause_count_delta(&self) -> isize {
         match self {
-            ProofStep::AtClause { clause, .. } => {
+            ProofStep::AddClause { clause } | ProofStep::AtClause { clause, .. } => {
                 if clause.len() > 1 {
                     1
                 } else {
@@ -122,6 +135,8 @@ impl<'a> ProofStep<'a> {
             ProofStep::UnitClauses(..)
             | ProofStep::ChangeHashBits(..)
             | ProofStep::Model(..)
+            | ProofStep::Assumptions(..)
+            | ProofStep::FailedAssumptions { .. }
             | ProofStep::End => 0,
         }
     }
@@ -211,17 +226,21 @@ impl<'a> Proof<'a> {
 
 /// Call when adding an external clause.
 ///
-/// This is ignored for writing proof files but required for on-the-fly checking.
+/// This is required for on the fly checking and checking of incremental solving.
 pub fn add_clause<'a>(
     mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP),
     clause: &[Lit],
 ) {
-    if let Some(checker) = &mut ctx.part_mut(ProofP).checker {
-        let result = checker.add_clause(clause);
-        handle_self_check_result(ctx.borrow(), result);
-    }
-    if clause.len() > 1 {
-        ctx.part_mut(ProofP).clause_count += 1;
+    if ctx.part(SolverStateP).solver_invoked {
+        add_step(ctx.borrow(), &ProofStep::AddClause { clause })
+    } else {
+        if let Some(checker) = &mut ctx.part_mut(ProofP).checker {
+            let result = checker.add_clause(clause);
+            handle_self_check_result(ctx.borrow(), result);
+        }
+        if clause.len() > 1 {
+            ctx.part_mut(ProofP).clause_count += 1;
+        }
     }
 }
 

@@ -112,6 +112,8 @@ impl<'a> Solver<'a> {
 
     /// Check the satisfiability of the current formula.
     pub fn solve(&mut self) -> Result<bool, SolverError> {
+        self.ctx.solver_state.solver_invoked = true;
+
         let mut ctx = self.ctx.into_partial_ref_mut();
         assert!(
             !ctx.part_mut(SolverStateP).state_is_invalid,

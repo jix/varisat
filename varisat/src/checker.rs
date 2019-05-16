@@ -82,6 +82,11 @@ pub enum CheckedProofStep<'a> {
         same_as_id: u64,
         clause: &'a [Lit],
     },
+    /// A tautological clause of the input formula.
+    ///
+    /// Tautological clauses can be completely ignored. This step is only used to give an id to a
+    /// tautological input clause.
+    TautologicalClause { id: u64, clause: &'a [Lit] },
     /// Addition of an asymmetric tautology (AT).
     ///
     /// A clause C is an asymmetric tautology wrt. a formula F, iff unit propagation in F with the
@@ -105,8 +110,18 @@ pub enum CheckedProofStep<'a> {
     },
     /// Make a redundant clause irredundant.
     MakeIrredundant { id: u64, clause: &'a [Lit] },
-    /// A (partial) assignment that satisfies all clauses.
+    /// A (partial) assignment that satisfies all clauses and assumptions.
     Model { assignment: &'a [Lit] },
+    /// Change the active set of assumptions.
+    Assumptions { assumptions: &'a [Lit] },
+    /// Subset of assumptions incompatible with the formula.
+    ///
+    /// The proof consists of showing that the negation of the assumptions is an AT wrt. the
+    /// formula.
+    FailedAssumptions {
+        failed_core: &'a [Lit],
+        propagations: &'a [u64],
+    },
 }
 
 /// Implement to process proof steps.
@@ -188,7 +203,7 @@ struct Clause {
 }
 
 /// Identifies the origin of a unit clause.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum UnitId {
     Global(u64),
     TracePos(usize),
@@ -196,7 +211,7 @@ enum UnitId {
 }
 
 /// Known unit clauses and metadata.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 struct UnitClause {
     id: UnitId,
     value: bool,
@@ -268,6 +283,8 @@ pub struct Checker<'a> {
     previous_irred_clause_id: Option<u64>,
     /// Last added irredundant clause literals.
     previous_irred_clause_lits: Vec<Lit>,
+    /// Current assumptions, used to check FailedAssumptions and Model
+    assumptions: Vec<Lit>,
 }
 
 impl<'a> Default for Checker<'a> {
@@ -291,6 +308,7 @@ impl<'a> Default for Checker<'a> {
             hash_bits: 64,
             previous_irred_clause_id: None,
             previous_irred_clause_lits: vec![],
+            assumptions: vec![],
         }
     }
 }
@@ -317,11 +335,18 @@ impl<'a> Checker<'a> {
         }
 
         let mut tmp = replace(&mut self.tmp, vec![]);
-        tmp.clear();
-        tmp.extend_from_slice(&clause);
 
-        tmp.sort_unstable();
-        tmp.dedup();
+        if copy_canonical(&mut tmp, clause) {
+            Self::process_step(
+                &mut self.processors,
+                &CheckedProofStep::TautologicalClause {
+                    id: self.next_clause_id,
+                    clause: &self.tmp,
+                },
+            )?;
+            self.next_clause_id += 1;
+            return Ok(());
+        }
 
         let (id, added) = self.store_clause(&tmp, false);
 
@@ -619,6 +644,18 @@ impl<'a> Checker<'a> {
 
         assert!(self.trail.is_empty());
 
+        for &lit in lits.iter() {
+            if let Some((true, unit)) = self.lit_value(lit) {
+                if let UnitId::Global(id) = unit.id {
+                    self.trace_ids.clear();
+                    self.trace_ids.push(id);
+                    return Ok(());
+                } else {
+                    unreachable!("unexpected non global unit");
+                }
+            }
+        }
+
         // Set all lits to false
         for &lit in lits.iter() {
             if self.unit_clauses.len() <= lit.index() {
@@ -756,37 +793,13 @@ impl<'a> Checker<'a> {
         if self.previous_irred_clause_id.is_none() {
             return false;
         }
-        let mut subset = &self.previous_irred_clause_lits[..];
-        let mut superset = lits;
-
-        let mut strict = false;
-
-        while let Some((&sub_min, sub_rest)) = subset.split_first() {
-            if let Some((&super_min, super_rest)) = superset.split_first() {
-                if sub_min < super_min {
-                    // sub_min is not in superset
-                    return false;
-                } else if sub_min > super_min {
-                    // super_min is not in subset, skip it
-                    superset = super_rest;
-                    strict = true;
-                } else {
-                    // sub_min == super_min, go to next element
-                    superset = super_rest;
-                    subset = sub_rest;
-                }
-            } else {
-                // sub_min is not in superset
-                return false;
-            }
-        }
-        strict |= !superset.is_empty();
-        strict
+        is_subset(&self.previous_irred_clause_lits[..], lits, true)
     }
 
     /// Check a single proof step
     pub(crate) fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
         let mut result = match step {
+            ProofStep::AddClause { clause } => self.add_clause(clause),
             ProofStep::AtClause {
                 redundant,
                 clause,
@@ -802,6 +815,20 @@ impl<'a> Checker<'a> {
                 Ok(())
             }
             ProofStep::Model(model) => self.check_model_step(model),
+            ProofStep::Assumptions(assumptions) => {
+                copy_canonical(&mut self.assumptions, assumptions);
+                Self::process_step(
+                    &mut self.processors,
+                    &CheckedProofStep::Assumptions {
+                        assumptions: &self.assumptions,
+                    },
+                )?;
+                Ok(())
+            }
+            ProofStep::FailedAssumptions {
+                failed_core,
+                propagation_hashes,
+            } => self.check_failed_assumptions_step(failed_core, propagation_hashes),
             ProofStep::End => {
                 self.ended = true;
                 Ok(())
@@ -825,11 +852,13 @@ impl<'a> Checker<'a> {
         propagation_hashes: &[ClauseHash],
     ) -> Result<(), CheckerError> {
         let mut tmp = replace(&mut self.tmp, vec![]);
-        tmp.clear();
-        tmp.extend_from_slice(&clause);
 
-        tmp.sort_unstable();
-        tmp.dedup();
+        if copy_canonical(&mut tmp, clause) {
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!("clause {:?} is a tautology", tmp),
+            ));
+        }
 
         self.check_clause_with_hashes(&tmp, &*propagation_hashes)?;
 
@@ -874,11 +903,13 @@ impl<'a> Checker<'a> {
         proof: DeleteClauseProof,
     ) -> Result<(), CheckerError> {
         let mut tmp = replace(&mut self.tmp, vec![]);
-        tmp.clear();
-        tmp.extend_from_slice(&clause);
 
-        tmp.sort_unstable();
-        tmp.dedup();
+        if copy_canonical(&mut tmp, clause) {
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!("clause {:?} is a tautology", tmp),
+            ));
+        }
 
         let redundant = proof == DeleteClauseProof::Redundant;
 
@@ -1010,6 +1041,15 @@ impl<'a> Checker<'a> {
             assignments.insert(lit);
         }
 
+        for &lit in self.assumptions.iter() {
+            if !assignments.contains(&lit) {
+                return Err(CheckerError::check_failed(
+                    self.step,
+                    format!("model does not contain assumption {:?}", lit),
+                ));
+            }
+        }
+
         for (_, candidates) in self.clauses.iter() {
             for clause in candidates.iter() {
                 let lits = clause.lits.slice(&self.literal_buffer);
@@ -1021,6 +1061,58 @@ impl<'a> Checker<'a> {
                 }
             }
         }
+
+        Self::process_step(
+            &mut self.processors,
+            &CheckedProofStep::Model { assignment: model },
+        )?;
+
+        Ok(())
+    }
+
+    /// Check a FailedAssumptions step
+    fn check_failed_assumptions_step(
+        &mut self,
+        failed_core: &[Lit],
+        propagation_hashes: &[ClauseHash],
+    ) -> Result<(), CheckerError> {
+        let mut tmp = replace(&mut self.tmp, vec![]);
+
+        let direct_conflict = copy_canonical(&mut tmp, failed_core);
+
+        if !is_subset(&tmp, &self.assumptions, false) {
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!("failed core contains non-assumed variables"),
+            ));
+        }
+
+        if direct_conflict {
+            // we have x and not x among the assumptions, no need to check
+            self.trace_ids.clear();
+        } else {
+            // invert the assumptions and check for an AT
+            for lit in tmp.iter_mut() {
+                *lit = !*lit;
+            }
+            self.check_clause_with_hashes(&tmp, propagation_hashes)?;
+
+            // we undo the inversion to report the correct checked proof step
+            for lit in tmp.iter_mut() {
+                *lit = !*lit;
+            }
+        }
+
+        Self::process_step(
+            &mut self.processors,
+            &CheckedProofStep::FailedAssumptions {
+                failed_core: &tmp,
+                propagations: &self.trace_ids,
+            },
+        )?;
+
+        self.tmp = tmp;
+
         Ok(())
     }
 
@@ -1104,6 +1196,54 @@ impl<'a> Checker<'a> {
     }
 }
 
+/// Test whether a set of literals is a (strict) subset of another set of literals
+///
+/// Requires subset and superset to be sorted.
+fn is_subset(mut subset: &[Lit], mut superset: &[Lit], strict: bool) -> bool {
+    // We set is_strict to true if we don't require a strict subset
+    let mut is_strict = !strict;
+
+    while let Some((&sub_min, sub_rest)) = subset.split_first() {
+        if let Some((&super_min, super_rest)) = superset.split_first() {
+            if sub_min < super_min {
+                // sub_min is not in superset
+                return false;
+            } else if sub_min > super_min {
+                // super_min is not in subset, skip it
+                superset = super_rest;
+                is_strict = true;
+            } else {
+                // sub_min == super_min, go to next element
+                superset = super_rest;
+                subset = sub_rest;
+            }
+        } else {
+            // sub_min is not in superset
+            return false;
+        }
+    }
+    is_strict |= !superset.is_empty();
+    is_strict
+}
+
+/// Sort literals, remove duplicates and check for tautologic clauses.
+///
+/// Return true if the clause is a tautology
+fn copy_canonical(target: &mut Vec<Lit>, src: &[Lit]) -> bool {
+    target.clear();
+    target.extend_from_slice(src);
+    target.sort();
+    target.dedup();
+
+    let mut last = None;
+
+    target.iter().any(|&lit| {
+        let tautology = last == Some(!lit);
+        last = Some(lit);
+        tautology
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1112,8 +1252,9 @@ mod tests {
 
     use crate::dimacs::write_dimacs;
 
-    use crate::test::sgen_unsat_formula;
+    use crate::test::{conditional_pigeon_hole, sgen_unsat_formula};
 
+    use crate::lit::Var;
     use crate::solver::{ProofFormat, Solver};
 
     fn expect_check_failed(result: Result<(), CheckerError>, contains: &str) {
@@ -1358,6 +1499,115 @@ mod tests {
             "does not satisfy clause",
         )
     }
+    #[test]
+    fn model_conflicts_assumptions() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                1, 2;
+                -1, 2;
+            ])
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::Assumptions(&lits![-2]))
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::Model(&lits![1, 2])),
+            "does not contain assumption",
+        )
+    }
+
+    #[test]
+    fn model_misses_assumption() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                1, 2;
+                -1, 2;
+            ])
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::Assumptions(&lits![-3]))
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::Model(&lits![1, 2])),
+            "does not contain assumption",
+        )
+    }
+
+    #[test]
+    fn failed_core_with_non_assumed_vars() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                1, 2;
+                -1, 2;
+            ])
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::Assumptions(&lits![-2]))
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::FailedAssumptions {
+                failed_core: &lits![-2, -3],
+                propagation_hashes: &[],
+            }),
+            "contains non-assumed variables",
+        )
+    }
+
+    #[test]
+    fn failed_assumptions_with_missing_propagations() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                1, 2;
+                -1, 2;
+                -3, -2;
+            ])
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::Assumptions(&lits![3]))
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::FailedAssumptions {
+                failed_core: &lits![3],
+                propagation_hashes: &[],
+            }),
+            "AT check failed",
+        )
+    }
+
+    #[test]
+    fn failed_assumptions_with_conflicting_assumptions() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                1, 2;
+                -1, 2;
+                -3, -2;
+            ])
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::Assumptions(&lits![3, -3, 4]))
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::FailedAssumptions {
+                failed_core: &lits![3, -3],
+                propagation_hashes: &[],
+            })
+            .unwrap();
+    }
 
     proptest! {
         #[test]
@@ -1384,6 +1634,152 @@ mod tests {
             checker.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
 
             checker.check_proof(&mut &proof[..]).unwrap();
+        }
+
+        #[test]
+        fn sgen_checked_unsat_incremental_clauses(formula in sgen_unsat_formula(1..7usize)) {
+            let mut proof = vec![];
+
+            let mut solver = Solver::new();
+            solver.write_proof(&mut proof, ProofFormat::Varisat);
+
+            let mut expected_models = 0;
+
+            // Add all clauses incrementally so they are recorded in the proof
+            solver.solve().unwrap();
+            expected_models += 1;
+
+            let mut last_state = Some(true);
+
+            for clause in formula.iter() {
+                solver.add_clause(clause);
+
+                let state = solver.solve().ok();
+                if state != last_state {
+                    prop_assert_eq!(state, Some(false));
+                    prop_assert_eq!(last_state, Some(true));
+                    last_state = state;
+                }
+                if state == Some(true) {
+                    expected_models += 1;
+                }
+            }
+
+            prop_assert_eq!(last_state, Some(false));
+
+            drop(solver);
+
+            #[derive(Default)]
+            struct FoundModels {
+                counter: usize,
+                unsat: bool,
+            }
+
+            impl ProofProcessor for FoundModels {
+                fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error> {
+                    if let CheckedProofStep::Model { .. } = step {
+                        self.counter += 1;
+                    } else if let CheckedProofStep::AtClause { clause: &[], .. } = step {
+                        self.unsat = true;
+                    }
+                    Ok(())
+                }
+            }
+
+            let mut found_models = FoundModels::default();
+            let mut checker = Checker::new();
+            checker.add_processor(&mut found_models);
+            checker.check_proof(&mut &proof[..]).unwrap();
+
+            prop_assert_eq!(found_models.counter, expected_models);
+            prop_assert!(found_models.unsat);
+        }
+
+        #[test]
+        fn pigeon_hole_checked_unsat_assumption_core(
+            (enable_row, columns, formula) in conditional_pigeon_hole(1..5usize, 1..5usize),
+        ) {
+            let mut proof = vec![];
+
+            let mut solver = Solver::new();
+            solver.write_proof(&mut proof, ProofFormat::Varisat);
+
+            let mut expected_sat = 0;
+            let mut expected_unsat = 0;
+
+            solver.solve().unwrap();
+            expected_sat += 1;
+            solver.add_formula(&formula);
+
+            prop_assert_eq!(solver.solve().ok(), Some(true));
+            expected_sat += 1;
+
+            let mut assumptions = enable_row.to_owned();
+
+            assumptions.push(Lit::positive(Var::from_index(formula.var_count() + 10)));
+
+            solver.assume(&assumptions);
+
+            prop_assert_eq!(solver.solve().ok(), Some(false));
+            expected_unsat += 1;
+
+            let mut candidates = solver.failed_core().unwrap().to_owned();
+            let mut core: Vec<Lit> = vec![];
+
+            while !candidates.is_empty() {
+
+                solver.assume(&candidates[0..candidates.len() - 1]);
+
+                match solver.solve() {
+                    Err(_) => unreachable!(),
+                    Ok(true) => {
+                        expected_sat += 1;
+                        let skipped = *candidates.last().unwrap();
+                        core.push(skipped);
+
+                        let single_clause = CnfFormula::from(Some(&[skipped]));
+                        solver.add_formula(&single_clause);
+                    },
+                    Ok(false) => {
+                        expected_unsat += 1;
+                        candidates = solver.failed_core().unwrap().to_owned();
+                    }
+                }
+            }
+
+            prop_assert_eq!(core.len(), columns + 1);
+
+            drop(solver);
+
+            #[derive(Default)]
+            struct CountResults {
+                sat: usize,
+                unsat: usize,
+            }
+
+            impl ProofProcessor for CountResults {
+                fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error> {
+                    match step {
+                        CheckedProofStep::Model { .. } => {
+                            self.sat += 1;
+                        }
+                        CheckedProofStep::AtClause { clause: &[], .. }
+                        | CheckedProofStep::FailedAssumptions { .. } => {
+                            self.unsat += 1;
+                        }
+                        _ => (),
+                    }
+                    Ok(())
+                }
+            }
+
+            let mut count_results = CountResults::default();
+            let mut checker = Checker::new();
+            checker.add_processor(&mut count_results);
+            checker.check_proof(&mut &proof[..]).unwrap();
+
+            prop_assert_eq!(count_results.sat, expected_sat);
+            prop_assert_eq!(count_results.unsat, expected_unsat);
         }
     }
 }

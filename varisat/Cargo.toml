@@ -27,6 +27,7 @@ varisat-macros = { path = "../varisat-macros", version = "=0.2.0" }
 proptest = "0.9.3"
 rand = "0.6.5"
 tempfile = "3.0.7"
+env_logger = "0.6.1"
 
 [build-dependencies]
 failure = "0.1.5"

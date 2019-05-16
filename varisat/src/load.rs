@@ -69,13 +69,6 @@ pub fn load_clause<'a>(
 
     for &lit in lits.iter() {
         if last == Some(!lit) {
-            proof::add_step(
-                ctx.borrow(),
-                &ProofStep::DeleteClause {
-                    clause: lits,
-                    proof: DeleteClauseProof::Satisfied,
-                },
-            );
             return;
         }
         last = Some(lit);
