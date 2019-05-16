@@ -3,13 +3,13 @@ use std::mem::swap;
 
 use partial_ref::{partial, split_borrow, PartialRef};
 
+use vec_mut_scan::VecMutScan;
+
 use crate::clause::ClauseRef;
 use crate::context::{AnalyzeConflictP, ClauseAllocP, Context, ImplGraphP, ProofP, TrailP, VsidsP};
 use crate::lit::{Lit, LitIdx, Var};
 use crate::proof::{clause_hash, lit_hash, ClauseHash};
 use crate::prop::{Conflict, Reason};
-
-use crate::vec_mut_scan::VecMutScan;
 
 /// Temporaries for conflict analysis
 #[derive(Default)]

@@ -33,7 +33,5 @@ mod state;
 mod tmp;
 mod vli_enc;
 
-mod vec_mut_scan;
-
 #[cfg(test)]
 mod test;
