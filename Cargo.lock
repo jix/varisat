@@ -599,6 +599,7 @@ dependencies = [
  "varisat-dimacs 0.2.0",
  "varisat-formula 0.2.0",
  "varisat-internal-macros 0.2.0",
+ "varisat-internal-proof 0.2.0",
  "vec_mut_scan 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -643,6 +644,15 @@ dependencies = [
  "regex 1.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 0.15.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "synstructure 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "varisat-internal-proof"
+version = "0.2.0"
+dependencies = [
+ "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "varisat-formula 0.2.0",
 ]
 
 [[package]]

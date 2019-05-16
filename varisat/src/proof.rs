@@ -5,6 +5,7 @@ use std::io::{self, sink, BufWriter, Write};
 use partial_ref::{partial, PartialRef};
 
 use varisat_formula::Lit;
+use varisat_internal_proof::{ClauseHash, ProofStep};
 
 use crate::checker::{Checker, CheckerError, ProofProcessor};
 use crate::context::{Context, ProofP, SolverStateP};
@@ -12,7 +13,6 @@ use crate::solver::SolverError;
 
 mod drat;
 mod map_step;
-pub mod varisat;
 
 /// Proof formats that can be generated during solving.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -22,124 +22,29 @@ pub enum ProofFormat {
     BinaryDrat,
 }
 
-/// Integer type used to store a hash of a clause.
-pub type ClauseHash = u64;
-
-/// Hash a single literal.
-///
-/// Multiple literals can be combined with xor, as done in [`clause_hash`].
-pub fn lit_hash(lit: Lit) -> ClauseHash {
-    // Constant based on the golden ratio provides good mixing for the resulting upper bits
-    (!(lit.code() as u64)).wrapping_mul(0x61c8864680b583ebu64)
-}
-
-/// A fast hash function for clauses (or other *sets* of literals).
-///
-/// This hash function interprets the given slice as a set and will not change when the input is
-/// permuted. It does not handle duplicated items.
-pub fn clause_hash(lits: &[Lit]) -> ClauseHash {
-    let mut hash = 0;
-    for &lit in lits {
-        hash ^= lit_hash(lit);
-    }
-    hash
-}
-
-/// Justifications for a simple clause deletion.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum DeleteClauseProof {
-    /// The clause is known to be redundant.
-    Redundant,
-    /// The clause is irred and subsumed by the clause added in the previous step.
-    Simplified,
-    /// The clause contains a true literal.
-    ///
-    /// Also used to justify deletion of tautological clauses.
-    Satisfied,
-}
-
-/// A single proof step.
-///
-/// Represents a mutation of the current formula and a justification for the mutation's validity.
-#[derive(Copy, Clone, Debug)]
-pub enum ProofStep<'a> {
-    /// Add a new input clause.
-    ///
-    /// This is only emitted for clauses added incrementally after an initial solve call.
-    AddClause { clause: &'a [Lit] },
-    /// Add a clause that is an asymmetric tautoligy (AT).
-    ///
-    /// Assuming the negation of the clause's literals leads to a unit propagation conflict.
-    ///
-    /// The second slice contains the hashes of all clauses involved in the resulting conflict. The
-    /// order of hashes is the order in which the clauses propagate when all literals of the clause
-    /// are set false.
-    ///
-    /// When generating DRAT proofs the second slice is ignored and may be empty.
-    AtClause {
-        redundant: bool,
-        clause: &'a [Lit],
-        propagation_hashes: &'a [ClauseHash],
-    },
-    /// Unit clauses found by top-level unit-propagation.
-    ///
-    /// Pairs of unit clauses and the original clause that became unit. Clauses are in chronological
-    /// order. This is equivalent to multiple `AtClause` steps where the clause is unit and the
-    /// propagation_hashes field contains just one hash, with the difference that this is not output
-    /// for DRAT proofs.
-    ///
-    /// Ignored when generating DRAT proofs.
-    UnitClauses(&'a [(Lit, ClauseHash)]),
-    /// Delete a clause consisting of the given literals.
-    DeleteClause {
-        clause: &'a [Lit],
-        proof: DeleteClauseProof,
-    },
-    /// Change the number of clause hash bits used
-    ChangeHashBits(u32),
-    /// A (partial) assignment that satisfies all clauses and assumptions.
-    Model(&'a [Lit]),
-    /// Change the active set of assumptions.
-    ///
-    /// This is checked against future model or failed assumptions steps.
-    Assumptions(&'a [Lit]),
-    /// A subset of the assumptions that make the formula unsat.
-    FailedAssumptions {
-        failed_core: &'a [Lit],
-        propagation_hashes: &'a [ClauseHash],
-    },
-    /// Signals the end of a proof.
-    ///
-    /// A varisat proof must end with this command or else the checker will complain about an
-    /// incomplete proof.
-    End,
-}
-
-impl<'a> ProofStep<'a> {
-    /// Number of added or removed clauses.
-    pub fn clause_count_delta(&self) -> isize {
-        match self {
-            ProofStep::AddClause { clause } | ProofStep::AtClause { clause, .. } => {
-                if clause.len() > 1 {
-                    1
-                } else {
-                    0
-                }
+/// Number of added or removed clauses.
+pub fn clause_count_delta(step: &ProofStep) -> isize {
+    match step {
+        ProofStep::AddClause { clause } | ProofStep::AtClause { clause, .. } => {
+            if clause.len() > 1 {
+                1
+            } else {
+                0
             }
-            ProofStep::DeleteClause { clause, .. } => {
-                if clause.len() > 1 {
-                    -1
-                } else {
-                    0
-                }
-            }
-            ProofStep::UnitClauses(..)
-            | ProofStep::ChangeHashBits(..)
-            | ProofStep::Model(..)
-            | ProofStep::Assumptions(..)
-            | ProofStep::FailedAssumptions { .. }
-            | ProofStep::End => 0,
         }
+        ProofStep::DeleteClause { clause, .. } => {
+            if clause.len() > 1 {
+                -1
+            } else {
+                0
+            }
+        }
+        ProofStep::UnitClauses(..)
+        | ProofStep::ChangeHashBits(..)
+        | ProofStep::Model(..)
+        | ProofStep::Assumptions(..)
+        | ProofStep::FailedAssumptions { .. }
+        | ProofStep::End => 0,
     }
 }
 
@@ -295,7 +200,7 @@ fn write_varisat_step<'a, 's>(
 ) -> io::Result<()> {
     let proof = ctx.part_mut(ProofP);
 
-    proof.clause_count += step.clause_count_delta();
+    proof.clause_count += clause_count_delta(step);
 
     let mut rehash = false;
     // Should we change the hash size?
@@ -311,7 +216,7 @@ fn write_varisat_step<'a, 's>(
     }
 
     if rehash {
-        varisat::write_step(
+        varisat_internal_proof::binary_format::write_step(
             &mut proof.target,
             &ProofStep::ChangeHashBits(proof.hash_bits),
         )?;
@@ -323,7 +228,7 @@ fn write_varisat_step<'a, 's>(
     let step = proof.map_step.map(step, |lit| lit, map_hash);
 
     if proof.format == Some(ProofFormat::Varisat) {
-        varisat::write_step(&mut proof.target, &step)?;
+        varisat_internal_proof::binary_format::write_step(&mut proof.target, &step)?;
     }
 
     Ok(())

@@ -1,3 +1,4 @@
+//! Binary format for varisat proofs.
 use std::io::{self, BufRead, Write};
 
 use failure::Error;

@@ -9,10 +9,11 @@ use failure::{Error, Fail};
 use hashbrown::{HashMap, HashSet};
 use smallvec::SmallVec;
 
-use varisat_formula::{lit::LitIdx, CnfFormula, Lit};
-
-use crate::proof::{clause_hash, varisat::Parser, ClauseHash, DeleteClauseProof, ProofStep};
 use varisat_dimacs::DimacsParser;
+use varisat_formula::{lit::LitIdx, CnfFormula, Lit};
+use varisat_internal_proof::{
+    binary_format::Parser, clause_hash, ClauseHash, DeleteClauseProof, ProofStep,
+};
 
 mod write_lrat;
 

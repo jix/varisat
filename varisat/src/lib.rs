@@ -28,7 +28,6 @@ mod schedule;
 mod simplify;
 mod state;
 mod tmp;
-mod vli_enc;
 
 #[cfg(test)]
 mod test;
