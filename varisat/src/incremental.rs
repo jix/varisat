@@ -2,11 +2,12 @@
 
 use partial_ref::{partial, PartialRef};
 
+use varisat_formula::Lit;
+
 use crate::context::{
     AssignmentP, ClauseAllocP, Context, ImplGraphP, IncrementalP, ProofP, SolverStateP, TmpDataP,
     TrailP, VsidsP,
 };
-use crate::lit::Lit;
 use crate::proof::{self, clause_hash, lit_hash, ClauseHash, ProofStep};
 use crate::prop::{enqueue_assignment, full_restart, Reason};
 use crate::state::SatState;

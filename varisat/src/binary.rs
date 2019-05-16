@@ -2,10 +2,10 @@
 
 use partial_ref::{partial, PartialRef};
 
+use varisat_formula::Lit;
+
 use crate::context::{AssignmentP, BinaryClausesP, Context, ProofP, SolverStateP};
 use crate::proof::{self, DeleteClauseProof, ProofStep};
-
-use crate::lit::Lit;
 
 /// Binary clauses.
 #[derive(Default)]

@@ -4,9 +4,10 @@ use std::io::{self, sink, BufWriter, Write};
 
 use partial_ref::{partial, PartialRef};
 
+use varisat_formula::Lit;
+
 use crate::checker::{Checker, CheckerError, ProofProcessor};
 use crate::context::{Context, ProofP, SolverStateP};
-use crate::lit::Lit;
 use crate::solver::SolverError;
 
 mod drat;

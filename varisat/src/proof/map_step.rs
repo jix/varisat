@@ -1,6 +1,6 @@
 //! Maps literals and hashes of clause steps between the solver and the checker.
 
-use crate::lit::Lit;
+use varisat_formula::Lit;
 
 use super::{ClauseHash, ProofStep};
 

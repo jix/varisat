@@ -5,13 +5,13 @@ use partial_ref::{IntoPartialRef, IntoPartialRefMut, PartialRef};
 
 use failure::{Error, Fail};
 
+use varisat_formula::{CnfFormula, Lit};
+
 use crate::checker::ProofProcessor;
-use crate::cnf::CnfFormula;
 use crate::config::SolverConfigUpdate;
 use crate::context::{config_changed, ensure_var_count, AssignmentP, Context, SolverStateP};
 use crate::dimacs::DimacsParser;
 use crate::incremental::set_assumptions;
-use crate::lit::Lit;
 use crate::load::load_clause;
 use crate::proof;
 use crate::schedule::schedule_step;
@@ -247,10 +247,10 @@ mod tests {
 
     use proptest::prelude::*;
 
+    use varisat_formula::{cnf_formula, lits, CnfFormula, Var};
+
     use crate::checker::CheckedProofStep;
-    use crate::cnf::CnfFormula;
     use crate::dimacs::write_dimacs;
-    use crate::lit::Var;
 
     use crate::test::{conditional_pigeon_hole, sat_formula, sgen_unsat_formula};
 

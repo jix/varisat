@@ -14,8 +14,9 @@
 
 use ordered_float::OrderedFloat;
 
+use varisat_formula::Var;
+
 use crate::config::SolverConfig;
-use crate::lit::Var;
 
 /// The VSIDS branching heuristic.
 ///
@@ -198,6 +199,8 @@ impl Iterator for Vsids {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use varisat_formula::var;
 
     #[test]
     fn rescale_bump() {

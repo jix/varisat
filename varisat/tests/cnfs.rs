@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use varisat::lit::Lit;
 use varisat::solver::Solver;
+use varisat::Lit;
 
 macro_rules! test_cnf {
     ($name:ident, $result:expr) => {

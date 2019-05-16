@@ -1,5 +1,5 @@
 //! Solver configuration.
-use varisat_macros::{ConfigUpdate, DocDefault};
+use varisat_internal_macros::{ConfigUpdate, DocDefault};
 
 /// Configurable parameters used during solving.
 #[derive(DocDefault, ConfigUpdate)]

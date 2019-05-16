@@ -9,9 +9,7 @@
 //! [user manual]: https://jix.github.io/varisat/manual/0.2.0/
 
 #[macro_use]
-pub mod lit;
 pub mod checker;
-pub mod cnf;
 pub mod config;
 pub mod dimacs;
 pub mod solver;
@@ -35,3 +33,5 @@ mod vli_enc;
 
 #[cfg(test)]
 mod test;
+
+pub use varisat_formula::{cnf, lit, CnfFormula, Lit, Var};

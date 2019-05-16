@@ -2,13 +2,14 @@
 
 use partial_ref::{partial, split_borrow, PartialRef};
 
+use varisat_formula::Lit;
+
 use crate::binary::simplify_binary;
 use crate::clause::db::filter_clauses;
 use crate::context::{
     AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, ProofP,
     SolverStateP, TrailP, WatchlistsP,
 };
-use crate::lit::Lit;
 use crate::proof::{self, clause_hash, lit_hash, DeleteClauseProof, ProofStep};
 use crate::prop::{enqueue_assignment, Reason};
 

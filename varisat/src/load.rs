@@ -3,12 +3,13 @@ use vec_mut_scan::VecMutScan;
 
 use partial_ref::{partial, PartialRef};
 
+use varisat_formula::Lit;
+
 use crate::clause::{db, ClauseHeader, Tier};
 use crate::context::{
     AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, IncrementalP,
     ProofP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
 };
-use crate::lit::Lit;
 use crate::proof::{self, DeleteClauseProof, ProofStep};
 use crate::prop::{assignment, full_restart, Reason};
 use crate::simplify::resurrect_unit;
@@ -156,6 +157,8 @@ mod tests {
     use super::*;
 
     use partial_ref::IntoPartialRefMut;
+
+    use varisat_formula::lits;
 
     use crate::clause::Tier;
     use crate::context::set_var_count;

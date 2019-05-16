@@ -1,5 +1,5 @@
 //! Temporary data.
-use crate::lit::Lit;
+use varisat_formula::Lit;
 
 /// Temporary data used by various parts of the solver.
 ///

@@ -3,8 +3,7 @@ use proptest::{prelude::*, *};
 use rand::distributions::Bernoulli;
 use rand::seq::SliceRandom;
 
-use crate::cnf::CnfFormula;
-use crate::lit::Lit;
+use varisat_formula::{CnfFormula, Lit};
 
 /// Generate small hard unsat instances.
 ///

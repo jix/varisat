@@ -9,9 +9,9 @@ use failure::{Error, Fail};
 use hashbrown::{HashMap, HashSet};
 use smallvec::SmallVec;
 
-use crate::cnf::CnfFormula;
+use varisat_formula::{lit::LitIdx, CnfFormula, Lit};
+
 use crate::dimacs::DimacsParser;
-use crate::lit::{Lit, LitIdx};
 use crate::proof::{clause_hash, varisat::Parser, ClauseHash, DeleteClauseProof, ProofStep};
 
 mod write_lrat;
@@ -1250,12 +1250,12 @@ mod tests {
 
     use proptest::prelude::*;
 
+    use varisat_formula::{cnf_formula, lits, Var};
+
     use crate::dimacs::write_dimacs;
+    use crate::solver::{ProofFormat, Solver};
 
     use crate::test::{conditional_pigeon_hole, sgen_unsat_formula};
-
-    use crate::lit::Var;
-    use crate::solver::{ProofFormat, Solver};
 
     fn expect_check_failed(result: Result<(), CheckerError>, contains: &str) {
         match result {

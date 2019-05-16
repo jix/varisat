@@ -3,8 +3,7 @@ use std::borrow::Borrow;
 use std::io;
 use std::mem::replace;
 
-use crate::cnf::CnfFormula;
-use crate::lit::{Lit, Var};
+use varisat_formula::{CnfFormula, Lit, Var};
 
 use failure::{Error, Fail};
 
@@ -428,7 +427,7 @@ mod tests {
     use failure::{Error, ResultExt};
     use proptest::*;
 
-    use crate::cnf::strategy::*;
+    use varisat_formula::{cnf::strategy::*, cnf_formula};
 
     #[test]
     fn odd_whitespace() -> Result<(), Error> {

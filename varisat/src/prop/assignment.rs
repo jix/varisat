@@ -1,9 +1,10 @@
 //! Partial assignment and backtracking.
 use partial_ref::{partial, PartialRef};
 
+use varisat_formula::{lit::LitIdx, Lit, Var};
+
 use crate::context::{AssignmentP, Context, ImplGraphP, IncrementalP, TrailP, VsidsP};
 use crate::decision::make_available;
-use crate::lit::{Lit, LitIdx, Var};
 
 use super::Reason;
 

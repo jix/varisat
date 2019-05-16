@@ -596,7 +596,8 @@ dependencies = [
  "serde 1.0.91 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "varisat-macros 0.2.0",
+ "varisat-formula 0.2.0",
+ "varisat-internal-macros 0.2.0",
  "vec_mut_scan 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -613,7 +614,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "varisat-macros"
+name = "varisat-formula"
+version = "0.2.0"
+dependencies = [
+ "proptest 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "varisat-internal-macros"
 version = "0.2.0"
 dependencies = [
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",

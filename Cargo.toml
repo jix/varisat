@@ -1,8 +1,10 @@
 [workspace]
+# the order here must match the topological ordering of internal dependencies
 members = [
+    "varisat-internal-macros",
+    "varisat-formula",
     "varisat",
     "varisat-cli",
-    "varisat-macros",
 ]
 
 [profile.dev]

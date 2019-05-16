@@ -1,0 +1,22 @@
+[package]
+name = "varisat-formula"
+version = "0.2.0"
+authors = ["Jannis Harder <me@jix.one>"]
+edition = "2018"
+description = "Basic formula data types used by the Varisat SAT solver"
+homepage = "https://jix.one/project/varisat/"
+repository = "https://github.com/jix/varisat"
+license = "MIT/Apache-2.0"
+readme = "README.md"
+
+[features]
+default = []
+
+proptest-strategies = ["proptest"]
+internal-test-macros = []
+
+[dependencies]
+proptest = { version = "0.9.3", optional = true }
+
+[dev-dependencies]
+proptest = "0.9.3"

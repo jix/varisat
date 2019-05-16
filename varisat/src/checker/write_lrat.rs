@@ -4,7 +4,7 @@ use std::mem::replace;
 
 use failure::Error;
 
-use crate::lit::Lit;
+use varisat_formula::Lit;
 
 use super::{CheckedProofStep, ProofProcessor};
 
@@ -220,8 +220,9 @@ mod tests {
 
     use tempfile::TempDir;
 
+    use varisat_formula::{cnf_formula, CnfFormula};
+
     use crate::checker::Checker;
-    use crate::cnf::CnfFormula;
     use crate::dimacs::write_dimacs;
     use crate::solver::{ProofFormat, Solver};
 

@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use crate::lit::Lit;
+use varisat_formula::Lit;
 
 use super::ProofStep;
 

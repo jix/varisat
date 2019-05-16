@@ -56,10 +56,10 @@ mod tests {
 
     use partial_ref::IntoPartialRefMut;
 
+    use varisat_formula::{cnf::strategy::*, CnfFormula, Lit};
+
     use crate::clause::{db, gc};
-    use crate::cnf::{strategy::*, CnfFormula};
     use crate::context::{set_var_count, Context, SolverStateP};
-    use crate::lit::Lit;
     use crate::load::load_clause;
     use crate::state::SatState;
 

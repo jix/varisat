@@ -1,7 +1,7 @@
 //! Metadata stored in the header of each long clause.
 use std::cmp::min;
 
-use crate::lit::{LitIdx, Var};
+use varisat_formula::{lit::LitIdx, Var};
 
 use super::Tier;
 

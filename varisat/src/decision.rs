@@ -2,8 +2,9 @@
 
 use partial_ref::{partial, PartialRef};
 
+use varisat_formula::{Lit, Var};
+
 use crate::context::{AssignmentP, Context, ImplGraphP, TrailP, VsidsP};
-use crate::lit::{Lit, Var};
 use crate::prop::{enqueue_assignment, Reason};
 
 pub mod vsids;

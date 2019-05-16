@@ -2,6 +2,8 @@
 
 use partial_ref::{partial, PartialRef};
 
+use varisat_formula::Lit;
+
 use crate::analyze_conflict::analyze_conflict;
 use crate::clause::{assess_learned_clause, bump_clause, db, decay_clause_activities};
 use crate::context::{
@@ -10,7 +12,6 @@ use crate::context::{
 };
 use crate::decision::make_decision;
 use crate::incremental::{enqueue_assumption, EnqueueAssumption};
-use crate::lit::Lit;
 use crate::proof::{self, ProofStep};
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
 use crate::simplify::{prove_units, simplify};
@@ -173,6 +174,8 @@ mod tests {
     use proptest::prelude::*;
 
     use partial_ref::IntoPartialRefMut;
+
+    use varisat_formula::cnf_formula;
 
     use crate::context::{set_var_count, AssignmentP, SolverStateP};
     use crate::load::load_clause;
