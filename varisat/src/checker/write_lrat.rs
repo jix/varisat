@@ -35,7 +35,8 @@ impl<'a> ProofProcessor for WriteLrat<'a> {
             &CheckedProofStep::AddClause { id, .. } => {
                 self.last_added_id = id;
             }
-            &CheckedProofStep::DuplicatedClause { id, .. } => {
+            &CheckedProofStep::DuplicatedClause { id, .. }
+            | &CheckedProofStep::TautologicalClause { id, .. } => {
                 self.last_added_id = id;
                 if self.binary {
                     self.open_delete()?;

@@ -82,6 +82,11 @@ pub enum CheckedProofStep<'a> {
         same_as_id: u64,
         clause: &'a [Lit],
     },
+    /// A tautological clause of the input formula.
+    ///
+    /// Tautological clauses can be completely ignored. This step is only used to give an id to a
+    /// tautological input clause.
+    TautologicalClause { id: u64, clause: &'a [Lit] },
     /// Addition of an asymmetric tautology (AT).
     ///
     /// A clause C is an asymmetric tautology wrt. a formula F, iff unit propagation in F with the
@@ -330,11 +335,18 @@ impl<'a> Checker<'a> {
         }
 
         let mut tmp = replace(&mut self.tmp, vec![]);
-        tmp.clear();
-        tmp.extend_from_slice(&clause);
 
-        tmp.sort_unstable();
-        tmp.dedup();
+        if copy_canonical(&mut tmp, clause) {
+            Self::process_step(
+                &mut self.processors,
+                &CheckedProofStep::TautologicalClause {
+                    id: self.next_clause_id,
+                    clause: &self.tmp,
+                },
+            )?;
+            self.next_clause_id += 1;
+            return Ok(());
+        }
 
         let (id, added) = self.store_clause(&tmp, false);
 
@@ -804,10 +816,7 @@ impl<'a> Checker<'a> {
             }
             ProofStep::Model(model) => self.check_model_step(model),
             ProofStep::Assumptions(assumptions) => {
-                self.assumptions.clear();
-                self.assumptions.extend_from_slice(assumptions);
-                self.assumptions.sort();
-                self.assumptions.dedup();
+                copy_canonical(&mut self.assumptions, assumptions);
                 Self::process_step(
                     &mut self.processors,
                     &CheckedProofStep::Assumptions {
@@ -843,11 +852,13 @@ impl<'a> Checker<'a> {
         propagation_hashes: &[ClauseHash],
     ) -> Result<(), CheckerError> {
         let mut tmp = replace(&mut self.tmp, vec![]);
-        tmp.clear();
-        tmp.extend_from_slice(&clause);
 
-        tmp.sort_unstable();
-        tmp.dedup();
+        if copy_canonical(&mut tmp, clause) {
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!("clause {:?} is a tautology", tmp),
+            ));
+        }
 
         self.check_clause_with_hashes(&tmp, &*propagation_hashes)?;
 
@@ -892,11 +903,13 @@ impl<'a> Checker<'a> {
         proof: DeleteClauseProof,
     ) -> Result<(), CheckerError> {
         let mut tmp = replace(&mut self.tmp, vec![]);
-        tmp.clear();
-        tmp.extend_from_slice(&clause);
 
-        tmp.sort_unstable();
-        tmp.dedup();
+        if copy_canonical(&mut tmp, clause) {
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!("clause {:?} is a tautology", tmp),
+            ));
+        }
 
         let redundant = proof == DeleteClauseProof::Redundant;
 
@@ -1064,10 +1077,8 @@ impl<'a> Checker<'a> {
         propagation_hashes: &[ClauseHash],
     ) -> Result<(), CheckerError> {
         let mut tmp = replace(&mut self.tmp, vec![]);
-        tmp.clear();
-        tmp.extend_from_slice(failed_core);
-        tmp.sort();
-        tmp.dedup();
+
+        let direct_conflict = copy_canonical(&mut tmp, failed_core);
 
         if !is_subset(&tmp, &self.assumptions, false) {
             return Err(CheckerError::check_failed(
@@ -1076,12 +1087,21 @@ impl<'a> Checker<'a> {
             ));
         }
 
-        for lit in tmp.iter_mut() {
-            *lit = !*lit;
-        }
-        tmp.sort();
+        if direct_conflict {
+            // we have x and not x among the assumptions, no need to check
+            self.trace_ids.clear();
+        } else {
+            // invert the assumptions and check for an AT
+            for lit in tmp.iter_mut() {
+                *lit = !*lit;
+            }
+            self.check_clause_with_hashes(&tmp, propagation_hashes)?;
 
-        self.check_clause_with_hashes(&tmp, propagation_hashes)?;
+            // we undo the inversion to report the correct checked proof step
+            for lit in tmp.iter_mut() {
+                *lit = !*lit;
+            }
+        }
 
         Self::process_step(
             &mut self.processors,
@@ -1204,6 +1224,24 @@ fn is_subset(mut subset: &[Lit], mut superset: &[Lit], strict: bool) -> bool {
     }
     is_strict |= !superset.is_empty();
     is_strict
+}
+
+/// Sort literals, remove duplicates and check for tautologic clauses.
+///
+/// Return true if the clause is a tautology
+fn copy_canonical(target: &mut Vec<Lit>, src: &[Lit]) -> bool {
+    target.clear();
+    target.extend_from_slice(src);
+    target.sort();
+    target.dedup();
+
+    let mut last = None;
+
+    target.iter().any(|&lit| {
+        let tautology = last == Some(!lit);
+        last = Some(lit);
+        tautology
+    })
 }
 
 #[cfg(test)]
@@ -1546,6 +1584,29 @@ mod tests {
             }),
             "AT check failed",
         )
+    }
+
+    #[test]
+    fn failed_assumptions_with_conflicting_assumptions() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                1, 2;
+                -1, 2;
+                -3, -2;
+            ])
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::Assumptions(&lits![3, -3, 4]))
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::FailedAssumptions {
+                failed_core: &lits![3, -3],
+                propagation_hashes: &[],
+            })
+            .unwrap();
     }
 
     proptest! {
