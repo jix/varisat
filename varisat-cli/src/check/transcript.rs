@@ -36,6 +36,14 @@ impl ProofProcessor for Transcript {
                     println!("t UNSAT");
                 }
             }
+            CheckedProofStep::Assumptions { assumptions } => {
+                self.print_loaded_clauses();
+                println!("t ASSUME {} LITERALS", assumptions.len());
+            }
+            CheckedProofStep::FailedAssumptions { failed_core, .. } => {
+                self.print_loaded_clauses();
+                println!("t UNSAT WITH {} ASSUMPTIONS", failed_core.len());
+            }
             CheckedProofStep::Model { .. } => {
                 self.print_loaded_clauses();
                 println!("t SAT");

@@ -74,6 +74,29 @@ impl MapStep {
                 ProofStep::Model(&self.lit_buf)
             }
 
+            ProofStep::Assumptions(assumptions) => {
+                self.lit_buf.clear();
+                self.lit_buf
+                    .extend(assumptions.iter().cloned().map(map_lit));
+                ProofStep::Assumptions(&self.lit_buf)
+            }
+
+            ProofStep::FailedAssumptions {
+                failed_core,
+                propagation_hashes,
+            } => {
+                self.lit_buf.clear();
+                self.lit_buf
+                    .extend(failed_core.iter().cloned().map(map_lit));
+                self.hash_buf.clear();
+                self.hash_buf
+                    .extend(propagation_hashes.iter().cloned().map(map_hash));
+                ProofStep::FailedAssumptions {
+                    failed_core: &self.lit_buf,
+                    propagation_hashes: &self.hash_buf,
+                }
+            }
+
             ProofStep::ChangeHashBits(..) | ProofStep::End => step.clone(),
         }
     }

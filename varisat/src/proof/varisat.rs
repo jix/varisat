@@ -16,6 +16,8 @@ const CODE_DELETE_CLAUSE_SATISFIED: u64 = 5;
 const CODE_CHANGE_HASH_BITS: u64 = 6;
 const CODE_MODEL: u64 = 7;
 const CODE_ADD_CLAUSE: u64 = 8;
+const CODE_ASSUMPTIONS: u64 = 9;
+const CODE_FAILED_ASSUMPTIONS: u64 = 10;
 
 // Using a random value here makes it unlikely that a corrupted proof will be silently truncated and
 // accepted
@@ -72,6 +74,20 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
         ProofStep::Model(model) => {
             write_u64(&mut *target, CODE_MODEL)?;
             write_literals(&mut *target, model)?;
+        }
+
+        ProofStep::Assumptions(assumptions) => {
+            write_u64(&mut *target, CODE_ASSUMPTIONS)?;
+            write_literals(&mut *target, assumptions)?;
+        }
+
+        ProofStep::FailedAssumptions {
+            failed_core,
+            propagation_hashes,
+        } => {
+            write_u64(&mut *target, CODE_FAILED_ASSUMPTIONS)?;
+            write_literals(&mut *target, failed_core)?;
+            write_hashes(&mut *target, propagation_hashes)?;
         }
 
         ProofStep::End => {
@@ -134,6 +150,18 @@ impl Parser {
             CODE_MODEL => {
                 read_literals(&mut *source, &mut self.lit_buf)?;
                 Ok(ProofStep::Model(&self.lit_buf))
+            }
+            CODE_ASSUMPTIONS => {
+                read_literals(&mut *source, &mut self.lit_buf)?;
+                Ok(ProofStep::Assumptions(&self.lit_buf))
+            }
+            CODE_FAILED_ASSUMPTIONS => {
+                read_literals(&mut *source, &mut self.lit_buf)?;
+                read_hashes(&mut *source, &mut self.hash_buf)?;
+                Ok(ProofStep::FailedAssumptions {
+                    failed_core: &self.lit_buf,
+                    propagation_hashes: &self.hash_buf,
+                })
             }
             CODE_END => Ok(ProofStep::End),
             _ => failure::bail!("parse error"),

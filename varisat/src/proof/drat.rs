@@ -22,6 +22,10 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
             // TODO allow error handling here?
             panic!("incremental clause additions not supported by DRAT proofs");
         }
+        ProofStep::Assumptions(..) | ProofStep::FailedAssumptions { .. } => {
+            // TODO allow error handling here?
+            panic!("assumptions not supported by DRAT proofs");
+        }
     }
 
     Ok(())
@@ -45,6 +49,10 @@ pub fn write_binary_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -
         ProofStep::AddClause { .. } => {
             // TODO allow error handling here?
             panic!("incremental clause additions not supported by DRAT proofs");
+        }
+        ProofStep::Assumptions(..) | ProofStep::FailedAssumptions { .. } => {
+            // TODO allow error handling here?
+            panic!("assumptions not supported by DRAT proofs");
         }
     }
 

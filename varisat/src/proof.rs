@@ -96,8 +96,17 @@ pub enum ProofStep<'a> {
     },
     /// Change the number of clause hash bits used
     ChangeHashBits(u32),
-    /// A (partial) assignment that satisfies all clauses.
+    /// A (partial) assignment that satisfies all clauses and assumptions.
     Model(&'a [Lit]),
+    /// Change the active set of assumptions.
+    ///
+    /// This is checked against future model or failed assumptions steps.
+    Assumptions(&'a [Lit]),
+    /// A subset of the assumptions that make the formula unsat.
+    FailedAssumptions {
+        failed_core: &'a [Lit],
+        propagation_hashes: &'a [ClauseHash],
+    },
     /// Signals the end of a proof.
     ///
     /// A varisat proof must end with this command or else the checker will complain about an
@@ -126,6 +135,8 @@ impl<'a> ProofStep<'a> {
             ProofStep::UnitClauses(..)
             | ProofStep::ChangeHashBits(..)
             | ProofStep::Model(..)
+            | ProofStep::Assumptions(..)
+            | ProofStep::FailedAssumptions { .. }
             | ProofStep::End => 0,
         }
     }
