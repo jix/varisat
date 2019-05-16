@@ -10,7 +10,7 @@ macro_rules! test_cnf {
             let cnf = include_bytes!(concat!("cnfs/", stringify!($name), ".cnf"));
             let mut solver = Solver::new();
             solver.enable_self_checking();
-            let formula = varisat::dimacs::DimacsParser::parse(&cnf[..]).expect("parsing failed");
+            let formula = varisat_dimacs::DimacsParser::parse(&cnf[..]).expect("parsing failed");
             solver.add_formula(&formula);
             let result = $result;
             assert_eq!(solver.solve().expect("solve failed"), result);

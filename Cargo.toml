@@ -3,6 +3,7 @@
 members = [
     "varisat-internal-macros",
     "varisat-formula",
+    "varisat-dimacs",
     "varisat",
     "varisat-cli",
 ]

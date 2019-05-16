@@ -223,8 +223,8 @@ mod tests {
     use varisat_formula::{cnf_formula, CnfFormula};
 
     use crate::checker::Checker;
-    use crate::dimacs::write_dimacs;
     use crate::solver::{ProofFormat, Solver};
+    use varisat_dimacs::write_dimacs;
 
     use crate::test::sgen_unsat_formula;
 

@@ -405,8 +405,8 @@ mod tests {
 
     use tempfile::TempDir;
 
-    use crate::dimacs::write_dimacs;
     use crate::solver::Solver;
+    use varisat_dimacs::write_dimacs;
 
     use crate::test::sgen_unsat_formula;
 

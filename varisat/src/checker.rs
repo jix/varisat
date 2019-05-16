@@ -11,8 +11,8 @@ use smallvec::SmallVec;
 
 use varisat_formula::{lit::LitIdx, CnfFormula, Lit};
 
-use crate::dimacs::DimacsParser;
 use crate::proof::{clause_hash, varisat::Parser, ClauseHash, DeleteClauseProof, ProofStep};
+use varisat_dimacs::DimacsParser;
 
 mod write_lrat;
 
@@ -1252,8 +1252,8 @@ mod tests {
 
     use varisat_formula::{cnf_formula, lits, Var};
 
-    use crate::dimacs::write_dimacs;
     use crate::solver::{ProofFormat, Solver};
+    use varisat_dimacs::write_dimacs;
 
     use crate::test::{conditional_pigeon_hole, sgen_unsat_formula};
 

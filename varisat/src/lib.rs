@@ -11,7 +11,6 @@
 #[macro_use]
 pub mod checker;
 pub mod config;
-pub mod dimacs;
 pub mod solver;
 
 mod analyze_conflict;
@@ -35,3 +34,8 @@ mod vli_enc;
 mod test;
 
 pub use varisat_formula::{cnf, lit, CnfFormula, Lit, Var};
+
+pub mod dimacs {
+    //! DIMCAS CNF parser and writer.
+    pub use varisat_dimacs::*;
+}
