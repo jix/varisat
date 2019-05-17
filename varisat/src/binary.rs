@@ -5,7 +5,7 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Lit;
 use varisat_internal_proof::{DeleteClauseProof, ProofStep};
 
-use crate::context::{AssignmentP, BinaryClausesP, Context, ProofP, SolverStateP};
+use crate::context::{parts::*, Context};
 use crate::proof;
 
 /// Binary clauses.

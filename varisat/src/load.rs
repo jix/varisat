@@ -7,10 +7,7 @@ use varisat_formula::Lit;
 use varisat_internal_proof::{DeleteClauseProof, ProofStep};
 
 use crate::clause::{db, ClauseHeader, Tier};
-use crate::context::{
-    AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, IncrementalP,
-    ProofP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
-};
+use crate::context::{parts::*, Context};
 use crate::proof;
 use crate::prop::{assignment, full_restart, Reason};
 use crate::simplify::resurrect_unit;

@@ -2,7 +2,7 @@
 use partial_ref::{partial, PartialRef};
 
 use crate::config::SolverConfig;
-use crate::context::{ClauseActivityP, ClauseAllocP, ClauseDbP, Context};
+use crate::context::{parts::*, Context};
 
 use super::ClauseRef;
 

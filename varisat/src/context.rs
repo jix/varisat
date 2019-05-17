@@ -18,7 +18,7 @@ use crate::state::SolverState;
 use crate::tmp::TmpData;
 
 /// Part declarations for the [`Context`] struct.
-mod parts {
+pub mod parts {
     use super::*;
 
     part!(pub AnalyzeConflictP: AnalyzeConflict);
@@ -39,7 +39,7 @@ mod parts {
     part!(pub WatchlistsP: Watchlists);
 }
 
-pub use parts::*;
+use parts::*;
 
 /// Central solver data structure.
 ///

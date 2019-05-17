@@ -8,7 +8,7 @@ use partial_ref::{partial, PartialRef};
 
 use varisat_formula::Lit;
 
-use crate::context::{Context, ImplGraphP, TmpDataP};
+use crate::context::{parts::*, Context};
 
 /// Compute the glue level of a clause.
 pub fn compute_glue(mut ctx: partial!(Context, mut TmpDataP, ImplGraphP), lits: &[Lit]) -> usize {

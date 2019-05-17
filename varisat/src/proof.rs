@@ -8,7 +8,7 @@ use varisat_checker::{internal::SelfChecker, Checker, CheckerError, ProofProcess
 use varisat_formula::Lit;
 use varisat_internal_proof::{ClauseHash, ProofStep};
 
-use crate::context::{Context, ProofP, SolverStateP};
+use crate::context::{parts::*, Context};
 use crate::solver::SolverError;
 
 mod drat;

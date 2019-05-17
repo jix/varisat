@@ -7,10 +7,7 @@ use varisat_internal_proof::{clause_hash, lit_hash, DeleteClauseProof, ProofStep
 
 use crate::binary::simplify_binary;
 use crate::clause::db::filter_clauses;
-use crate::context::{
-    AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, ProofP,
-    SolverStateP, TrailP, WatchlistsP,
-};
+use crate::context::{parts::*, Context};
 use crate::proof;
 use crate::prop::{enqueue_assignment, Reason};
 

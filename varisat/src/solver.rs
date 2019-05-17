@@ -9,7 +9,7 @@ use varisat_checker::ProofProcessor;
 use varisat_formula::{CnfFormula, Lit};
 
 use crate::config::SolverConfigUpdate;
-use crate::context::{config_changed, ensure_var_count, AssignmentP, Context, SolverStateP};
+use crate::context::{config_changed, ensure_var_count, parts::*, Context};
 use crate::incremental::set_assumptions;
 use crate::load::load_clause;
 use crate::proof;
