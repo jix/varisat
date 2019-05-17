@@ -170,7 +170,7 @@ impl<'a> Solver<'a> {
                     .iter()
                     .enumerate()
                     .flat_map(|(index, assignment)| {
-                        assignment.map(|polarity| Lit::from_index(index, !polarity))
+                        assignment.map(|polarity| Lit::from_index(index, polarity))
                     })
                     .collect(),
             )

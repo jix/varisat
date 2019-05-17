@@ -29,7 +29,7 @@ pub fn make_decision(
     {
         let decision = Lit::from_var(
             decision_var,
-            !ctx.part(AssignmentP).last_var_value(decision_var),
+            ctx.part(AssignmentP).last_var_value(decision_var),
         );
 
         ctx.part_mut(TrailP).new_decision_level();

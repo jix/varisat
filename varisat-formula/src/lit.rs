@@ -99,25 +99,25 @@ pub struct Lit {
 }
 
 impl Lit {
-    /// Creates a literal from a `Var` and a `bool` that is `true` when the literal is negative.
-    pub fn from_var(var: Var, negative: bool) -> Lit {
-        Lit::from_litidx(var.index, negative)
+    /// Creates a literal from a `Var` and a `bool` that is `true` when the literal is positive.
+    pub fn from_var(var: Var, polarity: bool) -> Lit {
+        Lit::from_litidx(var.index, polarity)
     }
 
     /// Create a positive literal from a `Var`.
     pub fn positive(var: Var) -> Lit {
-        Lit::from_var(var, false)
+        Lit::from_var(var, true)
     }
 
     /// Create a negative literal from a `Var`.
     pub fn negative(var: Var) -> Lit {
-        Lit::from_var(var, true)
+        Lit::from_var(var, false)
     }
 
     /// Create a literal from a variable index and a `bool` that is `true` when the literal is
-    /// negative.
-    pub fn from_index(index: usize, negative: bool) -> Lit {
-        Lit::from_var(Var::from_index(index), negative)
+    /// positive.
+    pub fn from_index(index: usize, polarity: bool) -> Lit {
+        Lit::from_var(Var::from_index(index), polarity)
     }
 
     /// Create a literal with the given encoding.
@@ -128,10 +128,10 @@ impl Lit {
         }
     }
 
-    fn from_litidx(index: LitIdx, negative: bool) -> Lit {
+    fn from_litidx(index: LitIdx, polarity: bool) -> Lit {
         debug_assert!(index <= Var::max_var().index);
         Lit {
-            code: (index << 1) | (negative as LitIdx),
+            code: (index << 1) | (!polarity as LitIdx),
         }
     }
 
@@ -140,7 +140,7 @@ impl Lit {
     /// The absolute value is used as 1-based index, the sign of
     /// the integer is used as sign of the literal.
     pub fn from_dimacs(number: isize) -> Lit {
-        Lit::from_var(Var::from_dimacs(number.abs()), number < 0)
+        Lit::from_var(Var::from_dimacs(number.abs()), number > 0)
     }
 
     /// 1-based Integer representation of the literal, opposite of `from_dimacs`.
@@ -226,6 +226,6 @@ pub mod strategy {
     }
 
     pub fn lit(index: impl Strategy<Value = usize>) -> impl Strategy<Value = Lit> {
-        (var(index), bool::ANY).prop_map(|(var, negative)| Lit::from_var(var, negative))
+        (var(index), bool::ANY).prop_map(|(var, polarity)| Lit::from_var(var, polarity))
     }
 }
