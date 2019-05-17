@@ -1,8 +1,6 @@
 //! Literals and variables.
 use std::{fmt, ops};
 
-use serde::{Deserialize, Serialize};
-
 /// The backing type used to represent literals and variables.
 pub type LitIdx = u32;
 
@@ -14,7 +12,7 @@ pub type LitIdx = u32;
 ///
 /// Creating a variable with an index larger than `Var::max_var().index()` is unsupported. This
 /// might panic or be interpreted as a different variable.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct Var {
     index: LitIdx,
@@ -94,7 +92,7 @@ impl fmt::Display for Var {
 /// literal.
 ///
 /// The restriction on the range of allowed indices for `Var` also applies to `Lit`.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct Lit {
     code: LitIdx,
@@ -217,55 +215,8 @@ impl fmt::Display for Lit {
     }
 }
 
-/// Shortcut for tests
-#[cfg(test)]
-#[allow(unused_macros)]
-macro_rules! lit {
-    ($x:expr) => {
-        $crate::lit::Lit::from_dimacs($x)
-    };
-}
-
-/// Shortcut for tests
-#[cfg(test)]
-#[allow(unused_macros)]
-macro_rules! var {
-    ($x:expr) => {
-        $crate::lit::Var::from_dimacs($x)
-    };
-}
-
-/// Shortcut for tests
-#[cfg(test)]
-#[allow(unused_macros)]
-macro_rules! lits {
-    ( $( $x:expr ),* ) => { [ $( lit!( $x ) ),* ] };
-    ( $( $x:expr ),* , ) => { lits! [ $( $ x),* ] };
-}
-
-/// Shortcut for tests
-#[cfg(test)]
-#[allow(unused_macros)]
-macro_rules! vars {
-    ( $( $x:expr ),* ) => { [ $( var!( $x ) ),* ] };
-    ( $( $x:expr ),* , ) => { vars! [ $( $ x),* ] };
-}
-
-/// Shortcut for tests
-#[cfg(test)]
-#[allow(unused_macros)]
-macro_rules! cnf {
-    ( $( $( $x:expr ),* );* ; ) => { [ $( &[ $( lit!( $x ) ),* ] as &[$crate::lit::Lit] ),* ] };
-}
-
-/// Shortcut for tests
-#[cfg(test)]
-#[allow(unused_macros)]
-macro_rules! cnf_formula {
-    ( $( $t:tt )* ) => { $crate::cnf::CnfFormula::from(cnf![ $($t)* ].iter().cloned()) };
-}
-
-#[cfg(test)]
+#[cfg(any(test, feature = "proptest-strategies"))]
+#[doc(hidden)]
 pub mod strategy {
     use super::*;
     use proptest::{prelude::*, *};

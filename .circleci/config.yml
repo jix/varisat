@@ -143,7 +143,7 @@ jobs:
 
               cargo login $CARGO_TOKEN
 
-              for PKG in varisat-macros varisat varisat-cli; do
+              for PKG in $(sed '/^]/{d;q};s/"\(.*\)",\?/\1/;t;d' Cargo.toml); do
                 cd $PKG
                 cargo package || { echo retrying && sleep 5 && cargo package; }
                 cargo publish

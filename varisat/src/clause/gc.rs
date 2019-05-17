@@ -1,11 +1,10 @@
 //! Garbage collection of long clauses.
-
 use partial_ref::{partial, PartialRef};
-
-use super::{ClauseAlloc, Tier};
 
 use crate::context::{ClauseAllocP, ClauseDbP, Context, ImplGraphP, TrailP, WatchlistsP};
 use crate::prop::Reason;
+
+use super::{ClauseAlloc, Tier};
 
 /// Perform a garbage collection of long clauses if necessary.
 pub fn collect_garbage(
@@ -116,10 +115,10 @@ mod tests {
     use partial_ref::IntoPartialRefMut;
     use proptest::*;
 
+    use varisat_formula::{cnf::strategy::*, Lit};
+
     use crate::clause::{db, ClauseHeader};
-    use crate::cnf::strategy::*;
     use crate::context::{set_var_count, AssignmentP};
-    use crate::lit::Lit;
     use crate::prop::enqueue_assignment;
 
     proptest! {

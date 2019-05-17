@@ -1,3 +1,4 @@
+//! Internal macros for the Varisat SAT solver.
 #![recursion_limit = "128"]
 use std::fmt::Write;
 

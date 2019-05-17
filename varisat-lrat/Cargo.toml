@@ -1,0 +1,37 @@
+[package]
+name = "varisat-lrat"
+version = "0.2.0"
+authors = ["Jannis Harder <me@jix.one>"]
+edition = "2018"
+description = "LRAT proof generation for the Varisat SAT solver"
+homepage = "https://jix.one/project/varisat/"
+repository = "https://github.com/jix/varisat"
+license = "MIT/Apache-2.0"
+readme = "README.md"
+
+[dependencies]
+failure = "0.1.5"
+leb128 = "0.2.3"
+itoa = "0.4.4"
+
+    [dependencies.varisat-formula]
+    path = "../varisat-formula"
+    version = "=0.2.0"
+
+    [dependencies.varisat-checker]
+    path = "../varisat-checker"
+    version = "=0.2.0"
+
+
+[dev-dependencies]
+proptest = "0.9.3"
+tempfile = "3.0.7"
+
+    [dev-dependencies.varisat]
+    path = "../varisat"
+    version = "=0.2.0"
+
+    [dev-dependencies.varisat-formula]
+    path = "../varisat-formula"
+    version = "=0.2.0"
+    features = ["proptest-strategies", "internal-testing"]

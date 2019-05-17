@@ -1,7 +1,7 @@
 //! Clause storage.
 use std::slice;
 
-use crate::lit::{Lit, LitIdx};
+use varisat_formula::{lit::LitIdx, Lit};
 
 pub mod activity;
 pub mod alloc;

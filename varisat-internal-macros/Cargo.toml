@@ -1,13 +1,13 @@
 [package]
-name = "varisat-macros"
-description = "internal macros for varisat"
-homepage = "https://jix.one/project/varisat/"
-repository = "https://github.com/jix/varisat"
+name = "varisat-internal-macros"
 version = "0.2.0"
 authors = ["Jannis Harder <me@jix.one>"]
+edition = "2018"
+description = "Internal macros for the Varisat SAT solver"
+homepage = "https://jix.one/project/varisat/"
+repository = "https://github.com/jix/varisat"
 license = "MIT/Apache-2.0"
 readme = "README.md"
-edition = "2018"
 
 [lib]
 proc-macro = true

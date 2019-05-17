@@ -1,8 +1,10 @@
+//! Binary format for varisat proofs.
 use std::io::{self, BufRead, Write};
 
 use failure::Error;
 
-use crate::lit::Lit;
+use varisat_formula::Lit;
+
 use crate::vli_enc::{read_u64, write_u64};
 
 use super::{ClauseHash, DeleteClauseProof, ProofStep};

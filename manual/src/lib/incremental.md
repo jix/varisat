@@ -16,8 +16,7 @@ clauses that were already present prior to the last `solve` call.
 
 ```rust
 # extern crate varisat;
-use varisat::solver::Solver;
-use varisat::lit::Lit;
+use varisat::{Lit, Solver};
 
 let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
 
@@ -50,8 +49,7 @@ clauses:
 
 ```rust
 # extern crate varisat;
-use varisat::solver::Solver;
-use varisat::lit::Lit;
+use varisat::{Lit, Solver};
 
 let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
 let ignore_clauses = Lit::from_dimacs(4);

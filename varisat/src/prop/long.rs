@@ -1,8 +1,9 @@
 //! Propagation of long clauses.
 use partial_ref::{partial, PartialRef};
 
+use varisat_formula::Lit;
+
 use crate::context::{AssignmentP, ClauseAllocP, Context, ImplGraphP, TrailP, WatchlistsP};
-use crate::lit::Lit;
 
 use super::assignment::fast_option_eq;
 use super::enqueue_assignment;

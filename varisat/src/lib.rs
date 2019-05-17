@@ -8,12 +8,7 @@
 //! [cnf]: https://en.wikipedia.org/wiki/Conjunctive_normal_form
 //! [user manual]: https://jix.github.io/varisat/manual/0.2.0/
 
-#[macro_use]
-pub mod lit;
-pub mod checker;
-pub mod cnf;
 pub mod config;
-pub mod dimacs;
 pub mod solver;
 
 mod analyze_conflict;
@@ -31,7 +26,16 @@ mod schedule;
 mod simplify;
 mod state;
 mod tmp;
-mod vli_enc;
 
-#[cfg(test)]
-mod test;
+pub use solver::{ProofFormat, Solver};
+pub use varisat_formula::{cnf, lit, CnfFormula, Lit, Var};
+
+pub mod dimacs {
+    //! DIMCAS CNF parser and writer.
+    pub use varisat_dimacs::*;
+}
+
+pub mod checker {
+    //! Proof checker for Varisat proofs.
+    pub use varisat_checker::{CheckedProofStep, Checker, CheckerError, ProofProcessor};
+}

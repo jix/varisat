@@ -1,0 +1,31 @@
+[package]
+name = "varisat-checker"
+version = "0.2.0"
+authors = ["Jannis Harder <me@jix.one>"]
+edition = "2018"
+description = "Proof checker for proofs generate by the Varisat SAT solver"
+homepage = "https://jix.one/project/varisat/"
+repository = "https://github.com/jix/varisat"
+license = "MIT/Apache-2.0"
+readme = "README.md"
+
+[dependencies]
+failure = "0.1.5"
+hashbrown = "0.3.0"
+smallvec = "0.6.9"
+log = "0.4.6"
+
+    [dependencies.varisat-formula]
+    path = "../varisat-formula"
+    version = "=0.2.0"
+
+    [dependencies.varisat-dimacs]
+    path = "../varisat-dimacs"
+    version = "=0.2.0"
+
+    [dependencies.varisat-internal-proof]
+    path = "../varisat-internal-proof"
+    version = "=0.2.0"
+
+[dev-dependencies]
+proptest = "0.9.3"

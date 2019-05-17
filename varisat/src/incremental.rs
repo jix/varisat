@@ -2,12 +2,14 @@
 
 use partial_ref::{partial, PartialRef};
 
+use varisat_formula::Lit;
+use varisat_internal_proof::{clause_hash, lit_hash, ClauseHash, ProofStep};
+
 use crate::context::{
     AssignmentP, ClauseAllocP, Context, ImplGraphP, IncrementalP, ProofP, SolverStateP, TmpDataP,
     TrailP, VsidsP,
 };
-use crate::lit::Lit;
-use crate::proof::{self, clause_hash, lit_hash, ClauseHash, ProofStep};
+use crate::proof;
 use crate::prop::{enqueue_assignment, full_restart, Reason};
 use crate::state::SatState;
 
@@ -205,12 +207,12 @@ mod tests {
 
     use partial_ref::IntoPartialRefMut;
 
+    use varisat_formula::test::conditional_pigeon_hole;
+
     use crate::cdcl::conflict_step;
     use crate::context::{set_var_count, SolverStateP};
     use crate::load::load_clause;
     use crate::state::SatState;
-
-    use crate::test::conditional_pigeon_hole;
 
     proptest! {
         #[test]

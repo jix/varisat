@@ -2,7 +2,7 @@
 use std::mem::transmute;
 use std::slice;
 
-use crate::lit::{Lit, LitIdx};
+use varisat_formula::{lit::LitIdx, Lit};
 
 use super::{Clause, ClauseHeader, HEADER_LEN};
 
@@ -195,7 +195,7 @@ impl ClauseRef {
 mod tests {
     use super::*;
 
-    use crate::cnf::{strategy::*, CnfFormula};
+    use varisat_formula::{cnf::strategy::*, CnfFormula};
 
     use proptest::*;
 

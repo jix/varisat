@@ -15,9 +15,9 @@ We can load a formula by adding individual clauses:
 
 ```rust
 # extern crate varisat;
-# use varisat::solver::Solver;
+# use varisat::Solver;
 # let mut solver = Solver::new();
-use varisat::lit::Lit;
+use varisat::Lit;
 
 let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
 
@@ -30,11 +30,10 @@ By adding a formula:
 
 ```rust
 # extern crate varisat;
-# use varisat::solver::Solver;
-# use varisat::lit::Lit;
+# use varisat::{Lit, Solver};
 # let mut solver = Solver::new();
 # let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
-use varisat::cnf::CnfFormula;
+use varisat::CnfFormula;
 let mut formula = CnfFormula::new();
 formula.add_clause(&[x, y, z]);
 formula.add_clause(&[!x, !y]);
@@ -49,7 +48,7 @@ reading the whole formula into a `CnfFormula`.
 
 ```rust
 # extern crate varisat;
-# use varisat::solver::Solver;
+# use varisat::Solver;
 # let mut solver = Solver::new();
 let dimacs_cnf = b"1 2 3 0\n-1 -2 0\n-2 -3 0\n";
 
@@ -62,7 +61,7 @@ After loading a formula, we can ask the solver to find a solution:
 
 ```rust
 # extern crate varisat;
-# use varisat::solver::Solver;
+# use varisat::Solver;
 # let mut solver = Solver::new();
 # let dimacs_cnf = b"1 2 3 0\n-1 -2 0\n-2 -3 0\n";
 # solver.add_dimacs_cnf(&dimacs_cnf[..]).expect("parse error");
@@ -80,8 +79,8 @@ query the solver for a set of assignments that make all clauses true.
 
 ```rust
 # extern crate varisat;
-# use varisat::solver::Solver;
-# use varisat::lit::Lit;
+# use varisat::Solver;
+# use varisat::Lit;
 # let mut solver = Solver::new();
 # let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
 # let dimacs_cnf = b"1 2 3 0\n-1 -2 0\n-2 -3 0\n";

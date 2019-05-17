@@ -6,10 +6,12 @@ use vec_mut_scan::VecMutScan;
 
 use partial_ref::{partial, PartialRef};
 
+use varisat_internal_proof::{DeleteClauseProof, ProofStep};
+
 use crate::context::{
     AssignmentP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, ProofP, SolverStateP, WatchlistsP,
 };
-use crate::proof::{self, DeleteClauseProof, ProofStep};
+use crate::proof;
 
 use super::db::{set_clause_tier, try_delete_clause, Tier};
 

@@ -1,8 +1,9 @@
 //! Propagation of binary clauses.
 use partial_ref::{partial, PartialRef};
 
+use varisat_formula::Lit;
+
 use crate::context::{AssignmentP, BinaryClausesP, Context, ImplGraphP, TrailP};
-use crate::lit::Lit;
 
 use super::enqueue_assignment;
 use super::{Conflict, Reason};

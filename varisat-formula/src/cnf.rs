@@ -106,7 +106,8 @@ impl PartialEq for CnfFormula {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "proptest-strategies"))]
+#[doc(hidden)]
 pub mod strategy {
     use super::*;
 

@@ -1,13 +1,14 @@
 //! Database for long clauses.
+use std::mem::transmute;
+
 use partial_ref::{partial, PartialRef};
 
-use super::{header::HEADER_LEN, ClauseAlloc, ClauseHeader, ClauseRef};
+use varisat_formula::Lit;
 
 use crate::context::{AssignmentP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, WatchlistsP};
-use crate::lit::Lit;
 use crate::prop::Reason;
 
-use std::mem::transmute;
+use super::{header::HEADER_LEN, ClauseAlloc, ClauseHeader, ClauseRef};
 
 /// Partitions of the clause database.
 ///
@@ -208,6 +209,8 @@ mod tests {
     use super::*;
 
     use partial_ref::IntoPartialRefMut;
+
+    use varisat_formula::cnf_formula;
 
     use crate::context::set_var_count;
 

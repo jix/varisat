@@ -5,10 +5,11 @@ use partial_ref::{partial, split_borrow, PartialRef};
 
 use vec_mut_scan::VecMutScan;
 
+use varisat_formula::{lit::LitIdx, Lit, Var};
+use varisat_internal_proof::{clause_hash, lit_hash, ClauseHash};
+
 use crate::clause::ClauseRef;
 use crate::context::{AnalyzeConflictP, ClauseAllocP, Context, ImplGraphP, ProofP, TrailP, VsidsP};
-use crate::lit::{Lit, LitIdx, Var};
-use crate::proof::{clause_hash, lit_hash, ClauseHash};
 use crate::prop::{Conflict, Reason};
 
 /// Temporaries for conflict analysis

@@ -1,10 +1,10 @@
-//! DIMACS CNF parsing and writing.
+//! DIMCAS CNF parser and writer for the Varisat SAT solver.
+
 use std::borrow::Borrow;
 use std::io;
 use std::mem::replace;
 
-use crate::cnf::CnfFormula;
-use crate::lit::{Lit, Var};
+use varisat_formula::{CnfFormula, Lit, Var};
 
 use failure::{Error, Fail};
 
@@ -104,9 +104,9 @@ impl DimacsParser {
 
     /// Parse the given input and check the header if present.
     ///
-    /// This parses the whole input into a signel [`CnfFormula`]. Incremental parsing is possible
-    /// using [`parse_incremental`](DimacsParser::parse_incremental) or the
-    /// [`parse_chunk`](DimacsParser::parse_chunk) method.
+    /// This parses the whole input into a single [`CnfFormula`](varisat_formula::CnfFormula).
+    /// Incremental parsing is possible using [`parse_incremental`](DimacsParser::parse_incremental)
+    /// or the [`parse_chunk`](DimacsParser::parse_chunk) method.
     pub fn parse(input: impl io::Read) -> Result<CnfFormula, Error> {
         Ok(Self::parse_incremental(input, |_| Ok(()))?.take_formula())
     }
@@ -275,9 +275,9 @@ impl DimacsParser {
 
     /// Returns the subformula of everything parsed since the last call to this method.
     ///
-    /// To parse the whole input into a single [`CnfFormula`], simply call this method once after
-    /// calling [`eof`](DimacsParser::eof). For incremental parsing this method can be invoked after
-    /// each call of [`parse_chunk`](DimacsParser::parse_chunk).
+    /// To parse the whole input into a single [`CnfFormula`](varisat_formula::CnfFormula), simply
+    /// call this method once after calling [`eof`](DimacsParser::eof). For incremental parsing this
+    /// method can be invoked after each call of [`parse_chunk`](DimacsParser::parse_chunk).
     ///
     /// The variable count of the returned formula will be the maximum of the variable count so far
     /// and the variable count of the header if present.
@@ -428,7 +428,7 @@ mod tests {
     use failure::{Error, ResultExt};
     use proptest::*;
 
-    use crate::cnf::strategy::*;
+    use varisat_formula::{cnf::strategy::*, cnf_formula};
 
     #[test]
     fn odd_whitespace() -> Result<(), Error> {
