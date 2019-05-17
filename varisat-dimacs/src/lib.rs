@@ -311,7 +311,7 @@ impl DimacsParser {
             } else {
                 self.partial_clause.push(Lit::from_var(
                     Var::from_dimacs(self.partial_lit as isize),
-                    self.negate_next_lit,
+                    !self.negate_next_lit,
                 ));
             }
         }

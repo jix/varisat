@@ -70,16 +70,16 @@ mod tests {
     ) -> impl Strategy<Value = (Vec<Lit>, CnfFormula)> {
         (vars, extra_vars, extra_clauses, density).prop_flat_map(
             |(vars, extra_vars, extra_clauses, density)| {
-                let negate = collection::vec(bool::ANY, vars + extra_vars);
+                let polarity = collection::vec(bool::ANY, vars + extra_vars);
 
                 let dist = Bernoulli::new(density);
 
-                let lits = negate
-                    .prop_map(|negate| {
-                        negate
+                let lits = polarity
+                    .prop_map(|polarity| {
+                        polarity
                             .into_iter()
                             .enumerate()
-                            .map(|(index, negate)| Lit::from_index(index, negate))
+                            .map(|(index, polarity)| Lit::from_index(index, polarity))
                             .collect::<Vec<_>>()
                     })
                     .prop_shuffle();

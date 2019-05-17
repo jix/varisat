@@ -49,7 +49,7 @@ pub fn conflict_step<'a>(
                         .iter()
                         .enumerate()
                         .flat_map(|(index, assignment)| {
-                            assignment.map(|polarity| Lit::from_index(index, !polarity))
+                            assignment.map(|polarity| Lit::from_index(index, polarity))
                         }),
                 );
                 proof::add_step(ctx.borrow(), &ProofStep::Model(&model));

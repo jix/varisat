@@ -13,12 +13,12 @@ pub fn sgen_unsat_formula(
     blocks: impl Strategy<Value = usize>,
 ) -> impl Strategy<Value = CnfFormula> {
     blocks.prop_flat_map(|blocks| {
-        collection::vec(bool::ANY, blocks * 4 + 1).prop_perturb(|negate, mut rng| {
+        collection::vec(bool::ANY, blocks * 4 + 1).prop_perturb(|polarity, mut rng| {
             let mut clauses: Vec<Vec<Lit>> = vec![];
-            let mut lits = negate
+            let mut lits = polarity
                 .into_iter()
                 .enumerate()
-                .map(|(index, negate)| Lit::from_index(index, negate))
+                .map(|(index, polarity)| Lit::from_index(index, polarity))
                 .collect::<Vec<_>>();
 
             for &invert in [false, true].iter() {
@@ -66,12 +66,12 @@ pub fn sat_formula(
             let density = Bernoulli::new(density);
             let polarity_dist = Bernoulli::new(polarity_dist);
 
-            collection::vec(bool::ANY, vars).prop_perturb(move |negate, mut rng| {
+            collection::vec(bool::ANY, vars).prop_perturb(move |polarity, mut rng| {
                 let mut clauses: Vec<Vec<Lit>> = vec![];
-                let lits = negate
+                let lits = polarity
                     .into_iter()
                     .enumerate()
-                    .map(|(index, negate)| Lit::from_index(index, negate))
+                    .map(|(index, polarity)| Lit::from_index(index, polarity))
                     .collect::<Vec<_>>();
 
                 for _ in 0..clause_count {
@@ -102,12 +102,12 @@ pub fn conditional_pigeon_hole(
         let rows = columns + extra_rows;
         let vars = (columns + 1) * rows;
 
-        collection::vec(bool::ANY, vars).prop_perturb(move |negate, mut rng| {
+        collection::vec(bool::ANY, vars).prop_perturb(move |polarity, mut rng| {
             let mut clauses: Vec<Vec<Lit>> = vec![];
-            let lits = negate
+            let lits = polarity
                 .into_iter()
                 .enumerate()
-                .map(|(index, negate)| Lit::from_index(index, negate))
+                .map(|(index, polarity)| Lit::from_index(index, polarity))
                 .collect::<Vec<_>>();
 
             for i in 1..columns + 1 {
