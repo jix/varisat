@@ -84,10 +84,13 @@ Instead Varisat provides the `CnfFormula` type, which stores all literals in a
 single `Vec`. When iterating over a `CnfFormula` the clauses can be accessed as
 slices.
 
+The `add_clause` method of the `ExtendFormula` trait allows adding new clauses
+to a `CnfFormula`.
+
 ```rust
 # extern crate varisat;
 # use varisat::{Var, Lit};
-use varisat::CnfFormula;
+use varisat::{CnfFormula, ExtendFormula};
 
 let mut formula = CnfFormula::new();
 
@@ -101,6 +104,30 @@ formula.add_clause(&[!a, !c]);
 assert_eq!(formula.iter().last().unwrap(), &[!a, !c]);
 ```
 
+## New Variables and Literals
+
+Often we don't care about the specific indices of variables. In that case,
+instead of manually computing indices, we can dynamically ask for new unused
+variables. This functionality is also also provided by the `ExtendFormula`
+trait.
+
+```rust
+# extern crate varisat;
+# use varisat::{Var, Lit};
+# use varisat::{CnfFormula, ExtendFormula};
+let mut formula = CnfFormula::new();
+
+let a = formula.new_var().negative();
+let b = formula.new_lit();
+let (c, d, e) = formula.new_lits();
+let f: Vec<Lit> = formula.new_lit_iter(10).collect();
+
+formula.add_clause(&[a, b, c, d, e]);
+formula.add_clause(&f);
+
+assert_eq!(formula.var_count(), 15);
+```
+
 ## Parsing and Writing Formulas
 
 Varisat provides routines for parsing and writing Formulas in the [DIMACS
@@ -109,6 +136,7 @@ CNF][dimacs] format.
 ```rust
 # extern crate varisat;
 # use varisat::{Var, Lit};
+# use varisat::ExtendFormula;
 use varisat::dimacs::{DimacsParser, write_dimacs};
 
 let input = b"p cnf 3 2\n1 2 3 0\n-1 -3 0\n";

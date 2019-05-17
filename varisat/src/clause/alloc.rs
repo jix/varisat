@@ -195,7 +195,7 @@ impl ClauseRef {
 mod tests {
     use super::*;
 
-    use varisat_formula::{cnf::strategy::*, CnfFormula};
+    use varisat_formula::{cnf::strategy::*, CnfFormula, ExtendFormula};
 
     use proptest::*;
 

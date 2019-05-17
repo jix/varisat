@@ -4,7 +4,7 @@ use std::borrow::Borrow;
 use std::io;
 use std::mem::replace;
 
-use varisat_formula::{CnfFormula, Lit, Var};
+use varisat_formula::{CnfFormula, ExtendFormula, Lit, Var};
 
 use failure::{Error, Fail};
 

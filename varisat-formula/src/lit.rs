@@ -222,6 +222,12 @@ impl ops::BitXor<bool> for Lit {
     }
 }
 
+impl From<Var> for Lit {
+    fn from(var: Var) -> Lit {
+        Lit::positive(var)
+    }
+}
+
 /// Uses the 1-based DIMACS CNF encoding.
 impl fmt::Debug for Lit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

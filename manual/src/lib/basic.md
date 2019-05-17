@@ -33,7 +33,7 @@ By adding a formula:
 # use varisat::{Lit, Solver};
 # let mut solver = Solver::new();
 # let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
-use varisat::CnfFormula;
+use varisat::{CnfFormula, ExtendFormula};
 let mut formula = CnfFormula::new();
 formula.add_clause(&[x, y, z]);
 formula.add_clause(&[!x, !y]);

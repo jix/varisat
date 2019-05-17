@@ -489,7 +489,7 @@ mod tests {
                         let skipped = *candidates.last().unwrap();
                         core.push(skipped);
 
-                        let single_clause = CnfFormula::from(Some(&[skipped]));
+                        let single_clause = CnfFormula::from(Some([skipped]));
                         solver.add_formula(&single_clause);
                     },
                     Ok(false) => {
