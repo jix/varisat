@@ -2,6 +2,9 @@
 
 Basic formula data types used by the [Varisat SAT solver][crate-varisat].
 
+The functionality of this crate is re-exported by the [main Varisat
+crate][crate-varisat].
+
 ## License
 
 The Varisat source code is licensed under either of
