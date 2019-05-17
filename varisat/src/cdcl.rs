@@ -176,7 +176,7 @@ mod tests {
     use varisat_formula::cnf_formula;
     use varisat_formula::test::{sat_formula, sgen_unsat_formula};
 
-    use crate::context::{set_var_count, AssignmentP, SolverStateP};
+    use crate::context::set_var_count;
     use crate::load::load_clause;
     use crate::state::SatState;
 

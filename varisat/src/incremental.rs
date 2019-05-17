@@ -207,7 +207,7 @@ mod tests {
     use varisat_formula::test::conditional_pigeon_hole;
 
     use crate::cdcl::conflict_step;
-    use crate::context::{set_var_count, SolverStateP};
+    use crate::context::set_var_count;
     use crate::load::load_clause;
     use crate::state::SatState;
 

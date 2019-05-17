@@ -118,7 +118,7 @@ mod tests {
     use varisat_formula::{cnf::strategy::*, Lit};
 
     use crate::clause::{db, ClauseHeader};
-    use crate::context::{set_var_count, AssignmentP};
+    use crate::context::set_var_count;
     use crate::prop::enqueue_assignment;
 
     proptest! {

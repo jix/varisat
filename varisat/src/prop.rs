@@ -57,7 +57,7 @@ mod tests {
     use varisat_formula::{cnf::strategy::*, CnfFormula, Lit};
 
     use crate::clause::{db, gc};
-    use crate::context::{set_var_count, Context, SolverStateP};
+    use crate::context::set_var_count;
     use crate::load::load_clause;
     use crate::state::SatState;
 

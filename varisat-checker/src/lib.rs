@@ -1245,11 +1245,7 @@ fn copy_canonical(target: &mut Vec<Lit>, src: &[Lit]) -> bool {
 mod tests {
     use super::*;
 
-    use proptest::prelude::*;
-
-    use varisat_dimacs::write_dimacs;
-    use varisat_formula::test::{conditional_pigeon_hole, sgen_unsat_formula};
-    use varisat_formula::{cnf_formula, lits, Var};
+    use varisat_formula::{cnf_formula, lits};
 
     fn expect_check_failed(result: Result<(), CheckerError>, contains: &str) {
         match result {
