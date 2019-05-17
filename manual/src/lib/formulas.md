@@ -41,10 +41,13 @@ assert_eq!(x.to_dimacs(), 1);
 assert!(Lit::from_dimacs(2).is_positive());
 assert!(Lit::from_dimacs(-3).is_negative());
 
-assert_eq!(Lit::positive(x), Lit::from_var(x, true));
-assert_eq!(Lit::negative(x), Lit::from_var(x, false));
+assert_eq!(Lit::positive(x), x.lit(true));
+assert_eq!(Lit::negative(x), x.lit(false));
 
-assert_eq!(Lit::negative(x), !Lit::positive(x));
+assert_eq!(x.positive(), Lit::from_var(x, true));
+assert_eq!(x.negative(), Lit::from_var(x, false));
+
+assert_eq!(x.positive(), !x.negative());
 
 assert_eq!(Lit::from_index(6, true).code(), 12);
 assert_eq!(Lit::from_index(6, false).code(), 13);

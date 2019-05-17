@@ -2,7 +2,7 @@
 
 use partial_ref::{partial, PartialRef};
 
-use varisat_formula::{Lit, Var};
+use varisat_formula::Var;
 
 use crate::context::{parts::*, Context};
 use crate::prop::{enqueue_assignment, Reason};
@@ -27,10 +27,7 @@ pub fn make_decision(
         .filter(|&var| ctx.part(AssignmentP).var_value(var).is_none())
         .next()
     {
-        let decision = Lit::from_var(
-            decision_var,
-            ctx.part(AssignmentP).last_var_value(decision_var),
-        );
+        let decision = decision_var.lit(ctx.part(AssignmentP).last_var_value(decision_var));
 
         ctx.part_mut(TrailP).new_decision_level();
 
