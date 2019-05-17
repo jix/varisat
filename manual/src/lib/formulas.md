@@ -30,7 +30,7 @@ index, not the literal's code.
 
 ```rust
 # extern crate varisat;
-use varisat::lit::{Var, Lit};
+use varisat::{Var, Lit};
 
 let x = Var::from_index(0);
 
@@ -57,7 +57,7 @@ When formatting variables or literals the DIMACS convention is used.
 
 ```rust
 # extern crate varisat;
-# use varisat::lit::{Var, Lit};
+# use varisat::{Var, Lit};
 
 let fmt_display = format!("{}, {}", Var::from_dimacs(5), Lit::from_dimacs(-1));
 let fmt_debug = format!("{:?}, {:?}", Var::from_dimacs(5), Lit::from_dimacs(-1));
@@ -83,8 +83,8 @@ slices.
 
 ```rust
 # extern crate varisat;
-# use varisat::lit::{Var, Lit};
-use varisat::cnf::CnfFormula;
+# use varisat::{Var, Lit};
+use varisat::CnfFormula;
 
 let mut formula = CnfFormula::new();
 
@@ -105,7 +105,7 @@ CNF][dimacs] format.
 
 ```rust
 # extern crate varisat;
-# use varisat::lit::{Var, Lit};
+# use varisat::{Var, Lit};
 use varisat::dimacs::{DimacsParser, write_dimacs};
 
 let input = b"p cnf 3 2\n1 2 3 0\n-1 -3 0\n";
