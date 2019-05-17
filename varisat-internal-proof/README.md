@@ -3,6 +3,9 @@
 This crate defines the proof format used internally by the [`varisat`
 crate][crate-varisat].
 
+__This is an internal dependency of the Varisat SAT solver, and should not be
+used directly.__
+
 ## License
 
 The Varisat source code is licensed under either of
