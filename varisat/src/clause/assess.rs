@@ -4,7 +4,7 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Lit;
 
 use crate::clause::{db, ClauseRef};
-use crate::context::{ClauseActivityP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, TmpDataP};
+use crate::context::{parts::*, Context};
 use crate::glue::compute_glue;
 
 use super::{bump_clause_activity, ClauseHeader, Tier};

@@ -7,10 +7,7 @@ use varisat_internal_proof::ProofStep;
 
 use crate::analyze_conflict::analyze_conflict;
 use crate::clause::{assess_learned_clause, bump_clause, db, decay_clause_activities};
-use crate::context::{
-    AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseActivityP, ClauseAllocP, ClauseDbP,
-    Context, ImplGraphP, IncrementalP, ProofP, SolverStateP, TmpDataP, TrailP, VsidsP, WatchlistsP,
-};
+use crate::context::{parts::*, Context};
 use crate::decision::make_decision;
 use crate::incremental::{enqueue_assumption, EnqueueAssumption};
 use crate::proof;

@@ -37,7 +37,7 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Lit;
 
 use crate::clause::{db, ClauseRef};
-use crate::context::{ClauseAllocP, ClauseDbP, Context, WatchlistsP};
+use crate::context::{parts::*, Context};
 
 /// A watch on a long clause.
 #[derive(Copy, Clone)]

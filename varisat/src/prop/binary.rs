@@ -3,7 +3,7 @@ use partial_ref::{partial, PartialRef};
 
 use varisat_formula::Lit;
 
-use crate::context::{AssignmentP, BinaryClausesP, Context, ImplGraphP, TrailP};
+use crate::context::{parts::*, Context};
 
 use super::enqueue_assignment;
 use super::{Conflict, Reason};

@@ -1,9 +1,7 @@
 //! Unit propagation.
 use partial_ref::{partial, PartialRef};
 
-use crate::context::{
-    AssignmentP, BinaryClausesP, ClauseAllocP, ClauseDbP, Context, ImplGraphP, TrailP, WatchlistsP,
-};
+use crate::context::{parts::*, Context};
 
 pub mod assignment;
 pub mod binary;

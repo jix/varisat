@@ -8,11 +8,7 @@ use partial_ref::{partial, PartialRef};
 use crate::cdcl::conflict_step;
 use crate::clause::reduce::{reduce_locals, reduce_mids};
 use crate::clause::{collect_garbage, Tier};
-use crate::context::{
-    AnalyzeConflictP, AssignmentP, BinaryClausesP, ClauseActivityP, ClauseAllocP, ClauseDbP,
-    Context, ImplGraphP, IncrementalP, ProofP, ScheduleP, SolverConfigP, SolverStateP, TmpDataP,
-    TrailP, VsidsP, WatchlistsP,
-};
+use crate::context::{parts::*, Context};
 use crate::prop::restart;
 use crate::state::SatState;
 

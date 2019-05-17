@@ -5,10 +5,7 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Lit;
 use varisat_internal_proof::{clause_hash, lit_hash, ClauseHash, ProofStep};
 
-use crate::context::{
-    AssignmentP, ClauseAllocP, Context, ImplGraphP, IncrementalP, ProofP, SolverStateP, TmpDataP,
-    TrailP, VsidsP,
-};
+use crate::context::{parts::*, Context};
 use crate::proof;
 use crate::prop::{enqueue_assignment, full_restart, Reason};
 use crate::state::SatState;

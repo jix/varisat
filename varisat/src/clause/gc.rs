@@ -1,7 +1,7 @@
 //! Garbage collection of long clauses.
 use partial_ref::{partial, PartialRef};
 
-use crate::context::{ClauseAllocP, ClauseDbP, Context, ImplGraphP, TrailP, WatchlistsP};
+use crate::context::{parts::*, Context};
 use crate::prop::Reason;
 
 use super::{ClauseAlloc, Tier};
