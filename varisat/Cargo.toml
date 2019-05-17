@@ -19,8 +19,6 @@ ordered-float = "1.0.2"
 partial_ref = "0.3.1"
 serde = { version = "1.0.91", features = ["derive"] }
 leb128 = "0.2.3"
-hashbrown = "0.3.0"
-smallvec = "0.6.9"
 vec_mut_scan = "0.1.0"
 
     [dependencies.varisat-internal-macros]
@@ -39,6 +37,10 @@ vec_mut_scan = "0.1.0"
     path = "../varisat-internal-proof"
     version = "=0.2.0"
 
+    [dependencies.varisat-checker]
+    path = "../varisat-checker"
+    version = "=0.2.0"
+
 [dev-dependencies]
 proptest = "0.9.3"
 rand = "0.6.5"
@@ -48,7 +50,7 @@ env_logger = "0.6.1"
     [dev-dependencies.varisat-formula]
     path = "../varisat-formula"
     version = "=0.2.0"
-    features = ["proptest-strategies", "internal-test-macros"]
+    features = ["proptest-strategies", "internal-testing"]
 
 [build-dependencies]
 failure = "0.1.5"

@@ -4,10 +4,10 @@ use std::io::{self, sink, BufWriter, Write};
 
 use partial_ref::{partial, PartialRef};
 
+use varisat_checker::{internal::SelfChecker, Checker, CheckerError, ProofProcessor};
 use varisat_formula::Lit;
 use varisat_internal_proof::{ClauseHash, ProofStep};
 
-use crate::checker::{Checker, CheckerError, ProofProcessor};
 use crate::context::{Context, ProofP, SolverStateP};
 use crate::solver::SolverError;
 
@@ -185,7 +185,7 @@ pub fn add_step<'a, 's>(
         let proof = ctx.part_mut(ProofP);
         if let Some(checker) = &mut proof.checker {
             let step = proof.map_step.map(step, |lit| lit, |hash| hash);
-            let result = checker.check_step(step);
+            let result = checker.self_check_step(step);
             handle_self_check_result(ctx.borrow(), result);
         }
     }
@@ -255,7 +255,7 @@ pub fn close_proof<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut Solver
 pub fn solve_finished<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP)) {
     flush_proof(ctx.borrow());
     if let Some(checker) = &mut ctx.part_mut(ProofP).checker {
-        let result = checker.process_unit_conflicts();
+        let result = checker.self_check_delayed_steps();
         handle_self_check_result(ctx.borrow(), result);
     }
 }
@@ -310,10 +310,10 @@ mod tests {
 
     use tempfile::TempDir;
 
-    use crate::solver::Solver;
     use varisat_dimacs::write_dimacs;
+    use varisat_formula::test::sgen_unsat_formula;
 
-    use crate::test::sgen_unsat_formula;
+    use crate::solver::Solver;
 
     proptest! {
 

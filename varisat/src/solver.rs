@@ -5,9 +5,9 @@ use partial_ref::{IntoPartialRef, IntoPartialRefMut, PartialRef};
 
 use failure::{Error, Fail};
 
+use varisat_checker::ProofProcessor;
 use varisat_formula::{CnfFormula, Lit};
 
-use crate::checker::ProofProcessor;
 use crate::config::SolverConfigUpdate;
 use crate::context::{config_changed, ensure_var_count, AssignmentP, Context, SolverStateP};
 use crate::incremental::set_assumptions;
@@ -247,12 +247,11 @@ mod tests {
 
     use proptest::prelude::*;
 
+    use varisat_formula::test::{conditional_pigeon_hole, sat_formula, sgen_unsat_formula};
     use varisat_formula::{cnf_formula, lits, CnfFormula, Var};
 
     use crate::checker::CheckedProofStep;
     use varisat_dimacs::write_dimacs;
-
-    use crate::test::{conditional_pigeon_hole, sat_formula, sgen_unsat_formula};
 
     fn enable_test_schedule(solver: &mut Solver) {
         let mut config = SolverConfigUpdate::new();

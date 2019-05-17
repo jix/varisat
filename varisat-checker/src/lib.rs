@@ -1,4 +1,4 @@
-//! Check unsatisfiability proofs.
+//! Proof checker for Varisat proofs.
 
 use std::convert::TryInto;
 use std::io;
@@ -15,9 +15,7 @@ use varisat_internal_proof::{
     binary_format::Parser, clause_hash, ClauseHash, DeleteClauseProof, ProofStep,
 };
 
-mod write_lrat;
-
-pub use write_lrat::WriteLrat;
+pub mod internal;
 
 /// Possible errors while checking a varisat proof.
 #[derive(Debug, Fail)]
@@ -393,7 +391,7 @@ impl<'a> Checker<'a> {
 
     /// Reads and adds a formula in DIMACS CNF format.
     ///
-    /// Using this avoids creating a temporary [`CnfFormula`].
+    /// Using this avoids creating a temporary [`CnfFormula`](varisat_formula::CnfFormula).
     pub fn add_dimacs_cnf(&mut self, input: impl io::Read) -> Result<(), Error> {
         let parser = DimacsParser::parse_incremental(input, |parser| {
             Ok(self.add_formula(&parser.take_formula())?)
@@ -798,7 +796,7 @@ impl<'a> Checker<'a> {
     }
 
     /// Check a single proof step
-    pub(crate) fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
+    fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
         let mut result = match step {
             ProofStep::AddClause { clause } => self.add_clause(clause),
             ProofStep::AtClause {
@@ -1131,9 +1129,7 @@ impl<'a> Checker<'a> {
         Ok(())
     }
 
-    /// Reads and adds a formula in DIMACS CNF format.
-    ///
-    /// Using this avoids creating a temporary [`CnfFormula`].
+    /// Checks a proof in the native Varisat format.
     pub fn check_proof(&mut self, input: impl io::Read) -> Result<(), CheckerError> {
         let mut buffer = io::BufReader::new(input);
         let mut parser = Parser::default();
@@ -1172,7 +1168,7 @@ impl<'a> Checker<'a> {
     }
 
     /// Process unit conflicts detected during clause loading.
-    pub(crate) fn process_unit_conflicts(&mut self) -> Result<(), CheckerError> {
+    fn process_unit_conflicts(&mut self) -> Result<(), CheckerError> {
         if let Some(ids) = &self.unit_conflict {
             let clause = &[];
             Self::process_step(
@@ -1251,12 +1247,9 @@ mod tests {
 
     use proptest::prelude::*;
 
-    use varisat_formula::{cnf_formula, lits, Var};
-
-    use crate::solver::{ProofFormat, Solver};
     use varisat_dimacs::write_dimacs;
-
-    use crate::test::{conditional_pigeon_hole, sgen_unsat_formula};
+    use varisat_formula::test::{conditional_pigeon_hole, sgen_unsat_formula};
+    use varisat_formula::{cnf_formula, lits, Var};
 
     fn expect_check_failed(result: Result<(), CheckerError>, contains: &str) {
         match result {
@@ -1608,179 +1601,5 @@ mod tests {
                 propagation_hashes: &[],
             })
             .unwrap();
-    }
-
-    proptest! {
-        #[test]
-        fn checked_unsat_via_dimacs(formula in sgen_unsat_formula(1..7usize)) {
-            let mut dimacs = vec![];
-            let mut proof = vec![];
-
-            let mut solver = Solver::new();
-
-            write_dimacs(&mut dimacs, &formula).unwrap();
-
-            solver.write_proof(&mut proof, ProofFormat::Varisat);
-
-            solver.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
-
-            prop_assert_eq!(solver.solve().ok(), Some(false));
-
-            solver.close_proof().map_err(|e| e.compat())?;
-
-            drop(solver);
-
-            let mut checker = Checker::new();
-
-            checker.add_dimacs_cnf(&mut &dimacs[..]).unwrap();
-
-            checker.check_proof(&mut &proof[..]).unwrap();
-        }
-
-        #[test]
-        fn sgen_checked_unsat_incremental_clauses(formula in sgen_unsat_formula(1..7usize)) {
-            let mut proof = vec![];
-
-            let mut solver = Solver::new();
-            solver.write_proof(&mut proof, ProofFormat::Varisat);
-
-            let mut expected_models = 0;
-
-            // Add all clauses incrementally so they are recorded in the proof
-            solver.solve().unwrap();
-            expected_models += 1;
-
-            let mut last_state = Some(true);
-
-            for clause in formula.iter() {
-                solver.add_clause(clause);
-
-                let state = solver.solve().ok();
-                if state != last_state {
-                    prop_assert_eq!(state, Some(false));
-                    prop_assert_eq!(last_state, Some(true));
-                    last_state = state;
-                }
-                if state == Some(true) {
-                    expected_models += 1;
-                }
-            }
-
-            prop_assert_eq!(last_state, Some(false));
-
-            drop(solver);
-
-            #[derive(Default)]
-            struct FoundModels {
-                counter: usize,
-                unsat: bool,
-            }
-
-            impl ProofProcessor for FoundModels {
-                fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error> {
-                    if let CheckedProofStep::Model { .. } = step {
-                        self.counter += 1;
-                    } else if let CheckedProofStep::AtClause { clause: &[], .. } = step {
-                        self.unsat = true;
-                    }
-                    Ok(())
-                }
-            }
-
-            let mut found_models = FoundModels::default();
-            let mut checker = Checker::new();
-            checker.add_processor(&mut found_models);
-            checker.check_proof(&mut &proof[..]).unwrap();
-
-            prop_assert_eq!(found_models.counter, expected_models);
-            prop_assert!(found_models.unsat);
-        }
-
-        #[test]
-        fn pigeon_hole_checked_unsat_assumption_core(
-            (enable_row, columns, formula) in conditional_pigeon_hole(1..5usize, 1..5usize),
-        ) {
-            let mut proof = vec![];
-
-            let mut solver = Solver::new();
-            solver.write_proof(&mut proof, ProofFormat::Varisat);
-
-            let mut expected_sat = 0;
-            let mut expected_unsat = 0;
-
-            solver.solve().unwrap();
-            expected_sat += 1;
-            solver.add_formula(&formula);
-
-            prop_assert_eq!(solver.solve().ok(), Some(true));
-            expected_sat += 1;
-
-            let mut assumptions = enable_row.to_owned();
-
-            assumptions.push(Lit::positive(Var::from_index(formula.var_count() + 10)));
-
-            solver.assume(&assumptions);
-
-            prop_assert_eq!(solver.solve().ok(), Some(false));
-            expected_unsat += 1;
-
-            let mut candidates = solver.failed_core().unwrap().to_owned();
-            let mut core: Vec<Lit> = vec![];
-
-            while !candidates.is_empty() {
-
-                solver.assume(&candidates[0..candidates.len() - 1]);
-
-                match solver.solve() {
-                    Err(_) => unreachable!(),
-                    Ok(true) => {
-                        expected_sat += 1;
-                        let skipped = *candidates.last().unwrap();
-                        core.push(skipped);
-
-                        let single_clause = CnfFormula::from(Some(&[skipped]));
-                        solver.add_formula(&single_clause);
-                    },
-                    Ok(false) => {
-                        expected_unsat += 1;
-                        candidates = solver.failed_core().unwrap().to_owned();
-                    }
-                }
-            }
-
-            prop_assert_eq!(core.len(), columns + 1);
-
-            drop(solver);
-
-            #[derive(Default)]
-            struct CountResults {
-                sat: usize,
-                unsat: usize,
-            }
-
-            impl ProofProcessor for CountResults {
-                fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error> {
-                    match step {
-                        CheckedProofStep::Model { .. } => {
-                            self.sat += 1;
-                        }
-                        CheckedProofStep::AtClause { clause: &[], .. }
-                        | CheckedProofStep::FailedAssumptions { .. } => {
-                            self.unsat += 1;
-                        }
-                        _ => (),
-                    }
-                    Ok(())
-                }
-            }
-
-            let mut count_results = CountResults::default();
-            let mut checker = Checker::new();
-            checker.add_processor(&mut count_results);
-            checker.check_proof(&mut &proof[..]).unwrap();
-
-            prop_assert_eq!(count_results.sat, expected_sat);
-            prop_assert_eq!(count_results.unsat, expected_unsat);
-        }
     }
 }

@@ -8,9 +8,9 @@ use failure::Error;
 use log::{error, info};
 use log::{Level, LevelFilter, Record};
 
-use varisat::checker::WriteLrat;
 use varisat::config::{SolverConfig, SolverConfigUpdate};
 use varisat::solver::{ProofFormat, Solver};
+use varisat_lrat::WriteLrat;
 
 mod check;
 

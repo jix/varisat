@@ -1,12 +1,11 @@
-//! Proof processor that generates an LRAT proof.
+//! LRAT proof generation for the Varisat SAT solver.
 use std::io::{BufWriter, Write};
 use std::mem::replace;
 
 use failure::Error;
 
+use varisat_checker::{CheckedProofStep, ProofProcessor};
 use varisat_formula::Lit;
-
-use super::{CheckedProofStep, ProofProcessor};
 
 /// Proof processor that generates an LRAT proof.
 pub struct WriteLrat<'a> {
@@ -220,13 +219,11 @@ mod tests {
 
     use tempfile::TempDir;
 
+    use varisat::dimacs::write_dimacs;
+    use varisat::{ProofFormat, Solver};
+    use varisat_checker::Checker;
+    use varisat_formula::test::sgen_unsat_formula;
     use varisat_formula::{cnf_formula, CnfFormula};
-
-    use crate::checker::Checker;
-    use crate::solver::{ProofFormat, Solver};
-    use varisat_dimacs::write_dimacs;
-
-    use crate::test::sgen_unsat_formula;
 
     fn check_lrat(tool: &str, cnf_file: &PathBuf, proof_file: &PathBuf) -> Result<bool, Error> {
         let mut child = Command::new(tool)

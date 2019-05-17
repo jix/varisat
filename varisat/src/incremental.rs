@@ -207,12 +207,12 @@ mod tests {
 
     use partial_ref::IntoPartialRefMut;
 
+    use varisat_formula::test::conditional_pigeon_hole;
+
     use crate::cdcl::conflict_step;
     use crate::context::{set_var_count, SolverStateP};
     use crate::load::load_clause;
     use crate::state::SatState;
-
-    use crate::test::conditional_pigeon_hole;
 
     proptest! {
         #[test]

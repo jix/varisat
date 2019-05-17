@@ -1,7 +1,7 @@
 //! Basic formula data types used by the Varisat SAT solver.
 
 /// Shortcut for tests
-#[cfg(any(test, feature = "internal-test-macros"))]
+#[cfg(any(test, feature = "internal-testing"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! lit {
@@ -11,7 +11,7 @@ macro_rules! lit {
 }
 
 /// Shortcut for tests
-#[cfg(any(test, feature = "internal-test-macros"))]
+#[cfg(any(test, feature = "internal-testing"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! var {
@@ -21,7 +21,7 @@ macro_rules! var {
 }
 
 /// Shortcut for tests
-#[cfg(any(test, feature = "internal-test-macros"))]
+#[cfg(any(test, feature = "internal-testing"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! lits {
@@ -30,7 +30,7 @@ macro_rules! lits {
 }
 
 /// Shortcut for tests
-#[cfg(any(test, feature = "internal-test-macros"))]
+#[cfg(any(test, feature = "internal-testing"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! vars {
@@ -39,7 +39,7 @@ macro_rules! vars {
 }
 
 /// Shortcut for tests
-#[cfg(any(test, feature = "internal-test-macros"))]
+#[cfg(any(test, feature = "internal-testing"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! cnf {
@@ -47,7 +47,7 @@ macro_rules! cnf {
 }
 
 /// Shortcut for tests
-#[cfg(any(test, feature = "internal-test-macros"))]
+#[cfg(any(test, feature = "internal-testing"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! cnf_formula {
@@ -56,6 +56,9 @@ macro_rules! cnf_formula {
 
 pub mod cnf;
 pub mod lit;
+
+#[cfg(any(test, feature = "internal-testing"))]
+pub mod test;
 
 pub use cnf::CnfFormula;
 pub use lit::{Lit, Var};

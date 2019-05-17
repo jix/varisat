@@ -4,7 +4,8 @@ use std::io;
 use clap::{App, ArgMatches, SubCommand};
 use failure::Error;
 
-use varisat::checker::{Checker, CheckerError, WriteLrat};
+use varisat::checker::{Checker, CheckerError};
+use varisat_lrat::WriteLrat;
 
 use super::{banner, init_logging};
 

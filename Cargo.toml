@@ -5,6 +5,8 @@ members = [
     "varisat-formula",
     "varisat-dimacs",
     "varisat-internal-proof",
+    "varisat-checker",
+    "varisat-lrat",
     "varisat",
     "varisat-cli",
 ]

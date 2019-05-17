@@ -177,12 +177,11 @@ mod tests {
     use partial_ref::IntoPartialRefMut;
 
     use varisat_formula::cnf_formula;
+    use varisat_formula::test::{sat_formula, sgen_unsat_formula};
 
     use crate::context::{set_var_count, AssignmentP, SolverStateP};
     use crate::load::load_clause;
     use crate::state::SatState;
-
-    use crate::test::{sat_formula, sgen_unsat_formula};
 
     #[test]
     fn level_0_unsat() {
