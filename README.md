@@ -27,8 +27,8 @@ for Linux and Windows.
 
 ## Documentation
 
-  * [User Manual](https://jix.github.io/varisat/manual/0.2.0/)
-  * [Library API Documentation](https://docs.rs/varisat/0.2.0/varisat/)
+  * [User Manual](https://jix.github.io/varisat/manual/0.2.1/)
+  * [Library API Documentation](https://docs.rs/varisat/0.2.1/varisat/)
 
 ## Developer Documentation
 

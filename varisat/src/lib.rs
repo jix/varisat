@@ -6,7 +6,7 @@
 //!
 //! [cdcl]: https://en.wikipedia.org/wiki/Conflict-Driven_Clause_Learning
 //! [cnf]: https://en.wikipedia.org/wiki/Conjunctive_normal_form
-//! [user manual]: https://jix.github.io/varisat/manual/0.2.0/
+//! [user manual]: https://jix.github.io/varisat/manual/0.2.1/
 
 pub mod config;
 pub mod solver;
