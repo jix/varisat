@@ -6,7 +6,7 @@ use partial_ref::{IntoPartialRef, IntoPartialRefMut, PartialRef};
 use failure::{Error, Fail};
 
 use varisat_checker::ProofProcessor;
-use varisat_formula::{CnfFormula, Lit};
+use varisat_formula::{CnfFormula, ExtendFormula, Lit, Var};
 
 use crate::config::SolverConfigUpdate;
 use crate::context::{config_changed, ensure_var_count, parts::*, Context};
@@ -76,13 +76,6 @@ impl<'a> Solver<'a> {
         for clause in formula.iter() {
             load_clause(ctx.borrow(), clause);
         }
-    }
-
-    /// Add a clause to the solver.
-    pub fn add_clause(&mut self, clause: &[Lit]) {
-        self.ensure_var_count_from_slice(clause);
-        let mut ctx = self.ctx.into_partial_ref_mut();
-        load_clause(ctx.borrow(), clause);
     }
 
     /// Increases the variable count to handle all literals in the given slice.
@@ -238,6 +231,23 @@ impl<'a> Solver<'a> {
 impl<'a> Drop for Solver<'a> {
     fn drop(&mut self) {
         let _ = self.close_proof();
+    }
+}
+
+impl<'a> ExtendFormula for Solver<'a> {
+    /// Add a clause to the solver.
+    fn add_clause(&mut self, clause: &[Lit]) {
+        self.ensure_var_count_from_slice(clause);
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        load_clause(ctx.borrow(), clause);
+    }
+
+    /// Add a new variable to the solver.
+    fn new_var(&mut self) -> Var {
+        let var_count = self.ctx.assignment.assignment().len();
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        ensure_var_count(ctx.borrow(), var_count + 1);
+        Var::from_index(var_count)
     }
 }
 

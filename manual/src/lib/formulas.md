@@ -113,8 +113,7 @@ trait.
 
 ```rust
 # extern crate varisat;
-# use varisat::{Var, Lit};
-# use varisat::{CnfFormula, ExtendFormula};
+# use varisat::{CnfFormula, ExtendFormula, Lit, Var};
 let mut formula = CnfFormula::new();
 
 let a = formula.new_var().negative();

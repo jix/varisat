@@ -6,7 +6,7 @@ use failure::{Error, Fail};
 use proptest::prelude::*;
 
 use varisat::checker::{CheckedProofStep, Checker, ProofProcessor};
-use varisat::{dimacs::write_dimacs, CnfFormula, Lit, ProofFormat, Solver, Var};
+use varisat::{dimacs::write_dimacs, CnfFormula, ExtendFormula, Lit, ProofFormat, Solver, Var};
 use varisat_formula::test::{conditional_pigeon_hole, sgen_unsat_formula};
 
 proptest! {
