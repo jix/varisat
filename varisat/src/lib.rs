@@ -28,7 +28,7 @@ mod state;
 mod tmp;
 
 pub use solver::{ProofFormat, Solver};
-pub use varisat_formula::{cnf, lit, CnfFormula, Lit, Var};
+pub use varisat_formula::{cnf, lit, CnfFormula, ExtendFormula, Lit, Var};
 
 pub mod dimacs {
     //! DIMCAS CNF parser and writer.

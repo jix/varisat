@@ -4,7 +4,7 @@ use std::borrow::Borrow;
 use std::io;
 use std::mem::replace;
 
-use varisat_formula::{CnfFormula, Lit, Var};
+use varisat_formula::{CnfFormula, ExtendFormula, Lit, Var};
 
 use failure::{Error, Fail};
 
@@ -309,10 +309,8 @@ impl DimacsParser {
                 self.partial_clause.clear();
                 self.clause_count += 1;
             } else {
-                self.partial_clause.push(Lit::from_var(
-                    Var::from_dimacs(self.partial_lit as isize),
-                    !self.negate_next_lit,
-                ));
+                self.partial_clause
+                    .push(Var::from_dimacs(self.partial_lit as isize).lit(!self.negate_next_lit));
             }
         }
     }

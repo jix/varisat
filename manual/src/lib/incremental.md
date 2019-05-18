@@ -16,11 +16,12 @@ clauses that were already present prior to the last `solve` call.
 
 ```rust
 # extern crate varisat;
-use varisat::{Lit, Solver};
-
-let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
+use varisat::{ExtendFormula, Solver};
 
 let mut solver = Solver::new();
+
+let (x, y, z) = solver.new_lits();
+
 solver.add_clause(&[!x, y]);
 solver.add_clause(&[!y, z]);
 assert_eq!(solver.solve().unwrap(), true);
@@ -49,12 +50,13 @@ clauses:
 
 ```rust
 # extern crate varisat;
-use varisat::{Lit, Solver};
-
-let (x, y, z) = (Lit::from_dimacs(1), Lit::from_dimacs(2), Lit::from_dimacs(3));
-let ignore_clauses = Lit::from_dimacs(4);
+use varisat::{ExtendFormula, Solver};
 
 let mut solver = Solver::new();
+
+let (x, y, z) = solver.new_lits();
+let ignore_clauses = solver.new_lit();
+
 solver.add_clause(&[!x, y]);
 solver.add_clause(&[!y, z]);
 assert_eq!(solver.solve().unwrap(), true);

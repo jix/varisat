@@ -41,10 +41,13 @@ assert_eq!(x.to_dimacs(), 1);
 assert!(Lit::from_dimacs(2).is_positive());
 assert!(Lit::from_dimacs(-3).is_negative());
 
-assert_eq!(Lit::positive(x), Lit::from_var(x, true));
-assert_eq!(Lit::negative(x), Lit::from_var(x, false));
+assert_eq!(Lit::positive(x), x.lit(true));
+assert_eq!(Lit::negative(x), x.lit(false));
 
-assert_eq!(Lit::negative(x), !Lit::positive(x));
+assert_eq!(x.positive(), Lit::from_var(x, true));
+assert_eq!(x.negative(), Lit::from_var(x, false));
+
+assert_eq!(x.positive(), !x.negative());
 
 assert_eq!(Lit::from_index(6, true).code(), 12);
 assert_eq!(Lit::from_index(6, false).code(), 13);
@@ -81,10 +84,13 @@ Instead Varisat provides the `CnfFormula` type, which stores all literals in a
 single `Vec`. When iterating over a `CnfFormula` the clauses can be accessed as
 slices.
 
+The `add_clause` method of the `ExtendFormula` trait allows adding new clauses
+to a `CnfFormula`.
+
 ```rust
 # extern crate varisat;
 # use varisat::{Var, Lit};
-use varisat::CnfFormula;
+use varisat::{CnfFormula, ExtendFormula};
 
 let mut formula = CnfFormula::new();
 
@@ -98,6 +104,29 @@ formula.add_clause(&[!a, !c]);
 assert_eq!(formula.iter().last().unwrap(), &[!a, !c]);
 ```
 
+## New Variables and Literals
+
+Often we don't care about the specific indices of variables. In that case,
+instead of manually computing indices, we can dynamically ask for new unused
+variables. This functionality is also also provided by the `ExtendFormula`
+trait.
+
+```rust
+# extern crate varisat;
+# use varisat::{CnfFormula, ExtendFormula, Lit, Var};
+let mut formula = CnfFormula::new();
+
+let a = formula.new_var().negative();
+let b = formula.new_lit();
+let (c, d, e) = formula.new_lits();
+let f: Vec<Lit> = formula.new_lit_iter(10).collect();
+
+formula.add_clause(&[a, b, c, d, e]);
+formula.add_clause(&f);
+
+assert_eq!(formula.var_count(), 15);
+```
+
 ## Parsing and Writing Formulas
 
 Varisat provides routines for parsing and writing Formulas in the [DIMACS
@@ -106,6 +135,7 @@ CNF][dimacs] format.
 ```rust
 # extern crate varisat;
 # use varisat::{Var, Lit};
+# use varisat::ExtendFormula;
 use varisat::dimacs::{DimacsParser, write_dimacs};
 
 let input = b"p cnf 3 2\n1 2 3 0\n-1 -3 0\n";

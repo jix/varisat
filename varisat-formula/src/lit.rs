@@ -64,6 +64,27 @@ impl Var {
     pub const fn max_count() -> usize {
         Self::max_var().index() + 1
     }
+
+    /// Creates a literal from this var and a `bool` that is `true` when the literal is positive.
+    ///
+    /// Shortcut for `Lit::from_var(var, polarity)`.
+    pub fn lit(self, polarity: bool) -> Lit {
+        Lit::from_var(self, polarity)
+    }
+
+    /// Creates a positive literal from this var.
+    ///
+    /// Shortcut for `Lit::positive(var)`.
+    pub fn positive(self) -> Lit {
+        Lit::positive(self)
+    }
+
+    /// Creates a negative literal from this var.
+    ///
+    /// Shortcut for `Lit::negative(var)`.
+    pub fn negative(self) -> Lit {
+        Lit::negative(self)
+    }
 }
 
 /// Uses the 1-based DIMACS CNF encoding.
@@ -201,6 +222,12 @@ impl ops::BitXor<bool> for Lit {
     }
 }
 
+impl From<Var> for Lit {
+    fn from(var: Var) -> Lit {
+        Lit::positive(var)
+    }
+}
+
 /// Uses the 1-based DIMACS CNF encoding.
 impl fmt::Debug for Lit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -226,6 +253,6 @@ pub mod strategy {
     }
 
     pub fn lit(index: impl Strategy<Value = usize>) -> impl Strategy<Value = Lit> {
-        (var(index), bool::ANY).prop_map(|(var, polarity)| Lit::from_var(var, polarity))
+        (var(index), bool::ANY).prop_map(|(var, polarity)| var.lit(polarity))
     }
 }

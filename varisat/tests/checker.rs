@@ -6,7 +6,7 @@ use failure::{Error, Fail};
 use proptest::prelude::*;
 
 use varisat::checker::{CheckedProofStep, Checker, ProofProcessor};
-use varisat::{dimacs::write_dimacs, CnfFormula, Lit, ProofFormat, Solver, Var};
+use varisat::{dimacs::write_dimacs, CnfFormula, ExtendFormula, Lit, ProofFormat, Solver, Var};
 use varisat_formula::test::{conditional_pigeon_hole, sgen_unsat_formula};
 
 proptest! {
@@ -137,7 +137,7 @@ proptest! {
                     let skipped = *candidates.last().unwrap();
                     core.push(skipped);
 
-                    let single_clause = CnfFormula::from(Some(&[skipped]));
+                    let single_clause = CnfFormula::from(Some([skipped]));
                     solver.add_formula(&single_clause);
                 },
                 Ok(false) => {

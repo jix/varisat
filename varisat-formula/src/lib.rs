@@ -60,5 +60,5 @@ pub mod lit;
 #[cfg(any(test, feature = "internal-testing"))]
 pub mod test;
 
-pub use cnf::CnfFormula;
+pub use cnf::{CnfFormula, ExtendFormula};
 pub use lit::{Lit, Var};

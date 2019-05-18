@@ -1,10 +1,9 @@
 //! CNF formulas.
 use std::cmp::max;
 use std::fmt;
-use std::iter::Extend;
 use std::ops::Range;
 
-use crate::lit::Lit;
+use crate::lit::{Lit, Var};
 
 /// A formula in conjunctive normal form (CNF).
 ///
@@ -42,24 +41,6 @@ impl CnfFormula {
         self.clause_ranges.len()
     }
 
-    /// Appends a clause to the formula.
-    ///
-    /// `literals` can be an `IntoIterator<Item = Lit>` or `IntoIterator<Item = &Lit>`.
-    pub fn add_clause<L>(&mut self, literals: impl IntoIterator<Item = L>)
-    where
-        Vec<Lit>: Extend<L>,
-    {
-        let begin = self.literals.len();
-        self.literals.extend(literals);
-        let end = self.literals.len();
-
-        for &lit in self.literals[begin..end].iter() {
-            self.var_count = max(lit.index() + 1, self.var_count);
-        }
-
-        self.clause_ranges.push(begin..end);
-    }
-
     /// Iterator over all clauses.
     pub fn iter(&self) -> impl Iterator<Item = &[Lit]> {
         let literals = &self.literals;
@@ -69,17 +50,16 @@ impl CnfFormula {
     }
 }
 
-/// Convert any iterable of [`Lit`] iterables into a CnfFormula
-impl<F, I, L> From<F> for CnfFormula
+/// Convert an iterable of [`Lit`] slices into a CnfFormula
+impl<Clauses, Item> From<Clauses> for CnfFormula
 where
-    F: IntoIterator<Item = I>,
-    I: IntoIterator<Item = L>,
-    Vec<Lit>: Extend<L>,
+    Clauses: IntoIterator<Item = Item>,
+    Item: std::borrow::Borrow<[Lit]>,
 {
-    fn from(formula: F) -> CnfFormula {
+    fn from(clauses: Clauses) -> CnfFormula {
         let mut cnf_formula = CnfFormula::new();
-        for clause in formula {
-            cnf_formula.add_clause(clause);
+        for clause in clauses {
+            cnf_formula.add_clause(clause.borrow());
         }
         cnf_formula
     }
@@ -105,6 +85,142 @@ impl PartialEq for CnfFormula {
                 })
     }
 }
+
+/// Extend a formula with new variables and clauses.
+pub trait ExtendFormula: Sized {
+    /// Appends a clause to the formula.
+    ///
+    /// `literals` can be an `IntoIterator<Item = Lit>` or `IntoIterator<Item = &Lit>`.
+    fn add_clause(&mut self, literals: &[Lit]);
+
+    /// Add a new variable to the formula and return it.
+    fn new_var(&mut self) -> Var;
+
+    /// Add a new variable to the formula and return it as positive literal.
+    fn new_lit(&mut self) -> Lit {
+        self.new_var().positive()
+    }
+
+    /// Iterator over multiple new variables.
+    fn new_var_iter(&mut self, count: usize) -> NewVarIter<Self> {
+        NewVarIter {
+            formula: self,
+            vars_left: count,
+            phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Iterator over multiple new literals.
+    fn new_lit_iter(&mut self, count: usize) -> NewVarIter<Self, Lit> {
+        NewVarIter {
+            formula: self,
+            vars_left: count,
+            phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Add multiple new variables and return them.
+    ///
+    /// Returns a uniform tuple of variables. The number of variables is inferred, so it can be used
+    /// like `let (x, y, z) = formula.new_vars()`.
+    fn new_vars<Vars: UniformTuple<Var>>(&mut self) -> Vars {
+        Vars::tuple_from_iter(self.new_var_iter(Vars::tuple_len()))
+    }
+
+    /// Add multiple new variables and return them as positive literals.
+    ///
+    /// Returns a uniform tuple of variables. The number of variables is inferred, so it can be used
+    /// like `let (x, y, z) = formula.new_lits()`.
+    fn new_lits<Lits: UniformTuple<Lit>>(&mut self) -> Lits {
+        Lits::tuple_from_iter(self.new_lit_iter(Lits::tuple_len()))
+    }
+}
+
+/// Iterator over new variables or literals.
+///
+/// Created by the [`new_var_iter`][ExtendFormula::new_var_iter] and
+/// [`new_lit_iter`][ExtendFormula::new_lit_iter] methods of [`ExtendFormula`].
+pub struct NewVarIter<'a, F, V = Var> {
+    formula: &'a mut F,
+    vars_left: usize,
+    phantom: std::marker::PhantomData<V>,
+}
+
+impl<'a, F, V> Iterator for NewVarIter<'a, F, V>
+where
+    F: ExtendFormula,
+    V: From<Var>,
+{
+    type Item = V;
+
+    fn next(&mut self) -> Option<V> {
+        if self.vars_left == 0 {
+            None
+        } else {
+            let var = self.formula.new_var();
+            self.vars_left -= 1;
+            Some(V::from(var))
+        }
+    }
+}
+
+impl ExtendFormula for CnfFormula {
+    fn add_clause(&mut self, clause: &[Lit]) {
+        let begin = self.literals.len();
+        self.literals.extend_from_slice(clause);
+        let end = self.literals.len();
+
+        for &lit in self.literals[begin..end].iter() {
+            self.var_count = max(lit.index() + 1, self.var_count);
+        }
+
+        self.clause_ranges.push(begin..end);
+    }
+
+    fn new_var(&mut self) -> Var {
+        let var = Var::from_index(self.var_count);
+        self.var_count += 1;
+        var
+    }
+}
+
+/// Helper trait to initialize multiple variables of the same type.
+pub trait UniformTuple<Item> {
+    fn tuple_len() -> usize;
+    fn tuple_from_iter(items: impl Iterator<Item = Item>) -> Self;
+}
+
+macro_rules! ignore_first {
+    ($a:tt, $b:tt) => {
+        $b
+    };
+}
+
+macro_rules! array_like_impl {
+    ($count:expr, $($call:tt)*) => {
+        impl<Item> UniformTuple<Item> for ($(ignore_first!($call, Item)),*) {
+            fn tuple_len() -> usize { $count }
+            fn tuple_from_iter(mut items: impl Iterator<Item = Item>) -> Self {
+                ($(items.next().unwrap().into $call),*)
+            }
+        }
+    }
+}
+
+macro_rules! array_like_impl_4 {
+    ($count:expr, $($call:tt)*) => {
+        array_like_impl!($count * 4 + 2, $(()()()$call)* ()());
+        array_like_impl!($count * 4 + 3, $(()()()$call)* ()()());
+        array_like_impl!($count * 4 + 4, $(()()()$call)* ()()()());
+        array_like_impl!($count * 4 + 5, $(()()()$call)* ()()()()());
+    }
+}
+
+array_like_impl_4!(0,);
+array_like_impl_4!(1, ());
+array_like_impl_4!(2, ()());
+array_like_impl_4!(3, ()()());
+array_like_impl_4!(4, ()()()());
 
 #[cfg(any(test, feature = "proptest-strategies"))]
 #[doc(hidden)]
@@ -171,6 +287,17 @@ mod tests {
     use proptest::*;
 
     #[test]
+    fn new_vars() {
+        let mut formula = CnfFormula::new();
+        let (x, y, z) = formula.new_vars();
+
+        assert_ne!(x, y);
+        assert_ne!(y, z);
+        assert_ne!(x, y);
+        assert_eq!(formula.var_count(), 3);
+    }
+
+    #[test]
     fn simple_roundtrip() {
         let input = cnf![
             1, 2, 3;
@@ -192,7 +319,7 @@ mod tests {
     proptest! {
         #[test]
         fn roundtrip_from_vec(input in vec_formula(1..200usize, 0..1000, 0..10)) {
-            let formula = CnfFormula::from(input.iter().map(|clause| clause.iter().cloned()));
+            let formula = CnfFormula::from(input.clone());
 
             for (clause, ref_clause) in formula.iter().zip(input.iter()) {
                 prop_assert_eq!(clause, &ref_clause[..]);
