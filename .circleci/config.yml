@@ -138,6 +138,7 @@ jobs:
                 -r $CIRCLE_PROJECT_REPONAME \
                 -c $CIRCLE_SHA1 \
                 -n "Varisat $VER" \
+                -b "$(sed -ne '2,${/^#/q;p}' CHANGELOG.md)" \
                 -delete v$VER \
                 /tmp/workspace/release
 

@@ -43,6 +43,11 @@ for FILE in "${FILES[@]}"; do
     fi
 done
 
+if ! fgrep -q "# $VER (" <(head -1 CHANGELOG.md); then
+    echo "Changelog entry missing" >&2
+    exit 1
+fi
+
 if ! git tag -l v$VER | grep -q .; then
     git tag -a v$VER -m "Release of version $VER"
 fi
