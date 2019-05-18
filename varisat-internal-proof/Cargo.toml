@@ -1,6 +1,6 @@
 [package]
 name = "varisat-internal-proof"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Jannis Harder <me@jix.one>"]
 edition = "2018"
 description = "Internal proof format for the Varisat SAT solver"
@@ -14,7 +14,7 @@ failure = "0.1.5"
 
     [dependencies.varisat-formula]
     path = "../varisat-formula"
-    version = "=0.2.0"
+    version = "=0.2.1"
 
 [dev-dependencies]
 proptest = "0.9.3"
