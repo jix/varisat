@@ -3,7 +3,7 @@ name = "varisat"
 description = "A CDCL based SAT solver (library)"
 homepage = "https://jix.one/project/varisat/"
 repository = "https://github.com/jix/varisat"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Jannis Harder <me@jix.one>"]
 license = "MIT/Apache-2.0"
 readme = "README.md"
@@ -23,23 +23,23 @@ vec_mut_scan = "0.1.0"
 
     [dependencies.varisat-internal-macros]
     path = "../varisat-internal-macros"
-    version = "=0.2.0"
+    version = "=0.2.1"
 
     [dependencies.varisat-formula]
     path = "../varisat-formula"
-    version = "=0.2.0"
+    version = "=0.2.1"
 
     [dependencies.varisat-dimacs]
     path = "../varisat-dimacs"
-    version = "=0.2.0"
+    version = "=0.2.1"
 
     [dependencies.varisat-internal-proof]
     path = "../varisat-internal-proof"
-    version = "=0.2.0"
+    version = "=0.2.1"
 
     [dependencies.varisat-checker]
     path = "../varisat-checker"
-    version = "=0.2.0"
+    version = "=0.2.1"
 
 [dev-dependencies]
 proptest = "0.9.3"
@@ -49,7 +49,7 @@ env_logger = "0.6.1"
 
     [dev-dependencies.varisat-formula]
     path = "../varisat-formula"
-    version = "=0.2.0"
+    version = "=0.2.1"
     features = ["proptest-strategies", "internal-testing"]
 
 [build-dependencies]

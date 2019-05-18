@@ -20,4 +20,4 @@ documentation][api-docs].
 [crate-varisat]: https://crates.io/crates/varisat
 [crate-varisat-cli]: https://crates.io/crates/varisat-cli
 [github]: https://github.com/jix/varisat
-[api-docs]: https://docs.rs/varisat/0.2.0/varisat/
+[api-docs]: https://docs.rs/varisat/0.2.1/varisat/

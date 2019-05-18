@@ -1,6 +1,6 @@
 [package]
 name = "varisat-internal-macros"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Jannis Harder <me@jix.one>"]
 edition = "2018"
 description = "Internal macros for the Varisat SAT solver"
