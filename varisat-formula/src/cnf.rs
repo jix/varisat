@@ -89,8 +89,6 @@ impl PartialEq for CnfFormula {
 /// Extend a formula with new variables and clauses.
 pub trait ExtendFormula: Sized {
     /// Appends a clause to the formula.
-    ///
-    /// `literals` can be an `IntoIterator<Item = Lit>` or `IntoIterator<Item = &Lit>`.
     fn add_clause(&mut self, literals: &[Lit]);
 
     /// Add a new variable to the formula and return it.
