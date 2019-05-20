@@ -43,7 +43,8 @@ pub fn reduce_locals<'a>(
         mut SolverStateP,
         mut WatchlistsP,
         AssignmentP,
-        ImplGraphP
+        ImplGraphP,
+        VariablesP,
     ),
 ) {
     dedup_and_mark_by_tier(ctx.borrow(), Tier::Local);
@@ -74,6 +75,7 @@ pub fn reduce_locals<'a>(
                     let lits = alloc.clause(*cref).lits();
                     proof::add_step(
                         ctx.borrow(),
+                        true,
                         &ProofStep::DeleteClause {
                             clause: lits,
                             proof: DeleteClauseProof::Redundant,

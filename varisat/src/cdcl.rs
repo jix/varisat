@@ -33,6 +33,7 @@ pub fn conflict_step<'a>(
         mut TrailP,
         mut VsidsP,
         mut WatchlistsP,
+        VariablesP,
     ),
 ) {
     let conflict = find_conflict(ctx.borrow());
@@ -52,7 +53,7 @@ pub fn conflict_step<'a>(
                             assignment.map(|polarity| Lit::from_index(index, polarity))
                         }),
                 );
-                proof::add_step(ctx.borrow(), &ProofStep::Model(&model));
+                proof::add_step(ctx.borrow(), true, &ProofStep::Model(&model));
             }
             ctx.part_mut(SolverStateP).sat_state = SatState::Sat;
             return;
@@ -80,6 +81,7 @@ pub fn conflict_step<'a>(
 
     proof::add_step(
         ctx.borrow(),
+        true,
         &ProofStep::AtClause {
             redundant: clause.len() > 2,
             clause: clause.into(),
@@ -140,6 +142,7 @@ fn find_conflict<'a>(
         mut TrailP,
         mut VsidsP,
         mut WatchlistsP,
+        VariablesP,
     ),
 ) -> Result<(), FoundConflict> {
     loop {
@@ -176,7 +179,6 @@ mod tests {
     use varisat_formula::cnf_formula;
     use varisat_formula::test::{sat_formula, sgen_unsat_formula};
 
-    use crate::context::set_var_count;
     use crate::load::load_clause;
     use crate::state::SatState;
 
@@ -191,8 +193,6 @@ mod tests {
             1, -2;
             2, -3;
         ];
-
-        set_var_count(ctx.borrow(), formula.var_count());
 
         for clause in formula.iter() {
             load_clause(ctx.borrow(), clause);
@@ -211,8 +211,6 @@ mod tests {
             let mut ctx = Context::default();
             let mut ctx = ctx.into_partial_ref_mut();
 
-            set_var_count(ctx.borrow(), formula.var_count());
-
             for clause in formula.iter() {
                 load_clause(ctx.borrow(), clause);
             }
@@ -229,8 +227,6 @@ mod tests {
             let mut ctx = Context::default();
             let mut ctx = ctx.into_partial_ref_mut();
 
-            set_var_count(ctx.borrow(), formula.var_count());
-
             for clause in formula.iter() {
                 load_clause(ctx.borrow(), clause);
             }
@@ -242,7 +238,11 @@ mod tests {
             prop_assert_eq!(ctx.part(SolverStateP).sat_state, SatState::Sat);
 
             for clause in formula.iter() {
-                prop_assert!(clause.iter().any(|&lit| ctx.part(AssignmentP).lit_is_true(lit)));
+                prop_assert!(clause.iter().any(|&lit| ctx.part(AssignmentP).lit_is_true(
+                    lit.map_var(|user_var| ctx
+                        .part(VariablesP)
+                        .existing_solver_from_user(user_var))
+                )));
             }
         }
 
@@ -250,8 +250,6 @@ mod tests {
         fn sgen_unsat_incremetal_clauses(formula in sgen_unsat_formula(1..7usize)) {
             let mut ctx = Context::default();
             let mut ctx = ctx.into_partial_ref_mut();
-
-            set_var_count(ctx.borrow(), formula.var_count());
 
             let mut last_state = SatState::Sat;
 

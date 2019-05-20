@@ -221,6 +221,11 @@ impl Lit {
     pub fn code(self) -> usize {
         self.code as usize
     }
+
+    /// Apply a function to the variable of the literal, without changing the polarity.
+    pub fn map_var(self, f: impl FnOnce(Var) -> Var) -> Lit {
+        f(self.var()).lit(self.is_positive())
+    }
 }
 
 impl ops::Not for Lit {

@@ -26,6 +26,7 @@ mod schedule;
 mod simplify;
 mod state;
 mod tmp;
+mod variables;
 
 pub use solver::{ProofFormat, Solver};
 pub use varisat_formula::{cnf, lit, CnfFormula, ExtendFormula, Lit, Var};

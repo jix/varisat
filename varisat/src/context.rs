@@ -16,6 +16,7 @@ use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
 use crate::schedule::Schedule;
 use crate::state::SolverState;
 use crate::tmp::TmpData;
+use crate::variables::Variables;
 
 /// Part declarations for the [`Context`] struct.
 pub mod parts {
@@ -35,6 +36,7 @@ pub mod parts {
     part!(pub SolverStateP: SolverState);
     part!(pub TmpDataP: TmpData);
     part!(pub TrailP: Trail);
+    part!(pub VariablesP: Variables);
     part!(pub VsidsP: Vsids);
     part!(pub WatchlistsP: Watchlists);
 }
@@ -77,6 +79,8 @@ pub struct Context<'a> {
     pub tmp_data: TmpData,
     #[part(TrailP)]
     pub trail: Trail,
+    #[part(VariablesP)]
+    pub variables: Variables,
     #[part(VsidsP)]
     pub vsids: Vsids,
     #[part(WatchlistsP)]
@@ -115,11 +119,12 @@ pub fn ensure_var_count(
         mut BinaryClausesP,
         mut ImplGraphP,
         mut TmpDataP,
+        mut VariablesP,
         mut VsidsP,
         mut WatchlistsP,
     ),
-    count: usize,
 ) {
+    let count = ctx.part(VariablesP).solver_watermark();
     if count > ctx.part_mut(AssignmentP).assignment().len() {
         set_var_count(ctx.borrow(), count)
     }

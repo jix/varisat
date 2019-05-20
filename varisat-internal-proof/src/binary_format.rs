@@ -3,23 +3,37 @@ use std::io::{self, BufRead, Write};
 
 use failure::Error;
 
-use varisat_formula::Lit;
+use varisat_formula::{Lit, Var};
 
 use crate::vli_enc::{read_u64, write_u64};
 
 use super::{ClauseHash, DeleteClauseProof, ProofStep};
 
-const CODE_AT_CLAUSE_RED: u64 = 0;
-const CODE_AT_CLAUSE_IRRED: u64 = 1;
-const CODE_UNIT_CLAUSES: u64 = 2;
-const CODE_DELETE_CLAUSE_REDUNDANT: u64 = 3;
-const CODE_DELETE_CLAUSE_SIMPLIFIED: u64 = 4;
-const CODE_DELETE_CLAUSE_SATISFIED: u64 = 5;
-const CODE_CHANGE_HASH_BITS: u64 = 6;
-const CODE_MODEL: u64 = 7;
-const CODE_ADD_CLAUSE: u64 = 8;
-const CODE_ASSUMPTIONS: u64 = 9;
-const CODE_FAILED_ASSUMPTIONS: u64 = 10;
+macro_rules! step_codes {
+    ($counter:expr, $name:ident, ) => {
+        const $name: u64 = $counter;
+    };
+    ($counter:expr, $name:ident, $($names:ident),* ,) => {
+        const $name: u64 = $counter;
+        step_codes!($counter + 1, $($names),* ,);
+    };
+}
+
+step_codes!(
+    0,
+    CODE_SOLVER_VAR_NAMES,
+    CODE_AT_CLAUSE_RED,
+    CODE_AT_CLAUSE_IRRED,
+    CODE_UNIT_CLAUSES,
+    CODE_DELETE_CLAUSE_REDUNDANT,
+    CODE_DELETE_CLAUSE_SIMPLIFIED,
+    CODE_DELETE_CLAUSE_SATISFIED,
+    CODE_CHANGE_HASH_BITS,
+    CODE_MODEL,
+    CODE_ADD_CLAUSE,
+    CODE_ASSUMPTIONS,
+    CODE_FAILED_ASSUMPTIONS,
+);
 
 // Using a random value here makes it unlikely that a corrupted proof will be silently truncated and
 // accepted
@@ -28,6 +42,11 @@ const CODE_END: u64 = 0x9ac3391f4294c211;
 /// Writes a proof step in the varisat format
 pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::Result<()> {
     match *step {
+        ProofStep::SolverVarNames { update } => {
+            write_u64(&mut *target, CODE_SOLVER_VAR_NAMES)?;
+            write_variable_updates(&mut *target, update)?;
+        }
+
         ProofStep::AddClause { clause } => {
             write_u64(&mut *target, CODE_ADD_CLAUSE)?;
             write_literals(&mut *target, clause)?;
@@ -103,6 +122,7 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
 #[derive(Default)]
 pub struct Parser {
     lit_buf: Vec<Lit>,
+    var_update_buf: Vec<(Var, Option<Var>)>,
     hash_buf: Vec<ClauseHash>,
     unit_buf: Vec<(Lit, ClauseHash)>,
 }
@@ -111,6 +131,12 @@ impl Parser {
     pub fn parse_step<'a>(&'a mut self, source: &mut impl BufRead) -> Result<ProofStep<'a>, Error> {
         let code = read_u64(&mut *source)?;
         match code {
+            CODE_SOLVER_VAR_NAMES => {
+                read_variable_updates(&mut *source, &mut self.var_update_buf)?;
+                Ok(ProofStep::SolverVarNames {
+                    update: &self.var_update_buf,
+                })
+            }
             CODE_ADD_CLAUSE => {
                 read_literals(&mut *source, &mut self.lit_buf)?;
                 Ok(ProofStep::AddClause {
@@ -169,6 +195,41 @@ impl Parser {
             _ => failure::bail!("parse error"),
         }
     }
+}
+
+/// Writes a slice of variable updates for a varisat proof
+fn write_variable_updates(
+    target: &mut impl Write,
+    updates: &[(Var, Option<Var>)],
+) -> io::Result<()> {
+    write_u64(&mut *target, updates.len() as u64)?;
+    for &update in updates {
+        write_u64(&mut *target, update.0.index() as u64)?;
+        write_u64(
+            &mut *target,
+            update.1.map(|var| var.index() as u64 + 1).unwrap_or(0),
+        )?;
+    }
+    Ok(())
+}
+
+/// Read a slice of variable updates from a varisat proof
+fn read_variable_updates(
+    source: &mut impl BufRead,
+    updates: &mut Vec<(Var, Option<Var>)>,
+) -> Result<(), io::Error> {
+    updates.clear();
+    let len = read_u64(&mut *source)? as usize;
+    updates.reserve(len);
+    for _ in 0..len {
+        let var_0 = Var::from_index(read_u64(&mut *source)? as usize);
+        let var_1 = match read_u64(&mut *source)? {
+            0 => None,
+            x => Some(Var::from_index(x as usize - 1)),
+        };
+        updates.push((var_0, var_1));
+    }
+    Ok(())
 }
 
 /// Writes a slice of literals for a varisat proof

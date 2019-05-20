@@ -16,6 +16,7 @@ pub trait SelfChecker {
 
 impl<'a> SelfChecker for Checker<'a> {
     fn self_check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
+        self.step += 1;
         self.check_step(step)
     }
 

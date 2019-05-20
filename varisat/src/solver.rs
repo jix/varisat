@@ -6,16 +6,17 @@ use partial_ref::{IntoPartialRef, IntoPartialRefMut, PartialRef};
 use failure::{Error, Fail};
 
 use varisat_checker::ProofProcessor;
+use varisat_dimacs::DimacsParser;
 use varisat_formula::{CnfFormula, ExtendFormula, Lit, Var};
 
 use crate::config::SolverConfigUpdate;
-use crate::context::{config_changed, ensure_var_count, parts::*, Context};
+use crate::context::{config_changed, parts::*, Context};
 use crate::incremental::set_assumptions;
 use crate::load::load_clause;
 use crate::proof;
 use crate::schedule::schedule_step;
 use crate::state::SatState;
-use varisat_dimacs::DimacsParser;
+use crate::variables;
 
 pub use crate::proof::ProofFormat;
 
@@ -72,17 +73,8 @@ impl<'a> Solver<'a> {
     /// Add a formula to the solver.
     pub fn add_formula(&mut self, formula: &CnfFormula) {
         let mut ctx = self.ctx.into_partial_ref_mut();
-        ensure_var_count(ctx.borrow(), formula.var_count());
         for clause in formula.iter() {
             load_clause(ctx.borrow(), clause);
-        }
-    }
-
-    /// Increases the variable count to handle all literals in the given slice.
-    fn ensure_var_count_from_slice(&mut self, lits: &[Lit]) {
-        if let Some(index) = lits.iter().map(|&lit| lit.index()).max() {
-            let mut ctx = self.ctx.into_partial_ref_mut();
-            ensure_var_count(ctx.borrow(), index + 1);
         }
     }
 
@@ -148,7 +140,6 @@ impl<'a> Solver<'a> {
     ///
     /// This replaces the current set of assumed literals.
     pub fn assume(&mut self, assumptions: &[Lit]) {
-        self.ensure_var_count_from_slice(assumptions);
         let mut ctx = self.ctx.into_partial_ref_mut();
         set_assumptions(ctx.borrow(), assumptions);
     }
@@ -157,13 +148,26 @@ impl<'a> Solver<'a> {
     pub fn model(&self) -> Option<Vec<Lit>> {
         let ctx = self.ctx.into_partial_ref();
         if ctx.part(SolverStateP).sat_state == SatState::Sat {
+            // TODO we need to extend the model to cover hidden solver vars
             Some(
-                ctx.part(AssignmentP)
-                    .assignment()
-                    .iter()
-                    .enumerate()
-                    .flat_map(|(index, assignment)| {
-                        assignment.map(|polarity| Lit::from_index(index, polarity))
+                ctx.part(VariablesP)
+                    .user_var_iter()
+                    .flat_map(|user_var| {
+                        let global_var = ctx
+                            .part(VariablesP)
+                            .global_from_user()
+                            .get(user_var)
+                            .unwrap();
+                        if let Some(solver_var) =
+                            ctx.part(VariablesP).solver_from_global().get(global_var)
+                        {
+                            ctx.part(AssignmentP)
+                                .var_value(solver_var)
+                                .map(|polarity| user_var.lit(polarity))
+                        } else {
+                            // Unused var, but right now we always report a full model.
+                            Some(user_var.negative())
+                        }
                     })
                     .collect(),
             )
@@ -177,7 +181,7 @@ impl<'a> Solver<'a> {
     /// This is not guaranteed to be minimal and may just return all assumptions every time.
     pub fn failed_core(&self) -> Option<&[Lit]> {
         match self.ctx.solver_state.sat_state {
-            SatState::UnsatUnderAssumptions => Some(self.ctx.incremental.failed_core()),
+            SatState::UnsatUnderAssumptions => Some(self.ctx.incremental.user_failed_core()),
             SatState::Unsat => Some(&[]),
             SatState::Unknown | SatState::Sat => None,
         }
@@ -237,17 +241,15 @@ impl<'a> Drop for Solver<'a> {
 impl<'a> ExtendFormula for Solver<'a> {
     /// Add a clause to the solver.
     fn add_clause(&mut self, clause: &[Lit]) {
-        self.ensure_var_count_from_slice(clause);
         let mut ctx = self.ctx.into_partial_ref_mut();
         load_clause(ctx.borrow(), clause);
     }
 
     /// Add a new variable to the solver.
     fn new_var(&mut self) -> Var {
-        let var_count = self.ctx.assignment.assignment().len();
+        self.ctx.solver_state.formula_is_empty = false;
         let mut ctx = self.ctx.into_partial_ref_mut();
-        ensure_var_count(ctx.borrow(), var_count + 1);
-        Var::from_index(var_count)
+        variables::new_user_var(ctx.borrow())
     }
 }
 

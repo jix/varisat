@@ -10,9 +10,9 @@ use hashbrown::{HashMap, HashSet};
 use smallvec::SmallVec;
 
 use varisat_dimacs::DimacsParser;
-use varisat_formula::{lit::LitIdx, CnfFormula, Lit};
+use varisat_formula::{lit::LitIdx, CnfFormula, Lit, Var};
 use varisat_internal_proof::{
-    binary_format::Parser, clause_hash, ClauseHash, DeleteClauseProof, ProofStep,
+    binary_format::Parser, lit_code_hash, lit_hash, ClauseHash, DeleteClauseProof, ProofStep,
 };
 
 pub mod internal;
@@ -284,6 +284,8 @@ pub struct Checker<'a> {
     previous_irred_clause_lits: Vec<Lit>,
     /// Current assumptions, used to check FailedAssumptions and Model
     assumptions: Vec<Lit>,
+    /// Current mapping from global var names to solver var names, used for hashing.
+    solver_var_names: HashMap<Var, Var>,
 }
 
 impl<'a> Default for Checker<'a> {
@@ -308,6 +310,7 @@ impl<'a> Default for Checker<'a> {
             previous_irred_clause_id: None,
             previous_irred_clause_lits: vec![],
             assumptions: vec![],
+            solver_var_names: Default::default(),
         }
     }
 }
@@ -409,7 +412,14 @@ impl<'a> Checker<'a> {
     /// Compute a clause hash of the current bit size
     fn clause_hash(&self, lits: &[Lit]) -> ClauseHash {
         let shift_bits = ClauseHash::max_value().count_ones() - self.hash_bits;
-        clause_hash(lits) >> shift_bits
+        let mut hash = 0;
+        for &lit in lits.iter() {
+            match self.solver_var_names.get(&lit.var()) {
+                Some(var) => hash ^= lit_hash(var.lit(lit.is_positive())),
+                None => hash ^= lit_code_hash(lit.code() + Var::max_count() * 2),
+            }
+        }
+        hash >> shift_bits
     }
 
     /// Value of a literal if known from unit clauses.
@@ -798,6 +808,10 @@ impl<'a> Checker<'a> {
     /// Check a single proof step
     fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
         let mut result = match step {
+            ProofStep::SolverVarNames { update } => {
+                self.handle_solver_var_names_step(update);
+                Ok(())
+            }
             ProofStep::AddClause { clause } => self.add_clause(clause),
             ProofStep::AtClause {
                 redundant,
@@ -841,6 +855,19 @@ impl<'a> Checker<'a> {
             *debug_step = format!("{:?}", step)
         }
         result
+    }
+
+    /// Handle a SolverVarNames step
+    fn handle_solver_var_names_step(&mut self, update: &[(Var, Option<Var>)]) {
+        for &(global_var, solver_var) in update.iter() {
+            if let Some(solver_var) = solver_var {
+                self.solver_var_names.insert(global_var, solver_var);
+            } else {
+                self.solver_var_names.remove(&global_var);
+            }
+        }
+
+        self.rehash();
     }
 
     /// Check an AtClause step
