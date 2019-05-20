@@ -25,7 +25,7 @@ itoa = "0.4.4"
 
 [dev-dependencies]
 proptest = "0.9.3"
-tempfile = "3.0.7"
+tempfile = "3.0.8"
 
     [dev-dependencies.varisat]
     path = "../varisat"

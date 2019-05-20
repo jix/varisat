@@ -44,7 +44,7 @@ vec_mut_scan = "0.1.0"
 [dev-dependencies]
 proptest = "0.9.3"
 rand = "0.6.5"
-tempfile = "3.0.7"
+tempfile = "3.0.8"
 env_logger = "0.6.1"
 
     [dev-dependencies.varisat-formula]
