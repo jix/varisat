@@ -42,7 +42,7 @@ impl BinaryClauses {
 
 /// Remove binary clauses that have an assigned literal.
 pub fn simplify_binary<'a>(
-    mut ctx: partial!(Context<'a>, mut BinaryClausesP, mut ProofP<'a>, mut SolverStateP, AssignmentP),
+    mut ctx: partial!(Context<'a>, mut BinaryClausesP, mut ProofP<'a>, mut SolverStateP, AssignmentP, VariablesP),
 ) {
     let (binary_clauses, mut ctx) = ctx.split_part_mut(BinaryClausesP);
     let (assignment, mut ctx) = ctx.split_part(AssignmentP);
@@ -60,6 +60,7 @@ pub fn simplify_binary<'a>(
                         let lits = [!lit, other_lit];
                         proof::add_step(
                             ctx.borrow(),
+                            true,
                             &ProofStep::DeleteClause {
                                 clause: &lits[..],
                                 proof: DeleteClauseProof::Satisfied,
@@ -78,6 +79,7 @@ pub fn simplify_binary<'a>(
                     let lits = [!lit, other_lit];
                     proof::add_step(
                         ctx.borrow(),
+                        true,
                         &ProofStep::DeleteClause {
                             clause: &lits[..],
                             proof: DeleteClauseProof::Satisfied,

@@ -44,7 +44,8 @@ pub fn schedule_step<'a>(
         mut TrailP,
         mut VsidsP,
         mut WatchlistsP,
-        SolverConfigP
+        SolverConfigP,
+        VariablesP,
     ),
 ) -> bool {
     let (schedule, mut ctx) = ctx.split_part_mut(ScheduleP);

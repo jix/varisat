@@ -21,6 +21,7 @@ pub fn prove_units<'a>(
         mut TrailP,
         AssignmentP,
         ClauseAllocP,
+        VariablesP,
     ),
 ) -> bool {
     // TODO move this somewhere else?
@@ -54,7 +55,7 @@ pub fn prove_units<'a>(
         trail.clear();
 
         if !unit_proofs.is_empty() {
-            proof::add_step(ctx.borrow(), &ProofStep::UnitClauses(&unit_proofs));
+            proof::add_step(ctx.borrow(), true, &ProofStep::UnitClauses(&unit_proofs));
         }
     }
 
@@ -88,6 +89,7 @@ pub fn simplify<'a>(
         mut SolverStateP,
         mut WatchlistsP,
         AssignmentP,
+        VariablesP,
     ),
 ) {
     simplify_binary(ctx.borrow());
@@ -96,7 +98,7 @@ pub fn simplify<'a>(
 
     let mut new_lits = vec![];
 
-    split_borrow!(proof_ctx = &(mut ProofP, mut SolverStateP) ctx);
+    split_borrow!(proof_ctx = &(mut ProofP, mut SolverStateP, VariablesP) ctx);
     let (ctx_2, mut ctx) = ctx.split_borrow();
 
     filter_clauses(ctx_2, |alloc, cref| {
@@ -109,6 +111,7 @@ pub fn simplify<'a>(
                 Some(true) => {
                     proof::add_step(
                         proof_ctx.borrow(),
+                        true,
                         &ProofStep::DeleteClause {
                             clause: clause.lits(),
                             proof: if redundant {
@@ -128,6 +131,7 @@ pub fn simplify<'a>(
                 let hash = [clause_hash(clause.lits())];
                 proof::add_step(
                     proof_ctx.borrow(),
+                    true,
                     &ProofStep::AtClause {
                         redundant: redundant && new_lits.len() > 2,
                         clause: &new_lits,
@@ -136,6 +140,7 @@ pub fn simplify<'a>(
                 );
                 proof::add_step(
                     proof_ctx.borrow(),
+                    true,
                     &ProofStep::DeleteClause {
                         clause: clause.lits(),
                         proof: if redundant {

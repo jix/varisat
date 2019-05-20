@@ -5,16 +5,18 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Lit;
 use varisat_internal_proof::{clause_hash, lit_hash, ClauseHash, ProofStep};
 
-use crate::context::{parts::*, Context};
+use crate::context::{ensure_var_count, parts::*, Context};
 use crate::proof;
 use crate::prop::{enqueue_assignment, full_restart, Reason};
 use crate::state::SatState;
+use crate::variables;
 
 /// Incremental solving.
 #[derive(Default)]
 pub struct Incremental {
     assumptions: Vec<Lit>,
     failed_core: Vec<Lit>,
+    user_failed_core: Vec<Lit>,
     assumption_levels: usize,
     failed_propagation_hashes: Vec<ClauseHash>,
 }
@@ -34,6 +36,11 @@ impl Incremental {
     pub fn failed_core(&self) -> &[Lit] {
         &self.failed_core
     }
+
+    /// Subset of assumptions that made the formula unsatisfiable.
+    pub fn user_failed_core(&self) -> &[Lit] {
+        &self.user_failed_core
+    }
 }
 
 /// Return type of [`enqueue_assumption`].
@@ -44,17 +51,25 @@ pub enum EnqueueAssumption {
 }
 
 /// Change the currently active assumptions.
+///
+/// The input uses user variable names.
 pub fn set_assumptions<'a>(
     mut ctx: partial!(
         Context<'a>,
+        mut AnalyzeConflictP,
         mut AssignmentP,
+        mut BinaryClausesP,
+        mut ImplGraphP,
         mut IncrementalP,
-        mut SolverStateP,
-        mut TrailP,
         mut ProofP<'a>,
+        mut SolverStateP,
+        mut TmpDataP,
+        mut TrailP,
+        mut VariablesP,
         mut VsidsP,
+        mut WatchlistsP,
     ),
-    assumptions: &[Lit],
+    user_assumptions: &[Lit],
 ) {
     full_restart(ctx.borrow());
 
@@ -65,12 +80,22 @@ pub fn set_assumptions<'a>(
         SatState::Sat | SatState::UnsatUnderAssumptions | SatState::Unknown => SatState::Unknown,
     };
 
-    let incremental = ctx.part_mut(IncrementalP);
+    let (incremental, mut ctx_2) = ctx.split_part_mut(IncrementalP);
 
-    incremental.assumptions.clear();
-    incremental.assumptions.extend_from_slice(assumptions);
+    variables::solver_from_user_lits(
+        ctx_2.borrow(),
+        &mut incremental.assumptions,
+        user_assumptions,
+    );
 
-    proof::add_step(ctx.borrow(), &ProofStep::Assumptions(assumptions));
+    // proof doesn't use solver variables, so no need to call ensure_var_count before
+    proof::add_step(
+        ctx_2.borrow(),
+        true,
+        &ProofStep::Assumptions(&incremental.assumptions),
+    );
+
+    ensure_var_count(ctx.borrow());
 }
 
 /// Enqueue another assumption if possible.
@@ -88,6 +113,7 @@ pub fn enqueue_assumption<'a>(
         mut TmpDataP,
         mut TrailP,
         ClauseAllocP,
+        VariablesP,
     ),
 ) -> EnqueueAssumption {
     while let Some(&assumption) = ctx
@@ -132,6 +158,7 @@ fn analyze_assumption_conflict<'a>(
         ClauseAllocP,
         ImplGraphP,
         TrailP,
+        VariablesP,
     ),
     assumption: Lit,
 ) {
@@ -187,8 +214,18 @@ fn analyze_assumption_conflict<'a>(
 
     incremental.failed_propagation_hashes.reverse();
 
+    incremental.user_failed_core.clear();
+    incremental
+        .user_failed_core
+        .extend(incremental.failed_core.iter().map(|solver_lit| {
+            let user_lit = solver_lit
+                .map_var(|solver_var| ctx.part(VariablesP).existing_user_from_solver(solver_var));
+            user_lit
+        }));
+
     proof::add_step(
         ctx.borrow(),
+        true,
         &ProofStep::FailedAssumptions {
             failed_core: &incremental.failed_core,
             propagation_hashes: &incremental.failed_propagation_hashes,
@@ -207,7 +244,6 @@ mod tests {
     use varisat_formula::test::conditional_pigeon_hole;
 
     use crate::cdcl::conflict_step;
-    use crate::context::set_var_count;
     use crate::load::load_clause;
     use crate::state::SatState;
 
@@ -219,8 +255,6 @@ mod tests {
         ) {
             let mut ctx = Context::default();
             let mut ctx = ctx.into_partial_ref_mut();
-
-            set_var_count(ctx.borrow(), formula.var_count());
 
             for clause in formula.iter() {
                 load_clause(ctx.borrow(), clause);
@@ -248,7 +282,7 @@ mod tests {
 
             prop_assert_eq!(ctx.part(SolverStateP).sat_state, SatState::UnsatUnderAssumptions);
 
-            let mut candidates = ctx.part(IncrementalP).failed_core().to_owned();
+            let mut candidates = ctx.part(IncrementalP).user_failed_core().to_owned();
             let mut core: Vec<Lit> = vec![];
 
             loop {
@@ -267,7 +301,7 @@ mod tests {
                         load_clause(ctx.borrow(), &[skipped]);
                     },
                     SatState::UnsatUnderAssumptions => {
-                        candidates = ctx.part(IncrementalP).failed_core().to_owned();
+                        candidates = ctx.part(IncrementalP).user_failed_core().to_owned();
                     }
                 }
             }
