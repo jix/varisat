@@ -239,6 +239,11 @@ enum DeleteClauseResult {
     Removed,
 }
 
+#[derive(Clone, Default)]
+struct LitData {
+    clause_count: usize,
+}
+
 /// A checker for unsatisfiability proofs in the native varisat format.
 pub struct Checker<'a> {
     /// Current step number.
@@ -253,6 +258,8 @@ pub struct Checker<'a> {
     clauses: HashMap<ClauseHash, SmallVec<[Clause; 1]>>,
     /// Stores known unit clauses and propagations during a clause check.
     unit_clauses: Vec<Option<UnitClause>>,
+    /// Information about literals in the current formula.
+    lit_data: Vec<LitData>,
     /// Stores overwritten values in `unit_clauses` to undo assignments.
     trail: Vec<(Lit, Option<UnitClause>)>,
     /// Whether unsatisfiability was proven.
@@ -276,6 +283,8 @@ pub struct Checker<'a> {
     tmp: Vec<Lit>,
     /// How many bits are used for storing clause hashes.
     hash_bits: u32,
+    /// Do we need to rehash before using clauses?
+    rehash_needed: bool,
     /// Last added irredundant clause id.
     ///
     /// Sorted and free of duplicates.
@@ -297,6 +306,7 @@ impl<'a> Default for Checker<'a> {
             garbage_size: 0,
             clauses: Default::default(),
             unit_clauses: vec![],
+            lit_data: vec![],
             trail: vec![],
             unsat: false,
             ended: false,
@@ -307,6 +317,7 @@ impl<'a> Default for Checker<'a> {
             unit_conflict: None,
             tmp: vec![],
             hash_bits: 64,
+            rehash_needed: false,
             previous_irred_clause_id: None,
             previous_irred_clause_lits: vec![],
             assumptions: vec![],
@@ -335,6 +346,8 @@ impl<'a> Checker<'a> {
         if self.unsat {
             return Ok(());
         }
+
+        self.rehash();
 
         let mut tmp = replace(&mut self.tmp, vec![]);
 
@@ -409,6 +422,14 @@ impl<'a> Checker<'a> {
         Ok(())
     }
 
+    /// Modify literal data
+    fn lit_data_mut(&mut self, lit: Lit) -> &mut LitData {
+        if self.lit_data.len() <= lit.code() {
+            self.lit_data.resize(lit.code() + 1, LitData::default());
+        }
+        &mut self.lit_data[lit.code()]
+    }
+
     /// Compute a clause hash of the current bit size
     fn clause_hash(&self, lits: &[Lit]) -> ClauseHash {
         let shift_bits = ClauseHash::max_value().count_ones() - self.hash_bits;
@@ -478,6 +499,11 @@ impl<'a> Checker<'a> {
                 });
 
                 self.next_clause_id += 1;
+
+                for &lit in lits.iter() {
+                    self.lit_data_mut(lit).clause_count += 1;
+                }
+
                 (id, StoreClauseResult::New)
             }
         }
@@ -590,6 +616,12 @@ impl<'a> Checker<'a> {
             self.clauses.remove(&hash);
         }
 
+        if let Some((_, DeleteClauseResult::Removed)) = result {
+            for &lit in lits.iter() {
+                self.lit_data_mut(lit).clause_count -= 1;
+            }
+        }
+
         if let Some(result) = result {
             self.collect_garbage();
             return Ok(result);
@@ -625,8 +657,13 @@ impl<'a> Checker<'a> {
         self.garbage_size = 0;
     }
 
-    /// Recompute all clause hashes
+    /// Recompute all clause hashes if necessary
     fn rehash(&mut self) {
+        if !self.rehash_needed {
+            return;
+        }
+        self.rehash_needed = false;
+
         let mut old_clauses = replace(&mut self.clauses, Default::default());
 
         for (_, mut candidates) in old_clauses.drain() {
@@ -807,6 +844,13 @@ impl<'a> Checker<'a> {
 
     /// Check a single proof step
     fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
+        match step {
+            ProofStep::SolverVarName { .. } | ProofStep::ChangeHashBits(..) => (),
+            _ => {
+                self.rehash();
+            }
+        }
+
         let mut result = match step {
             ProofStep::SolverVarName { global, solver } => {
                 self.handle_solver_var_name_step(global, solver);
@@ -824,7 +868,7 @@ impl<'a> Checker<'a> {
             ProofStep::UnitClauses(units) => self.check_unit_clauses_step(units),
             ProofStep::ChangeHashBits(bits) => {
                 self.hash_bits = bits;
-                self.rehash();
+                self.rehash_needed = true;
                 Ok(())
             }
             ProofStep::Model(model) => self.check_model_step(model),
@@ -865,7 +909,15 @@ impl<'a> Checker<'a> {
             self.solver_var_names.remove(&global);
         }
 
-        self.rehash();
+        for &polarity in &[false, true] {
+            if let Some(lit_data) = self.lit_data.get(global.lit(polarity).code()) {
+                if lit_data.clause_count > 0 {
+                    // TODO try to rehash only affected clauses
+                    self.rehash_needed = true;
+                    break;
+                }
+            }
+        }
     }
 
     /// Check an AtClause step
