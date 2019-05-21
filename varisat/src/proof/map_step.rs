@@ -109,7 +109,7 @@ impl MapStep {
 
             ProofStep::ChangeHashBits(..) | ProofStep::End => step.clone(),
 
-            ProofStep::SolverVarNames { .. } => {
+            ProofStep::SolverVarName { .. } => {
                 // while this step does contain variables, it is used to update the mapping, so it
                 // shouldn't be mapped itself.
                 step.clone()

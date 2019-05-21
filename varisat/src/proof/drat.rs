@@ -14,7 +14,7 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
             target.write_all(b"d ")?;
             write_literals(target, &clause[..])?;
         }
-        ProofStep::SolverVarNames { .. }
+        ProofStep::SolverVarName { .. }
         | ProofStep::UnitClauses(..)
         | ProofStep::ChangeHashBits(..)
         | ProofStep::Model(..)
@@ -43,7 +43,7 @@ pub fn write_binary_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -
             target.write_all(b"d")?;
             write_binary_literals(target, &clause[..])?;
         }
-        ProofStep::SolverVarNames { .. }
+        ProofStep::SolverVarName { .. }
         | ProofStep::UnitClauses(..)
         | ProofStep::ChangeHashBits(..)
         | ProofStep::Model(..)

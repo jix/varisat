@@ -5,8 +5,10 @@ use std::cmp::max;
 use partial_ref::{partial, PartialRef};
 
 use varisat_formula::{Lit, Var};
+use varisat_internal_proof::ProofStep;
 
 use crate::context::{parts::*, Context};
+use crate::proof;
 
 pub mod var_map;
 
@@ -164,10 +166,12 @@ pub fn global_from_user(mut ctx: partial!(Context, mut VariablesP), user: Var) -
 /// adjusted. This means you almost always want to call `context::ensure_var_count` after making
 /// calls to this function.
 pub fn solver_from_global<'a>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut VariablesP),
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
     global: Var,
 ) -> Var {
-    let (variables, mut ctx) = ctx.split_part_mut(VariablesP);
+    let variables = ctx.part_mut(VariablesP);
+
+    let mut emit_proof_step = false;
 
     let solver = variables
         .solver_from_global
@@ -190,13 +194,23 @@ pub fn solver_from_global<'a>(
                 .fwd_mut()
                 .insert(solver, global);
 
-            ctx.part_mut(ProofP)
-                .update_solver_var_name(global, Some(solver));
+            emit_proof_step = true;
 
             solver
         });
 
     variables.solver_watermark = max(variables.solver_watermark, solver.index() + 1);
+
+    if emit_proof_step && ctx.part(ProofP).native_format() {
+        proof::add_step(
+            ctx.borrow(),
+            false,
+            &ProofStep::SolverVarName {
+                global,
+                solver: Some(solver),
+            },
+        );
+    }
 
     solver
 }
@@ -205,7 +219,7 @@ pub fn solver_from_global<'a>(
 ///
 /// Allocates global and solver variables as requried.
 pub fn solver_from_user<'a>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut VariablesP),
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
     user: Var,
 ) -> Var {
     let global = global_from_user(ctx.borrow(), user);
@@ -232,7 +246,7 @@ pub fn new_user_var(mut ctx: partial!(Context, mut VariablesP)) -> Var {
 
 /// Maps a slice of user lits to solver lits using [`solver_from_user`].
 pub fn solver_from_user_lits<'a>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut VariablesP),
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
     solver_lits: &mut Vec<Lit>,
     user_lits: &[Lit],
 ) {

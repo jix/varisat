@@ -808,8 +808,8 @@ impl<'a> Checker<'a> {
     /// Check a single proof step
     fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
         let mut result = match step {
-            ProofStep::SolverVarNames { update } => {
-                self.handle_solver_var_names_step(update);
+            ProofStep::SolverVarName { global, solver } => {
+                self.handle_solver_var_name_step(global, solver);
                 Ok(())
             }
             ProofStep::AddClause { clause } => self.add_clause(clause),
@@ -857,14 +857,12 @@ impl<'a> Checker<'a> {
         result
     }
 
-    /// Handle a SolverVarNames step
-    fn handle_solver_var_names_step(&mut self, update: &[(Var, Option<Var>)]) {
-        for &(global_var, solver_var) in update.iter() {
-            if let Some(solver_var) = solver_var {
-                self.solver_var_names.insert(global_var, solver_var);
-            } else {
-                self.solver_var_names.remove(&global_var);
-            }
+    /// Handle a SolverVarName step
+    fn handle_solver_var_name_step(&mut self, global: Var, solver: Option<Var>) {
+        if let Some(solver) = solver {
+            self.solver_var_names.insert(global, solver);
+        } else {
+            self.solver_var_names.remove(&global);
         }
 
         self.rehash();
