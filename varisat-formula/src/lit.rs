@@ -223,6 +223,7 @@ impl Lit {
     }
 
     /// Apply a function to the variable of the literal, without changing the polarity.
+    #[inline]
     pub fn map_var(self, f: impl FnOnce(Var) -> Var) -> Lit {
         f(self.var()).lit(self.is_positive())
     }
