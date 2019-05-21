@@ -283,8 +283,8 @@ pub struct Checker<'a> {
     tmp: Vec<Lit>,
     /// How many bits are used for storing clause hashes.
     hash_bits: u32,
-    /// Do we need to rehash before using clauses?
-    rehash_needed: bool,
+    /// Changed solver names that are not yet reflected in the checkers current clause hashes.
+    buffered_solver_var_names: Vec<(Var, Option<Var>)>,
     /// Last added irredundant clause id.
     ///
     /// Sorted and free of duplicates.
@@ -317,7 +317,7 @@ impl<'a> Default for Checker<'a> {
             unit_conflict: None,
             tmp: vec![],
             hash_bits: 64,
-            rehash_needed: false,
+            buffered_solver_var_names: vec![],
             previous_irred_clause_id: None,
             previous_irred_clause_lits: vec![],
             assumptions: vec![],
@@ -346,8 +346,6 @@ impl<'a> Checker<'a> {
         if self.unsat {
             return Ok(());
         }
-
-        self.rehash();
 
         let mut tmp = replace(&mut self.tmp, vec![]);
 
@@ -659,10 +657,13 @@ impl<'a> Checker<'a> {
 
     /// Recompute all clause hashes if necessary
     fn rehash(&mut self) {
-        if !self.rehash_needed {
-            return;
+        for (global, solver) in self.buffered_solver_var_names.drain(..) {
+            if let Some(solver) = solver {
+                self.solver_var_names.insert(global, solver);
+            } else {
+                self.solver_var_names.remove(&global);
+            }
         }
-        self.rehash_needed = false;
 
         let mut old_clauses = replace(&mut self.clauses, Default::default());
 
@@ -683,6 +684,11 @@ impl<'a> Checker<'a> {
         lits: &[Lit],
         propagation_hashes: &[ClauseHash],
     ) -> Result<(), CheckerError> {
+        if !self.buffered_solver_var_names.is_empty() {
+            // TODO partial rehashing?
+            self.rehash();
+        }
+
         self.trace.clear();
         self.trace_edges.clear();
 
@@ -844,16 +850,9 @@ impl<'a> Checker<'a> {
 
     /// Check a single proof step
     fn check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
-        match step {
-            ProofStep::SolverVarName { .. } | ProofStep::ChangeHashBits(..) => (),
-            _ => {
-                self.rehash();
-            }
-        }
-
         let mut result = match step {
             ProofStep::SolverVarName { global, solver } => {
-                self.handle_solver_var_name_step(global, solver);
+                self.buffered_solver_var_names.push((global, solver));
                 Ok(())
             }
             ProofStep::AddClause { clause } => self.add_clause(clause),
@@ -868,7 +867,7 @@ impl<'a> Checker<'a> {
             ProofStep::UnitClauses(units) => self.check_unit_clauses_step(units),
             ProofStep::ChangeHashBits(bits) => {
                 self.hash_bits = bits;
-                self.rehash_needed = true;
+                self.rehash();
                 Ok(())
             }
             ProofStep::Model(model) => self.check_model_step(model),
@@ -899,25 +898,6 @@ impl<'a> Checker<'a> {
             *debug_step = format!("{:?}", step)
         }
         result
-    }
-
-    /// Handle a SolverVarName step
-    fn handle_solver_var_name_step(&mut self, global: Var, solver: Option<Var>) {
-        if let Some(solver) = solver {
-            self.solver_var_names.insert(global, solver);
-        } else {
-            self.solver_var_names.remove(&global);
-        }
-
-        for &polarity in &[false, true] {
-            if let Some(lit_data) = self.lit_data.get(global.lit(polarity).code()) {
-                if lit_data.clause_count > 0 {
-                    // TODO try to rehash only affected clauses
-                    self.rehash_needed = true;
-                    break;
-                }
-            }
-        }
     }
 
     /// Check an AtClause step

@@ -61,8 +61,6 @@ pub struct Proof<'a> {
     ///
     /// This is used to pick a good number of hash_bits
     clause_count: isize,
-    /// Whether we're finished with the initial loading of clauses.
-    initial_load_complete: bool,
 }
 
 impl<'a> Default for Proof<'a> {
@@ -74,7 +72,6 @@ impl<'a> Default for Proof<'a> {
             map_step: Default::default(),
             hash_bits: 64,
             clause_count: 0,
-            initial_load_complete: false,
         }
     }
 }
@@ -184,15 +181,6 @@ pub fn add_step<'a, 's>(
     let (variables, mut ctx) = ctx.split_part(VariablesP);
     let proof = ctx.part_mut(ProofP);
 
-    // This is a crude hack, as delete steps are the only ones emitted during loading. We need this
-    // to avoid triggering a hash size adjustment during the initial load. The checker has already
-    // loaded the complete formula, so our clause count doesn't match the checker's and we could
-    // cause way too many collisions, causing the checker to have quadratic runtime.
-    match step {
-        ProofStep::DeleteClause { .. } => {}
-        _ => proof.initial_load_complete = true,
-    }
-
     let map_vars = |var| {
         if solver_vars {
             variables
@@ -231,11 +219,11 @@ pub fn add_step<'a, 's>(
 
 /// Write a step using our native format
 fn write_varisat_step<'a, 's>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>),
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, SolverStateP),
     map_vars: impl Fn(Var) -> Var,
     step: &'s ProofStep<'s>,
 ) -> io::Result<()> {
-    let proof = ctx.part_mut(ProofP);
+    let (proof, ctx) = ctx.split_part_mut(ProofP);
 
     proof.clause_count += clause_count_delta(step);
 
@@ -245,7 +233,7 @@ fn write_varisat_step<'a, 's>(
         proof.hash_bits += 2;
         rehash = true;
     }
-    if proof.initial_load_complete {
+    if ctx.part(SolverStateP).solver_invoked {
         while proof.hash_bits > 6 && proof.clause_count * 4 < (1 << (proof.hash_bits / 2)) {
             proof.hash_bits -= 2;
             rehash = true;
