@@ -21,7 +21,8 @@ macro_rules! step_codes {
 
 step_codes!(
     0,
-    CODE_SOLVER_VAR_NAMES,
+    CODE_SOLVER_VAR_NAME_UPDATE,
+    CODE_SOLVER_VAR_NAME_REMOVE,
     CODE_AT_CLAUSE_RED,
     CODE_AT_CLAUSE_IRRED,
     CODE_UNIT_CLAUSES,
@@ -42,9 +43,15 @@ const CODE_END: u64 = 0x9ac3391f4294c211;
 /// Writes a proof step in the varisat format
 pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::Result<()> {
     match *step {
-        ProofStep::SolverVarNames { update } => {
-            write_u64(&mut *target, CODE_SOLVER_VAR_NAMES)?;
-            write_variable_updates(&mut *target, update)?;
+        ProofStep::SolverVarName { global, solver } => {
+            if let Some(solver) = solver {
+                write_u64(&mut *target, CODE_SOLVER_VAR_NAME_UPDATE)?;
+                write_u64(&mut *target, global.index() as u64)?;
+                write_u64(&mut *target, solver.index() as u64)?;
+            } else {
+                write_u64(&mut *target, CODE_SOLVER_VAR_NAME_REMOVE)?;
+                write_u64(&mut *target, global.index() as u64)?;
+            }
         }
 
         ProofStep::AddClause { clause } => {
@@ -122,7 +129,6 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
 #[derive(Default)]
 pub struct Parser {
     lit_buf: Vec<Lit>,
-    var_update_buf: Vec<(Var, Option<Var>)>,
     hash_buf: Vec<ClauseHash>,
     unit_buf: Vec<(Lit, ClauseHash)>,
 }
@@ -131,10 +137,16 @@ impl Parser {
     pub fn parse_step<'a>(&'a mut self, source: &mut impl BufRead) -> Result<ProofStep<'a>, Error> {
         let code = read_u64(&mut *source)?;
         match code {
-            CODE_SOLVER_VAR_NAMES => {
-                read_variable_updates(&mut *source, &mut self.var_update_buf)?;
-                Ok(ProofStep::SolverVarNames {
-                    update: &self.var_update_buf,
+            CODE_SOLVER_VAR_NAME_UPDATE => {
+                let global = Var::from_index(read_u64(&mut *source)? as usize);
+                let solver = Some(Var::from_index(read_u64(&mut *source)? as usize));
+                Ok(ProofStep::SolverVarName { global, solver })
+            }
+            CODE_SOLVER_VAR_NAME_REMOVE => {
+                let global = Var::from_index(read_u64(&mut *source)? as usize);
+                Ok(ProofStep::SolverVarName {
+                    global,
+                    solver: None,
                 })
             }
             CODE_ADD_CLAUSE => {
@@ -195,41 +207,6 @@ impl Parser {
             _ => failure::bail!("parse error"),
         }
     }
-}
-
-/// Writes a slice of variable updates for a varisat proof
-fn write_variable_updates(
-    target: &mut impl Write,
-    updates: &[(Var, Option<Var>)],
-) -> io::Result<()> {
-    write_u64(&mut *target, updates.len() as u64)?;
-    for &update in updates {
-        write_u64(&mut *target, update.0.index() as u64)?;
-        write_u64(
-            &mut *target,
-            update.1.map(|var| var.index() as u64 + 1).unwrap_or(0),
-        )?;
-    }
-    Ok(())
-}
-
-/// Read a slice of variable updates from a varisat proof
-fn read_variable_updates(
-    source: &mut impl BufRead,
-    updates: &mut Vec<(Var, Option<Var>)>,
-) -> Result<(), io::Error> {
-    updates.clear();
-    let len = read_u64(&mut *source)? as usize;
-    updates.reserve(len);
-    for _ in 0..len {
-        let var_0 = Var::from_index(read_u64(&mut *source)? as usize);
-        let var_1 = match read_u64(&mut *source)? {
-            0 => None,
-            x => Some(Var::from_index(x as usize - 1)),
-        };
-        updates.push((var_0, var_1));
-    }
-    Ok(())
 }
 
 /// Writes a slice of literals for a varisat proof

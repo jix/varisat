@@ -39,7 +39,7 @@ pub fn clause_count_delta(step: &ProofStep) -> isize {
                 0
             }
         }
-        ProofStep::SolverVarNames { .. }
+        ProofStep::SolverVarName { .. }
         | ProofStep::UnitClauses(..)
         | ProofStep::ChangeHashBits(..)
         | ProofStep::Model(..)
@@ -63,11 +63,6 @@ pub struct Proof<'a> {
     clause_count: isize,
     /// Whether we're finished with the initial loading of clauses.
     initial_load_complete: bool,
-
-    /// Buffer changes of the global <-> solver mapping.
-    solver_updates: Vec<(Var, Option<Var>)>,
-    /// Does solver_updates contain new solver vars?
-    solver_updates_has_new_var: bool,
 }
 
 impl<'a> Default for Proof<'a> {
@@ -80,8 +75,6 @@ impl<'a> Default for Proof<'a> {
             hash_bits: 64,
             clause_count: 0,
             initial_load_complete: false,
-            solver_updates: vec![],
-            solver_updates_has_new_var: false,
         }
     }
 }
@@ -136,14 +129,6 @@ impl<'a> Proof<'a> {
     pub fn models_in_proof(&self) -> bool {
         self.native_format()
     }
-
-    /// Invoked by Variables when a solver var name changed.
-    pub fn update_solver_var_name(&mut self, global: Var, solver: Option<Var>) {
-        if self.native_format() {
-            self.solver_updates.push((global, solver));
-            self.solver_updates_has_new_var |= solver.is_some();
-        }
-    }
 }
 
 /// Call when adding an external clause.
@@ -191,8 +176,6 @@ pub fn add_step<'a, 's>(
     if ctx.part(SolverStateP).solver_error.is_some() {
         return;
     }
-
-    handle_solver_var_names_update(ctx.borrow(), step);
 
     if ctx.part(SolverStateP).solver_error.is_some() {
         return;
@@ -244,36 +227,6 @@ pub fn add_step<'a, 's>(
     }
 
     handle_io_errors(ctx.borrow(), io_result);
-}
-
-/// Handle queued updates of solver var names
-fn handle_solver_var_names_update<'a, 's>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP),
-    step: &'s ProofStep<'s>,
-) {
-    let proof = ctx.part_mut(ProofP);
-    if proof.solver_updates_has_new_var && step.contains_hashes() {
-        let var_name_step = ProofStep::SolverVarNames {
-            update: &proof.solver_updates,
-        };
-        let io_result = if proof.format == Some(ProofFormat::Varisat) {
-            varisat_internal_proof::binary_format::write_step(&mut proof.target, &var_name_step)
-        } else {
-            Ok(())
-        };
-
-        if io_result.is_ok() {
-            if let Some(checker) = &mut proof.checker {
-                let result = checker.self_check_step(var_name_step);
-                handle_self_check_result(ctx.borrow(), result);
-            }
-        }
-        handle_io_errors(ctx.borrow(), io_result);
-
-        let proof = ctx.part_mut(ProofP);
-        proof.solver_updates_has_new_var = false;
-        proof.solver_updates.clear();
-    }
 }
 
 /// Write a step using our native format

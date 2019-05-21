@@ -56,7 +56,7 @@ pub enum ProofStep<'a> {
     /// Update the global to solver var mapping.
     ///
     /// For proof checking, the solver variable names are only used for hash computations.
-    SolverVarNames { update: &'a [(Var, Option<Var>)] },
+    SolverVarName { global: Var, solver: Option<Var> },
     /// Add a new input clause.
     ///
     /// This is only emitted for clauses added incrementally after an initial solve call.
@@ -117,7 +117,7 @@ impl<'a> ProofStep<'a> {
             | ProofStep::UnitClauses(..)
             | ProofStep::FailedAssumptions { .. } => true,
 
-            ProofStep::SolverVarNames { .. }
+            ProofStep::SolverVarName { .. }
             | ProofStep::AddClause { .. }
             | ProofStep::DeleteClause { .. }
             | ProofStep::ChangeHashBits(..)
