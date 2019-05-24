@@ -11,11 +11,12 @@ use crate::clause::{ClauseActivity, ClauseAlloc, ClauseDb};
 use crate::config::{SolverConfig, SolverConfigUpdate};
 use crate::decision::vsids::Vsids;
 use crate::incremental::Incremental;
+use crate::model::Model;
 use crate::proof::Proof;
 use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
 use crate::schedule::Schedule;
 use crate::state::SolverState;
-use crate::tmp::TmpData;
+use crate::tmp::{TmpData, TmpFlags};
 use crate::variables::Variables;
 
 /// Part declarations for the [`Context`] struct.
@@ -30,11 +31,13 @@ pub mod parts {
     part!(pub ClauseDbP: ClauseDb);
     part!(pub ImplGraphP: ImplGraph);
     part!(pub IncrementalP: Incremental);
+    part!(pub ModelP: Model);
     part!(pub ProofP<'a>: Proof<'a>);
     part!(pub ScheduleP: Schedule);
     part!(pub SolverConfigP: SolverConfig);
     part!(pub SolverStateP: SolverState);
     part!(pub TmpDataP: TmpData);
+    part!(pub TmpFlagsP: TmpFlags);
     part!(pub TrailP: Trail);
     part!(pub VariablesP: Variables);
     part!(pub VsidsP: Vsids);
@@ -67,6 +70,8 @@ pub struct Context<'a> {
     pub impl_graph: ImplGraph,
     #[part(IncrementalP)]
     pub incremental: Incremental,
+    #[part(ModelP)]
+    pub model: Model,
     #[part(ProofP<'a>)]
     pub proof: Proof<'a>,
     #[part(ScheduleP)]
@@ -77,6 +82,8 @@ pub struct Context<'a> {
     pub solver_state: SolverState,
     #[part(TmpDataP)]
     pub tmp_data: TmpData,
+    #[part(TmpFlagsP)]
+    pub tmp_flags: TmpFlags,
     #[part(TrailP)]
     pub trail: Trail,
     #[part(VariablesP)]
@@ -95,7 +102,7 @@ pub fn set_var_count(
         mut AssignmentP,
         mut BinaryClausesP,
         mut ImplGraphP,
-        mut TmpDataP,
+        mut TmpFlagsP,
         mut VsidsP,
         mut WatchlistsP,
     ),
@@ -105,29 +112,9 @@ pub fn set_var_count(
     ctx.part_mut(AssignmentP).set_var_count(count);
     ctx.part_mut(BinaryClausesP).set_var_count(count);
     ctx.part_mut(ImplGraphP).set_var_count(count);
-    ctx.part_mut(TmpDataP).set_var_count(count);
+    ctx.part_mut(TmpFlagsP).set_var_count(count);
     ctx.part_mut(VsidsP).set_var_count(count);
     ctx.part_mut(WatchlistsP).set_var_count(count);
-}
-
-/// Increases the variable count to at least the given value.
-pub fn ensure_var_count(
-    mut ctx: partial!(
-        Context,
-        mut AnalyzeConflictP,
-        mut AssignmentP,
-        mut BinaryClausesP,
-        mut ImplGraphP,
-        mut TmpDataP,
-        mut VariablesP,
-        mut VsidsP,
-        mut WatchlistsP,
-    ),
-) {
-    let count = ctx.part(VariablesP).solver_watermark();
-    if count > ctx.part_mut(AssignmentP).assignment().len() {
-        set_var_count(ctx.borrow(), count)
-    }
 }
 
 /// The solver configuration has changed.

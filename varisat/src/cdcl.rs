@@ -2,7 +2,6 @@
 
 use partial_ref::{partial, PartialRef};
 
-use varisat_formula::Lit;
 use varisat_internal_proof::ProofStep;
 
 use crate::analyze_conflict::analyze_conflict;
@@ -10,6 +9,7 @@ use crate::clause::{assess_learned_clause, bump_clause, db, decay_clause_activit
 use crate::context::{parts::*, Context};
 use crate::decision::make_decision;
 use crate::incremental::{enqueue_assumption, EnqueueAssumption};
+use crate::model::reconstruct_global_model;
 use crate::proof;
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
 use crate::simplify::{prove_units, simplify};
@@ -27,35 +27,22 @@ pub fn conflict_step<'a>(
         mut ClauseDbP,
         mut ImplGraphP,
         mut IncrementalP,
+        mut ModelP,
         mut ProofP<'a>,
         mut SolverStateP,
         mut TmpDataP,
+        mut TmpFlagsP,
         mut TrailP,
+        mut VariablesP,
         mut VsidsP,
         mut WatchlistsP,
-        VariablesP,
     ),
 ) {
     let conflict = find_conflict(ctx.borrow());
 
     let conflict = match conflict {
         Ok(()) => {
-            if ctx.part(ProofP).models_in_proof() {
-                let (tmp, mut ctx) = ctx.split_part_mut(TmpDataP);
-                let model = &mut tmp.lits;
-                model.clear();
-                model.extend(
-                    ctx.part(AssignmentP)
-                        .assignment()
-                        .iter()
-                        .enumerate()
-                        .flat_map(|(index, assignment)| {
-                            assignment.map(|polarity| Lit::from_index(index, polarity))
-                        }),
-                );
-                proof::add_step(ctx.borrow(), true, &ProofStep::Model(&model));
-            }
-            ctx.part_mut(SolverStateP).sat_state = SatState::Sat;
+            reconstruct_global_model(ctx.borrow());
             return;
         }
         Err(FoundConflict::Assumption) => {
@@ -138,11 +125,11 @@ fn find_conflict<'a>(
         mut IncrementalP,
         mut ProofP<'a>,
         mut SolverStateP,
-        mut TmpDataP,
+        mut TmpFlagsP,
         mut TrailP,
+        mut VariablesP,
         mut VsidsP,
         mut WatchlistsP,
-        VariablesP,
     ),
 ) -> Result<(), FoundConflict> {
     loop {
@@ -238,10 +225,12 @@ mod tests {
             prop_assert_eq!(ctx.part(SolverStateP).sat_state, SatState::Sat);
 
             for clause in formula.iter() {
-                prop_assert!(clause.iter().any(|&lit| ctx.part(AssignmentP).lit_is_true(
+                prop_assert!(clause.iter().any(|&lit| ctx.part(ModelP).lit_is_true(
                     lit.map_var(|user_var| ctx
                         .part(VariablesP)
-                        .existing_solver_from_user(user_var))
+                        .global_from_user()
+                        .get(user_var)
+                        .expect("no existing global var for user var"))
                 )));
             }
         }

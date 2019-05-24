@@ -5,7 +5,7 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Lit;
 use varisat_internal_proof::{clause_hash, lit_hash, ClauseHash, ProofStep};
 
-use crate::context::{ensure_var_count, parts::*, Context};
+use crate::context::{parts::*, Context};
 use crate::proof;
 use crate::prop::{enqueue_assignment, full_restart, Reason};
 use crate::state::SatState;
@@ -41,6 +41,11 @@ impl Incremental {
     pub fn user_failed_core(&self) -> &[Lit] {
         &self.user_failed_core
     }
+
+    /// Current assumptions.
+    pub fn assumptions(&self) -> &[Lit] {
+        &self.assumptions
+    }
 }
 
 /// Return type of [`enqueue_assumption`].
@@ -63,7 +68,7 @@ pub fn set_assumptions<'a>(
         mut IncrementalP,
         mut ProofP<'a>,
         mut SolverStateP,
-        mut TmpDataP,
+        mut TmpFlagsP,
         mut TrailP,
         mut VariablesP,
         mut VsidsP,
@@ -88,14 +93,11 @@ pub fn set_assumptions<'a>(
         user_assumptions,
     );
 
-    // proof doesn't use solver variables, so no need to call ensure_var_count before
     proof::add_step(
         ctx_2.borrow(),
         true,
         &ProofStep::Assumptions(&incremental.assumptions),
     );
-
-    ensure_var_count(ctx.borrow());
 }
 
 /// Enqueue another assumption if possible.
@@ -110,7 +112,7 @@ pub fn enqueue_assumption<'a>(
         mut IncrementalP,
         mut ProofP<'a>,
         mut SolverStateP,
-        mut TmpDataP,
+        mut TmpFlagsP,
         mut TrailP,
         ClauseAllocP,
         VariablesP,
@@ -154,7 +156,7 @@ fn analyze_assumption_conflict<'a>(
         mut IncrementalP,
         mut ProofP<'a>,
         mut SolverStateP,
-        mut TmpDataP,
+        mut TmpFlagsP,
         ClauseAllocP,
         ImplGraphP,
         TrailP,
@@ -163,7 +165,7 @@ fn analyze_assumption_conflict<'a>(
     assumption: Lit,
 ) {
     let (incremental, mut ctx) = ctx.split_part_mut(IncrementalP);
-    let (tmp, mut ctx) = ctx.split_part_mut(TmpDataP);
+    let (tmp, mut ctx) = ctx.split_part_mut(TmpFlagsP);
     let (trail, mut ctx) = ctx.split_part(TrailP);
     let (impl_graph, mut ctx) = ctx.split_part(ImplGraphP);
 

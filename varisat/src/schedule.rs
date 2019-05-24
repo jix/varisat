@@ -37,15 +37,17 @@ pub fn schedule_step<'a>(
         mut ClauseDbP,
         mut ImplGraphP,
         mut IncrementalP,
+        mut ModelP,
         mut ProofP<'a>,
         mut ScheduleP,
         mut SolverStateP,
         mut TmpDataP,
+        mut TmpFlagsP,
         mut TrailP,
+        mut VariablesP,
         mut VsidsP,
         mut WatchlistsP,
         SolverConfigP,
-        VariablesP,
     ),
 ) -> bool {
     let (schedule, mut ctx) = ctx.split_part_mut(ScheduleP);

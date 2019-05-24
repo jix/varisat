@@ -20,6 +20,7 @@ mod decision;
 mod glue;
 mod incremental;
 mod load;
+mod model;
 mod proof;
 mod prop;
 mod schedule;

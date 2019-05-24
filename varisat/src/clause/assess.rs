@@ -11,7 +11,7 @@ use super::{bump_clause_activity, ClauseHeader, Tier};
 
 /// Assess the newly learned clause and generate a clause header.
 pub fn assess_learned_clause(
-    mut ctx: partial!(Context, mut TmpDataP, ImplGraphP),
+    mut ctx: partial!(Context, mut TmpFlagsP, ImplGraphP),
     lits: &[Lit],
 ) -> ClauseHeader {
     // This is called while the clause is still in conflict, thus the computed glue level is one
@@ -44,7 +44,7 @@ pub fn bump_clause(
         mut ClauseActivityP,
         mut ClauseAllocP,
         mut ClauseDbP,
-        mut TmpDataP,
+        mut TmpFlagsP,
         ImplGraphP
     ),
     cref: ClauseRef,

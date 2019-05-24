@@ -133,10 +133,15 @@ impl<'a> VarBiMapMut<'a> {
     /// Remove a mapping.
     ///
     /// Does nothing if `from` is not mapped.
-    pub fn remove(&mut self, from: Var) {
+    ///
+    /// Returns the existing mapping if it was present.
+    pub fn remove(&mut self, from: Var) -> Option<Var> {
         if let Some(into) = self.fwd.get(from) {
             self.fwd.remove(from);
             self.bwd.remove(into);
+            Some(into)
+        } else {
+            None
         }
     }
 }

@@ -7,7 +7,7 @@ use varisat_formula::Lit;
 use varisat_internal_proof::{DeleteClauseProof, ProofStep};
 
 use crate::clause::{db, ClauseHeader, Tier};
-use crate::context::{ensure_var_count, parts::*, Context};
+use crate::context::{parts::*, Context};
 use crate::proof;
 use crate::prop::{assignment, full_restart, Reason};
 use crate::simplify::resurrect_unit;
@@ -33,6 +33,7 @@ pub fn load_clause<'a>(
         mut ProofP<'a>,
         mut SolverStateP,
         mut TmpDataP,
+        mut TmpFlagsP,
         mut TrailP,
         mut VariablesP,
         mut VsidsP,
@@ -57,8 +58,6 @@ pub fn load_clause<'a>(
     let (tmp_data, mut ctx_variables) = ctx.split_part_mut(TmpDataP);
     variables::solver_from_user_lits(ctx_variables.borrow(), &mut tmp_data.lits, user_lits);
 
-    ensure_var_count(ctx.borrow());
-
     let (tmp_data, mut ctx) = ctx.split_part_mut(TmpDataP);
 
     let lits = &mut tmp_data.lits;
@@ -77,6 +76,15 @@ pub fn load_clause<'a>(
             return;
         }
         last = Some(lit);
+    }
+
+    // If we're not a unit clause the contained variables are not isolated anymore.
+    if lits.len() > 1 {
+        for &lit in lits.iter() {
+            ctx.part_mut(VariablesP)
+                .var_data_solver_mut(lit.var())
+                .isolated = false;
+        }
     }
 
     // Remove satisfied clauses and handle false literals.
