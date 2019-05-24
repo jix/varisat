@@ -69,6 +69,11 @@ impl Assignment {
     pub fn unassign_var(&mut self, var: Var) {
         self.assignment[var.index()] = None;
     }
+
+    /// Set the assigned/unassigned value of a variable.
+    pub fn set_var(&mut self, var: Var, assignment: Option<bool>) {
+        self.assignment[var.index()] = assignment;
+    }
 }
 
 /// Decision and propagation history.

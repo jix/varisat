@@ -2,7 +2,7 @@
 
 use partial_ref::{partial, split_borrow, PartialRef};
 
-use varisat_formula::Lit;
+use varisat_formula::{Lit, Var};
 use varisat_internal_proof::{clause_hash, lit_hash, DeleteClauseProof, ProofStep};
 
 use crate::binary::simplify_binary;
@@ -10,6 +10,7 @@ use crate::clause::db::filter_clauses;
 use crate::context::{parts::*, Context};
 use crate::proof;
 use crate::prop::{enqueue_assignment, Reason};
+use crate::variables;
 
 /// Remove satisfied clauses and false literals.
 pub fn prove_units<'a>(
@@ -82,14 +83,16 @@ pub fn resurrect_unit<'a>(
 pub fn simplify<'a>(
     mut ctx: partial!(
         Context<'a>,
+        mut AssignmentP,
         mut BinaryClausesP,
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ProofP<'a>,
         mut SolverStateP,
+        mut VariablesP,
         mut WatchlistsP,
-        AssignmentP,
-        VariablesP,
+        mut VsidsP,
+        IncrementalP,
     ),
 ) {
     simplify_binary(ctx.borrow());
@@ -97,18 +100,47 @@ pub fn simplify<'a>(
     let (assignment, mut ctx) = ctx.split_part(AssignmentP);
 
     let mut new_lits = vec![];
+    {
+        split_borrow!(proof_ctx = &(mut ProofP, mut SolverStateP, VariablesP) ctx);
+        let (ctx_2, mut ctx) = ctx.split_borrow();
 
-    split_borrow!(proof_ctx = &(mut ProofP, mut SolverStateP, VariablesP) ctx);
-    let (ctx_2, mut ctx) = ctx.split_borrow();
-
-    filter_clauses(ctx_2, |alloc, cref| {
-        let clause = alloc.clause_mut(cref);
-        let redundant = clause.header().redundant();
-        new_lits.clear();
-        for &lit in clause.lits() {
-            match assignment.lit_value(lit) {
-                None => new_lits.push(lit),
-                Some(true) => {
+        filter_clauses(ctx_2, |alloc, cref| {
+            let clause = alloc.clause_mut(cref);
+            let redundant = clause.header().redundant();
+            new_lits.clear();
+            for &lit in clause.lits() {
+                match assignment.lit_value(lit) {
+                    None => new_lits.push(lit),
+                    Some(true) => {
+                        proof::add_step(
+                            proof_ctx.borrow(),
+                            true,
+                            &ProofStep::DeleteClause {
+                                clause: clause.lits(),
+                                proof: if redundant {
+                                    DeleteClauseProof::Redundant
+                                } else {
+                                    DeleteClauseProof::Satisfied
+                                },
+                            },
+                        );
+                        return false;
+                    }
+                    Some(false) => (),
+                }
+            }
+            if new_lits.len() < clause.lits().len() {
+                if proof_ctx.part(ProofP).is_active() {
+                    let hash = [clause_hash(clause.lits())];
+                    proof::add_step(
+                        proof_ctx.borrow(),
+                        true,
+                        &ProofStep::AtClause {
+                            redundant: redundant && new_lits.len() > 2,
+                            clause: &new_lits,
+                            propagation_hashes: &hash[..],
+                        },
+                    );
                     proof::add_step(
                         proof_ctx.borrow(),
                         true,
@@ -117,59 +149,67 @@ pub fn simplify<'a>(
                             proof: if redundant {
                                 DeleteClauseProof::Redundant
                             } else {
-                                DeleteClauseProof::Satisfied
+                                DeleteClauseProof::Simplified
                             },
                         },
                     );
-                    return false;
                 }
-                Some(false) => (),
-            }
-        }
-        if new_lits.len() < clause.lits().len() {
-            if proof_ctx.part(ProofP).is_active() {
-                let hash = [clause_hash(clause.lits())];
-                proof::add_step(
-                    proof_ctx.borrow(),
-                    true,
-                    &ProofStep::AtClause {
-                        redundant: redundant && new_lits.len() > 2,
-                        clause: &new_lits,
-                        propagation_hashes: &hash[..],
-                    },
-                );
-                proof::add_step(
-                    proof_ctx.borrow(),
-                    true,
-                    &ProofStep::DeleteClause {
-                        clause: clause.lits(),
-                        proof: if redundant {
-                            DeleteClauseProof::Redundant
-                        } else {
-                            DeleteClauseProof::Simplified
-                        },
-                    },
-                );
-            }
 
-            match new_lits[..] {
-                // Cannot have empty or unit clauses after full propagation. An empty clause would
-                // have been a conflict and a unit clause must be satisfied and thus would have been
-                // dropped above.
-                [] | [_] => unreachable!(),
-                [lit_0, lit_1] => {
-                    ctx.part_mut(BinaryClausesP)
-                        .add_binary_clause([lit_0, lit_1]);
-                    false
+                match new_lits[..] {
+                    // Cannot have empty or unit clauses after full propagation. An empty clause would
+                    // have been a conflict and a unit clause must be satisfied and thus would have been
+                    // dropped above.
+                    [] | [_] => unreachable!(),
+                    [lit_0, lit_1] => {
+                        ctx.part_mut(BinaryClausesP)
+                            .add_binary_clause([lit_0, lit_1]);
+                        false
+                    }
+                    ref lits => {
+                        clause.lits_mut()[..lits.len()].copy_from_slice(lits);
+                        clause.header_mut().set_len(lits.len());
+                        true
+                    }
                 }
-                ref lits => {
-                    clause.lits_mut()[..lits.len()].copy_from_slice(lits);
-                    clause.header_mut().set_len(lits.len());
-                    true
-                }
+            } else {
+                true
             }
-        } else {
-            true
+        });
+    }
+
+    for (var_index, &value) in assignment.assignment().iter().enumerate() {
+        let var = Var::from_index(var_index);
+        if !ctx.part(VariablesP).solver_var_present(var) {
+            continue;
         }
-    })
+        if let Some(value) = value {
+            let var_data = ctx.part_mut(VariablesP).var_data_solver_mut(var);
+            var_data.unit = Some(value);
+            var_data.isolated = true;
+        }
+    }
+
+    // TODO use a better way to protect assumptions
+
+    let (incremental, mut ctx) = ctx.split_part(IncrementalP);
+
+    for &lit in incremental.assumptions() {
+        let var_data = ctx.part_mut(VariablesP).var_data_solver_mut(lit.var());
+        if var_data.unit.is_some() {
+            var_data.isolated = false;
+        }
+    }
+
+    for (var_index, &value) in assignment.assignment().iter().enumerate() {
+        let var = Var::from_index(var_index);
+        if !ctx.part(VariablesP).solver_var_present(var) {
+            continue;
+        }
+        if value.is_some() {
+            let var_data = ctx.part_mut(VariablesP).var_data_solver_mut(var);
+            if var_data.isolated == true {
+                variables::remove_solver_var(ctx.borrow(), var);
+            }
+        }
+    }
 }

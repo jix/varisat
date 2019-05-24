@@ -95,6 +95,34 @@ impl<'a> Solver<'a> {
         Ok(())
     }
 
+    /// Sets the "witness" sampling mode for a variable.
+    pub fn witness_var(&mut self, var: Var) {
+        // TODO add link to sampling mode section of the manual when written
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        let global = variables::global_from_user(ctx.borrow(), var);
+        variables::set_sampling_mode(ctx.borrow(), global, variables::data::SamplingMode::Witness);
+    }
+
+    /// Sets the "sample" sampling mode for a variable.
+    pub fn sample_var(&mut self, var: Var) {
+        // TODO add link to sampling mode section of the manual when written
+        // TODO add warning about constrainig variables that previously were witness variables
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        let global = variables::global_from_user(ctx.borrow(), var);
+        variables::set_sampling_mode(ctx.borrow(), global, variables::data::SamplingMode::Sample);
+    }
+
+    /// Hide a variable.
+    ///
+    /// Turns a free variable into an existentially quantified variable. If the passed `Var` is used
+    /// again after this call, it refers to a new variable not the previously hidden variable.
+    pub fn hide_var(&mut self, var: Var) {
+        // TODO add link to sampling mode section of the manual when written
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        let global = variables::global_from_user(ctx.borrow(), var);
+        variables::set_sampling_mode(ctx.borrow(), global, variables::data::SamplingMode::Hide);
+    }
+
     /// Check the satisfiability of the current formula.
     pub fn solve(&mut self) -> Result<bool, SolverError> {
         self.ctx.solver_state.solver_invoked = true;
@@ -148,7 +176,6 @@ impl<'a> Solver<'a> {
     pub fn model(&self) -> Option<Vec<Lit>> {
         let ctx = self.ctx.into_partial_ref();
         if ctx.part(SolverStateP).sat_state == SatState::Sat {
-            // TODO we need to extend the model to cover hidden solver vars
             Some(
                 ctx.part(VariablesP)
                     .user_var_iter()
@@ -157,17 +184,9 @@ impl<'a> Solver<'a> {
                             .part(VariablesP)
                             .global_from_user()
                             .get(user_var)
-                            .unwrap();
-                        if let Some(solver_var) =
-                            ctx.part(VariablesP).solver_from_global().get(global_var)
-                        {
-                            ctx.part(AssignmentP)
-                                .var_value(solver_var)
-                                .map(|polarity| user_var.lit(polarity))
-                        } else {
-                            // Unused var, but right now we always report a full model.
-                            Some(user_var.negative())
-                        }
+                            .expect("no existing global var for user var");
+                        ctx.part(ModelP).assignment()[global_var.index()]
+                            .map(|value| user_var.lit(value))
                     })
                     .collect(),
             )
@@ -260,7 +279,7 @@ mod tests {
     use proptest::prelude::*;
 
     use varisat_formula::test::{conditional_pigeon_hole, sat_formula, sgen_unsat_formula};
-    use varisat_formula::{cnf_formula, lits, CnfFormula, Var};
+    use varisat_formula::{cnf_formula, lits, Var};
 
     use crate::checker::CheckedProofStep;
     use varisat_dimacs::write_dimacs;
@@ -501,8 +520,8 @@ mod tests {
                         let skipped = *candidates.last().unwrap();
                         core.push(skipped);
 
-                        let single_clause = CnfFormula::from(Some([skipped]));
-                        solver.add_formula(&single_clause);
+                        solver.add_clause(&[skipped]);
+                        solver.hide_var(skipped.var());
                     },
                     Ok(false) => {
                         candidates = solver.failed_core().unwrap().to_owned();

@@ -43,3 +43,17 @@ pub fn make_decision(
 pub fn make_available(mut ctx: partial!(Context, mut VsidsP), var: Var) {
     ctx.part_mut(VsidsP).make_available(var);
 }
+
+/// Initialize decision heuristics for a new variable.
+pub fn initialize_var(mut ctx: partial!(Context, mut VsidsP), var: Var, available: bool) {
+    ctx.part_mut(VsidsP).reset(var);
+
+    if available {
+        make_available(ctx.borrow(), var);
+    }
+}
+
+/// Remove a variable from the decision heuristics.
+pub fn remove_var(mut ctx: partial!(Context, mut VsidsP), var: Var) {
+    ctx.part_mut(VsidsP).make_unavailable(var);
+}

@@ -7,12 +7,15 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::{Lit, Var};
 use varisat_internal_proof::ProofStep;
 
-use crate::context::{parts::*, Context};
+use crate::context::{parts::*, set_var_count, Context};
+use crate::decision;
 use crate::proof;
 
+pub mod data;
 pub mod var_map;
 
-use var_map::{VarBiMap, VarMap};
+use data::{SamplingMode, VarData};
+use var_map::{VarBiMap, VarBiMapMut, VarMap};
 
 /// Variable mapping and metadata.
 pub struct Variables {
@@ -42,6 +45,11 @@ pub struct Variables {
     solver_watermark: usize,
     /// Solver variables that are unused and can be recycled.
     solver_freelist: Vec<Var>,
+
+    /// Variable metadata.
+    ///
+    /// Indexed by global variable indices.
+    var_data: Vec<VarData>,
 }
 
 impl Default for Variables {
@@ -55,6 +63,8 @@ impl Default for Variables {
             global_freelist: vec![],
             solver_watermark: 0,
             solver_freelist: vec![],
+
+            var_data: vec![],
         }
     }
 }
@@ -65,12 +75,24 @@ impl Variables {
         self.solver_watermark
     }
 
+    /// Number of allocated global variables.
+    pub fn global_watermark(&self) -> usize {
+        self.global_watermark
+    }
+
     /// Iterator over all user variables that are in use.
     pub fn user_var_iter<'a>(&'a self) -> impl Iterator<Item = Var> + 'a {
         let global_from_user = self.global_from_user.fwd();
         (0..self.user_watermark)
             .map(|user_index| Var::from_index(user_index))
             .filter(move |&user_var| global_from_user.get(user_var).is_some())
+    }
+
+    /// Iterator over all global variables that are in use.
+    pub fn global_var_iter<'a>(&'a self) -> impl Iterator<Item = Var> + 'a {
+        (0..self.global_watermark)
+            .map(|global_index| Var::from_index(global_index))
+            .filter(move |&global_var| !self.var_data[global_var.index()].deleted)
     }
 
     /// The user to global mapping.
@@ -88,9 +110,19 @@ impl Variables {
         &self.global_from_user.bwd()
     }
 
+    /// Mutable global to user mapping.
+    pub fn user_from_global_mut(&mut self) -> VarBiMapMut {
+        self.global_from_user.bwd_mut()
+    }
+
     /// The solver to global mapping.
     pub fn global_from_solver(&self) -> &VarMap {
         &self.solver_from_global.bwd()
+    }
+
+    /// Mutable global to solver mapping.
+    pub fn global_from_solver_mut(&mut self) -> VarBiMapMut {
+        self.solver_from_global.bwd_mut()
     }
 
     /// Get an existing solver var for a user var.
@@ -117,6 +149,25 @@ impl Variables {
             .get(global)
             .expect("no existing user var for global var");
         user
+    }
+
+    /// Mutable reference to the var data for a solver variable.
+    pub fn var_data_solver_mut(&mut self, solver: Var) -> &mut VarData {
+        let global = self
+            .global_from_solver()
+            .get(solver)
+            .expect("no existing global var for solver var");
+        &mut self.var_data[global.index()]
+    }
+
+    /// Var data for a global variable.
+    pub fn var_data_global(&self, global: Var) -> &VarData {
+        &self.var_data[global.index()]
+    }
+
+    /// Check if a solver var is mapped to a global var
+    pub fn solver_var_present(&self, solver: Var) -> bool {
+        self.global_from_solver().get(solver).is_some()
     }
 }
 
@@ -147,10 +198,20 @@ pub fn global_from_user(mut ctx: partial!(Context, mut VariablesP), user: Var) -
             // And add the new mapping.
             variables.global_from_user.fwd_mut().insert(global, user);
 
+            if variables.var_data.len() > global.index() {
+                variables.var_data[global.index()] = VarData::user_default();
+            } // else resize below
+
             // TODO we need to inform Proof about the new mapping
 
             global
         });
+
+    if variables.var_data.len() <= global.index() {
+        variables
+            .var_data
+            .resize(global.index() + 1, VarData::user_default());
+    }
 
     // Now we update the global watermark to make sure that this mapping is not remapped.
     variables.global_watermark = max(variables.global_watermark, global.index() + 1);
@@ -161,25 +222,31 @@ pub fn global_from_user(mut ctx: partial!(Context, mut VariablesP), user: Var) -
 /// Maps a global variable to a solver variable.
 ///
 /// If no matching solver variable exists a new one is allocated.
-///
-/// **Note:** When a new solver variable is allocated, the internal data structures are _not_
-/// adjusted. This means you almost always want to call `context::ensure_var_count` after making
-/// calls to this function.
 pub fn solver_from_global<'a>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut AnalyzeConflictP,
+        mut AssignmentP,
+        mut BinaryClausesP,
+        mut ImplGraphP,
+        mut ProofP<'a>,
+        mut SolverStateP,
+        mut TmpFlagsP,
+        mut VariablesP,
+        mut VsidsP,
+        mut WatchlistsP,
+    ),
     global: Var,
 ) -> Var {
     let variables = ctx.part_mut(VariablesP);
 
-    let mut emit_proof_step = false;
+    let mut new_solver_var = false;
 
     let solver = variables
         .solver_from_global
         .fwd()
         .get(global)
         .unwrap_or_else(|| {
-            // TODO we need to perform unhiding of solver vars here
-
             // Try to recycle a solver var, otherwise use the solver watermark.
             let solver = variables
                 .solver_freelist
@@ -194,22 +261,30 @@ pub fn solver_from_global<'a>(
                 .fwd_mut()
                 .insert(solver, global);
 
-            emit_proof_step = true;
+            new_solver_var = true;
 
             solver
         });
 
-    variables.solver_watermark = max(variables.solver_watermark, solver.index() + 1);
+    if new_solver_var {
+        let new_watermark = solver.index() + 1;
+        if new_watermark > variables.solver_watermark {
+            variables.solver_watermark = new_watermark;
+            set_var_count(ctx.borrow(), new_watermark);
+        }
 
-    if emit_proof_step && ctx.part(ProofP).native_format() {
-        proof::add_step(
-            ctx.borrow(),
-            false,
-            &ProofStep::SolverVarName {
-                global,
-                solver: Some(solver),
-            },
-        );
+        initialize_solver_var(ctx.borrow(), solver, global);
+
+        if ctx.part(ProofP).native_format() {
+            proof::add_step(
+                ctx.borrow(),
+                false,
+                &ProofStep::SolverVarName {
+                    global,
+                    solver: Some(solver),
+                },
+            );
+        }
     }
 
     solver
@@ -219,7 +294,19 @@ pub fn solver_from_global<'a>(
 ///
 /// Allocates global and solver variables as requried.
 pub fn solver_from_user<'a>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut AnalyzeConflictP,
+        mut AssignmentP,
+        mut BinaryClausesP,
+        mut ImplGraphP,
+        mut ProofP<'a>,
+        mut SolverStateP,
+        mut TmpFlagsP,
+        mut VariablesP,
+        mut VsidsP,
+        mut WatchlistsP,
+    ),
     user: Var,
 ) -> Var {
     let global = global_from_user(ctx.borrow(), user);
@@ -246,7 +333,19 @@ pub fn new_user_var(mut ctx: partial!(Context, mut VariablesP)) -> Var {
 
 /// Maps a slice of user lits to solver lits using [`solver_from_user`].
 pub fn solver_from_user_lits<'a>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut AnalyzeConflictP,
+        mut AssignmentP,
+        mut BinaryClausesP,
+        mut ImplGraphP,
+        mut ProofP<'a>,
+        mut SolverStateP,
+        mut TmpFlagsP,
+        mut VariablesP,
+        mut VsidsP,
+        mut WatchlistsP,
+    ),
     solver_lits: &mut Vec<Lit>,
     user_lits: &[Lit],
 ) {
@@ -256,4 +355,81 @@ pub fn solver_from_user_lits<'a>(
             .iter()
             .map(|user_lit| user_lit.map_var(|user_var| solver_from_user(ctx.borrow(), user_var))),
     )
+}
+
+/// Changes the sampling mode of a global variable.
+///
+/// If the mode is changed to hidden, an existing user mapping is automatically removed.
+pub fn set_sampling_mode(
+    mut ctx: partial!(Context, mut VariablesP),
+    global: Var,
+    mode: SamplingMode,
+) {
+    let variables = ctx.part_mut(VariablesP);
+
+    variables.var_data[global.index()].sampling_mode = mode;
+
+    if mode == SamplingMode::Hide {
+        if let Some(user) = variables.user_from_global_mut().remove(global) {
+            variables.user_freelist.push(user);
+        }
+    }
+
+    // TODO this also needs to inform Proof
+}
+
+/// Initialize a newly allocated solver variable
+pub fn initialize_solver_var(
+    mut ctx: partial!(
+        Context,
+        mut AssignmentP,
+        mut ImplGraphP,
+        mut VsidsP,
+        VariablesP
+    ),
+    solver: Var,
+    global: Var,
+) {
+    let (variables, mut ctx) = ctx.split_part(VariablesP);
+    let data = &variables.var_data[global.index()];
+
+    // This recovers the state of a variable that has a known value and was already propagated. This
+    // is important so that when new clauses containing this variable are added, load_clause knows
+    // to reenqueue the assignment.
+    ctx.part_mut(AssignmentP).set_var(solver, data.unit);
+    if data.unit.is_some() {
+        ctx.part_mut(ImplGraphP).update_removed_unit(solver);
+    }
+    decision::initialize_var(ctx.borrow(), solver, data.unit.is_none());
+
+    // TODO unhiding beyond unit clauses
+}
+
+/// Remove a solver var.
+///
+/// If the variable is isolated and hidden, the global variable is also removed.
+pub fn remove_solver_var(mut ctx: partial!(Context, mut VariablesP, mut VsidsP), solver: Var) {
+    decision::remove_var(ctx.borrow(), solver);
+
+    let variables = ctx.part_mut(VariablesP);
+
+    let global = variables
+        .global_from_solver_mut()
+        .remove(solver)
+        .expect("no existing global var for solver var");
+
+    let data = &mut variables.var_data[global.index()];
+
+    if data.sampling_mode == SamplingMode::Hide && data.isolated {
+        data.deleted = true;
+        // The user isn't interested in the variable and it cannot influence other variables
+        debug_assert!(variables.user_from_global().get(global).is_none());
+
+        // TODO emit a deletion step if the variable has a unit clause.
+
+        // TODO deletion of unit clauses isn't supported by most DRAT checkers, needs an extra
+        // variable mapping instead.
+
+        // TODO make the global variable available again by adding it to the freelist
+    }
 }
