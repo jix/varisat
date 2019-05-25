@@ -175,10 +175,15 @@ impl Variables {
 ///
 /// If no matching global variable exists (can only happen if the user previously hid the
 /// variable) a new global variable is allocated.
-pub fn global_from_user(mut ctx: partial!(Context, mut VariablesP), user: Var) -> Var {
+pub fn global_from_user<'a>(
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
+    user: Var,
+) -> Var {
     let variables = ctx.part_mut(VariablesP);
 
     variables.user_watermark = max(variables.user_watermark, user.index() + 1);
+
+    let mut new_mapping = false;
 
     let global = variables
         .global_from_user
@@ -197,12 +202,11 @@ pub fn global_from_user(mut ctx: partial!(Context, mut VariablesP), user: Var) -
 
             // And add the new mapping.
             variables.global_from_user.fwd_mut().insert(global, user);
+            new_mapping = true;
 
             if variables.var_data.len() > global.index() {
                 variables.var_data[global.index()] = VarData::user_default();
             } // else resize below
-
-            // TODO we need to inform Proof about the new mapping
 
             global
         });
@@ -215,6 +219,17 @@ pub fn global_from_user(mut ctx: partial!(Context, mut VariablesP), user: Var) -
 
     // Now we update the global watermark to make sure that this mapping is not remapped.
     variables.global_watermark = max(variables.global_watermark, global.index() + 1);
+
+    if new_mapping {
+        proof::add_step(
+            ctx.borrow(),
+            false,
+            &ProofStep::UserVarName {
+                global,
+                user: Some(user),
+            },
+        );
+    }
 
     global
 }
@@ -318,7 +333,9 @@ pub fn solver_from_user<'a>(
 ///
 /// This is either a user variable above any user variable used so far, or a user variable that was
 /// previously hidden by the user.
-pub fn new_user_var(mut ctx: partial!(Context, mut VariablesP)) -> Var {
+pub fn new_user_var<'a>(
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
+) -> Var {
     let variables = ctx.part_mut(VariablesP);
     let user_var = variables.user_freelist.pop().unwrap_or_else(|| {
         let user_var = Var::from_index(variables.user_watermark);
@@ -360,12 +377,16 @@ pub fn solver_from_user_lits<'a>(
 /// Changes the sampling mode of a global variable.
 ///
 /// If the mode is changed to hidden, an existing user mapping is automatically removed.
-pub fn set_sampling_mode(
-    mut ctx: partial!(Context, mut VariablesP),
+pub fn set_sampling_mode<'a>(
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
     global: Var,
     mode: SamplingMode,
 ) {
     let variables = ctx.part_mut(VariablesP);
+
+    if variables.var_data[global.index()].sampling_mode == mode {
+        return;
+    }
 
     variables.var_data[global.index()].sampling_mode = mode;
 
@@ -373,9 +394,15 @@ pub fn set_sampling_mode(
         if let Some(user) = variables.user_from_global_mut().remove(global) {
             variables.user_freelist.push(user);
         }
+
+        proof::add_step(
+            ctx.borrow(),
+            false,
+            &ProofStep::UserVarName { global, user: None },
+        );
     }
 
-    // TODO this also needs to inform Proof
+    // TODO this also needs to inform Proof when changing between witness and sample
 }
 
 /// Initialize a newly allocated solver variable

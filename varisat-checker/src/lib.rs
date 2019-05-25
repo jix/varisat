@@ -239,9 +239,16 @@ enum DeleteClauseResult {
     Removed,
 }
 
+/// Data for each literal.
 #[derive(Clone, Default)]
 struct LitData {
     clause_count: usize,
+}
+
+/// Data for each variable.
+#[derive(Clone, Default)]
+struct VarData {
+    user_var: Option<Var>,
 }
 
 /// A checker for unsatisfiability proofs in the native varisat format.
@@ -260,6 +267,8 @@ pub struct Checker<'a> {
     unit_clauses: Vec<Option<UnitClause>>,
     /// Information about literals in the current formula.
     lit_data: Vec<LitData>,
+    /// Information about variables in the current formula.
+    var_data: Vec<VarData>,
     /// Stores overwritten values in `unit_clauses` to undo assignments.
     trail: Vec<(Lit, Option<UnitClause>)>,
     /// Whether unsatisfiability was proven.
@@ -295,6 +304,10 @@ pub struct Checker<'a> {
     assumptions: Vec<Lit>,
     /// Current mapping from global var names to solver var names, used for hashing.
     solver_var_names: HashMap<Var, Var>,
+    /// User var names in used.
+    ///
+    /// This is used to check for colliding mappings which are not allowed.
+    used_user_vars: HashSet<Var>,
 }
 
 impl<'a> Default for Checker<'a> {
@@ -307,6 +320,7 @@ impl<'a> Default for Checker<'a> {
             clauses: Default::default(),
             unit_clauses: vec![],
             lit_data: vec![],
+            var_data: vec![],
             trail: vec![],
             unsat: false,
             ended: false,
@@ -322,6 +336,7 @@ impl<'a> Default for Checker<'a> {
             previous_irred_clause_lits: vec![],
             assumptions: vec![],
             solver_var_names: Default::default(),
+            used_user_vars: Default::default(),
         }
     }
 }
@@ -359,6 +374,10 @@ impl<'a> Checker<'a> {
             )?;
             self.next_clause_id += 1;
             return Ok(());
+        }
+
+        for &lit in tmp.iter() {
+            self.ensure_sampling_var(lit.var())?;
         }
 
         let (id, added) = self.store_clause(&tmp, false);
@@ -420,12 +439,78 @@ impl<'a> Checker<'a> {
         Ok(())
     }
 
-    /// Modify literal data
-    fn lit_data_mut(&mut self, lit: Lit) -> &mut LitData {
-        if self.lit_data.len() <= lit.code() {
-            self.lit_data.resize(lit.code() + 1, LitData::default());
+    /// Check that var is a sampling user var and create new variables as necessary.
+    fn ensure_sampling_var(&mut self, var: Var) -> Result<(), CheckerError> {
+        self.ensure_var(var);
+        // TODO actually check the sampling mode too
+        Ok(())
+    }
+
+    /// Ensure that a variable is present.
+    fn ensure_var(&mut self, var: Var) {
+        if self.var_data.len() <= var.index() {
+            self.var_data.reserve(var.index() - self.var_data.len());
+            // We create variables with the default identitiy mapping from user variables. If a
+            // variable isn't use as user variable, the proof will contain a step to remove this
+            // mapping.
+            for index in self.var_data.len()..=var.index() {
+                let user_var = Var::from_index(index);
+                let mut var_data = VarData::default();
+                var_data.user_var = Some(user_var);
+                // used_user_vars cannot already contain this mapping
+                self.used_user_vars.insert(user_var);
+                self.var_data.push(var_data);
+            }
+            self.lit_data
+                .resize((var.index() + 1) * 2, LitData::default())
         }
-        &mut self.lit_data[lit.code()]
+    }
+
+    /// Add a user/global var mapping.
+    fn add_user_mapping(&mut self, global_var: Var, user_var: Var) -> Result<(), CheckerError> {
+        self.ensure_var(global_var);
+
+        if user_var.index() >= self.var_data.len() || self.used_user_vars.contains(&user_var) {
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!("user name {:?} used for two different variables", user_var),
+            ));
+        }
+
+        let var_data = &mut self.var_data[global_var.index()];
+        if var_data.user_var.is_some() {
+            // TODO check if actually in use, otherwise this is OK
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!("change of user name for in use varible {:?}", global_var),
+            ));
+        }
+
+        var_data.user_var = Some(user_var);
+
+        // TODO sampling mode to witness if in use
+
+        self.used_user_vars.insert(user_var);
+
+        Ok(())
+    }
+
+    /// Remove a user/global var mapping.
+    fn remove_user_mapping(&mut self, global_var: Var) -> Result<(), CheckerError> {
+        self.ensure_var(global_var);
+
+        let var_data = &mut self.var_data[global_var.index()];
+        if let Some(user_var) = var_data.user_var {
+            self.used_user_vars.remove(&user_var);
+            var_data.user_var = None;
+        } else {
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!("no user name to remove for variable {:?}", global_var),
+            ));
+        }
+
+        Ok(())
     }
 
     /// Compute a clause hash of the current bit size
@@ -499,7 +584,8 @@ impl<'a> Checker<'a> {
                 self.next_clause_id += 1;
 
                 for &lit in lits.iter() {
-                    self.lit_data_mut(lit).clause_count += 1;
+                    self.ensure_var(lit.var());
+                    self.lit_data[lit.code()].clause_count += 1;
                 }
 
                 (id, StoreClauseResult::New)
@@ -616,7 +702,7 @@ impl<'a> Checker<'a> {
 
         if let Some((_, DeleteClauseResult::Removed)) = result {
             for &lit in lits.iter() {
-                self.lit_data_mut(lit).clause_count -= 1;
+                self.lit_data[lit.code()].clause_count -= 1;
             }
         }
 
@@ -855,6 +941,14 @@ impl<'a> Checker<'a> {
                 self.buffered_solver_var_names.push((global, solver));
                 Ok(())
             }
+            ProofStep::UserVarName { global, user } => {
+                if let Some(user) = user {
+                    self.add_user_mapping(global, user)?;
+                } else {
+                    self.remove_user_mapping(global)?;
+                }
+                Ok(())
+            }
             ProofStep::AddClause { clause } => self.add_clause(clause),
             ProofStep::AtClause {
                 redundant,
@@ -872,6 +966,9 @@ impl<'a> Checker<'a> {
             }
             ProofStep::Model(model) => self.check_model_step(model),
             ProofStep::Assumptions(assumptions) => {
+                for &lit in assumptions.iter() {
+                    self.ensure_sampling_var(lit.var())?;
+                }
                 copy_canonical(&mut self.assumptions, assumptions);
                 Self::process_step(
                     &mut self.processors,
