@@ -15,6 +15,7 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
             write_literals(target, &clause[..])?;
         }
         ProofStep::SolverVarName { .. }
+        | ProofStep::UserVarName { .. }
         | ProofStep::UnitClauses(..)
         | ProofStep::ChangeHashBits(..)
         | ProofStep::Model(..)
@@ -44,6 +45,7 @@ pub fn write_binary_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -
             write_binary_literals(target, &clause[..])?;
         }
         ProofStep::SolverVarName { .. }
+        | ProofStep::UserVarName { .. }
         | ProofStep::UnitClauses(..)
         | ProofStep::ChangeHashBits(..)
         | ProofStep::Model(..)

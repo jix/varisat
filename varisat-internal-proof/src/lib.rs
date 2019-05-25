@@ -57,6 +57,17 @@ pub enum ProofStep<'a> {
     ///
     /// For proof checking, the solver variable names are only used for hash computations.
     SolverVarName { global: Var, solver: Option<Var> },
+    /// Update the global to user var mapping.
+    ///
+    /// A variable without user mapping is considered hidden by the checker. When a variable without
+    /// user mapping gets a user mapping, the sampling mode is initialized to witness.
+    ///
+    /// It's not allowed to change a variable from one user name to another when the variable is in
+    /// use.
+    ///
+    /// Clause additions and assumptions are only allowed to use variables with user mappings (and a
+    /// non-witness sampling mode).
+    UserVarName { global: Var, user: Option<Var> },
     /// Add a new input clause.
     ///
     /// This is only emitted for clauses added incrementally after an initial solve call.
@@ -118,6 +129,7 @@ impl<'a> ProofStep<'a> {
             | ProofStep::FailedAssumptions { .. } => true,
 
             ProofStep::SolverVarName { .. }
+            | ProofStep::UserVarName { .. }
             | ProofStep::AddClause { .. }
             | ProofStep::DeleteClause { .. }
             | ProofStep::ChangeHashBits(..)

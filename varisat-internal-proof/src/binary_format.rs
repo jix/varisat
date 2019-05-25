@@ -23,6 +23,8 @@ step_codes!(
     0,
     CODE_SOLVER_VAR_NAME_UPDATE,
     CODE_SOLVER_VAR_NAME_REMOVE,
+    CODE_USER_VAR_NAME_UPDATE,
+    CODE_USER_VAR_NAME_REMOVE,
     CODE_AT_CLAUSE_RED,
     CODE_AT_CLAUSE_IRRED,
     CODE_UNIT_CLAUSES,
@@ -50,6 +52,17 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
                 write_u64(&mut *target, solver.index() as u64)?;
             } else {
                 write_u64(&mut *target, CODE_SOLVER_VAR_NAME_REMOVE)?;
+                write_u64(&mut *target, global.index() as u64)?;
+            }
+        }
+
+        ProofStep::UserVarName { global, user } => {
+            if let Some(user) = user {
+                write_u64(&mut *target, CODE_USER_VAR_NAME_UPDATE)?;
+                write_u64(&mut *target, global.index() as u64)?;
+                write_u64(&mut *target, user.index() as u64)?;
+            } else {
+                write_u64(&mut *target, CODE_USER_VAR_NAME_REMOVE)?;
                 write_u64(&mut *target, global.index() as u64)?;
             }
         }
@@ -148,6 +161,15 @@ impl Parser {
                     global,
                     solver: None,
                 })
+            }
+            CODE_USER_VAR_NAME_UPDATE => {
+                let global = Var::from_index(read_u64(&mut *source)? as usize);
+                let user = Some(Var::from_index(read_u64(&mut *source)? as usize));
+                Ok(ProofStep::UserVarName { global, user })
+            }
+            CODE_USER_VAR_NAME_REMOVE => {
+                let global = Var::from_index(read_u64(&mut *source)? as usize);
+                Ok(ProofStep::UserVarName { global, user: None })
             }
             CODE_ADD_CLAUSE => {
                 read_literals(&mut *source, &mut self.lit_buf)?;
