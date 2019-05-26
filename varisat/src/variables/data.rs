@@ -44,6 +44,17 @@ pub struct VarData {
     pub deleted: bool,
 }
 
+impl Default for VarData {
+    fn default() -> VarData {
+        VarData {
+            sampling_mode: SamplingMode::Hide,
+            unit: None,
+            isolated: true,
+            deleted: true,
+        }
+    }
+}
+
 impl VarData {
     /// Default variable data for a new user variable.
     pub fn user_default() -> VarData {
