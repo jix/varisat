@@ -470,18 +470,7 @@ impl<'a> Checker<'a> {
     /// Ensure that a variable is present.
     fn ensure_var(&mut self, var: Var) {
         if self.var_data.len() <= var.index() {
-            self.var_data.reserve(var.index() - self.var_data.len());
-            // We create variables with the default identitiy mapping from user variables. If a
-            // variable isn't use as user variable, the proof will contain a step to remove this
-            // mapping.
-            for index in self.var_data.len()..=var.index() {
-                let user_var = Var::from_index(index);
-                let mut var_data = VarData::default();
-                var_data.user_var = Some(user_var);
-                // used_user_vars cannot already contain this mapping
-                self.used_user_vars.insert(user_var);
-                self.var_data.push(var_data);
-            }
+            self.var_data.resize(var.index() + 1, VarData::default());
             self.lit_data
                 .resize((var.index() + 1) * 2, LitData::default());
             self.unit_clauses.resize(var.index() + 1, None);
@@ -499,9 +488,10 @@ impl<'a> Checker<'a> {
             ));
         }
 
+        // TODO if the global variable is already in use, we need to emit a checked step
+
         let var_data = &mut self.var_data[global_var.index()];
         if var_data.user_var.is_some() {
-            // TODO check if actually in use, otherwise this is OK
             return Err(CheckerError::check_failed(
                 self.step,
                 format!("change of user name for in use varible {:?}", global_var),

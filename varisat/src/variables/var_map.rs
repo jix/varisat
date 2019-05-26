@@ -8,25 +8,15 @@ const NO_VAR_IDX: LitIdx = Var::max_count() as LitIdx;
 /// A mapping from variables to variables.
 #[derive(Default)]
 pub struct VarMap {
-    default_identity: bool,
     mapping: Vec<LitIdx>,
 }
 
 impl VarMap {
-    /// Identity mapping over all variables.
-    pub fn identity() -> VarMap {
-        VarMap {
-            default_identity: true,
-            mapping: vec![],
-        }
-    }
-
     /// Look up a variable in the mapping
     pub fn get(&self, from: Var) -> Option<Var> {
         match self.mapping.get(from.index()).cloned() {
             Some(index) if index == NO_VAR_IDX => None,
             Some(index) => Some(Var::from_index(index as usize)),
-            None if self.default_identity => Some(from),
             None => None,
         }
     }
@@ -38,29 +28,25 @@ impl VarMap {
     ///
     /// This has the precondition that `from` is not mapped.
     pub fn insert(&mut self, into: Var, from: Var) {
-        self.ensure_mapping(from);
+        if self.mapping.len() <= from.index() {
+            self.mapping.resize(from.index() + 1, NO_VAR_IDX);
+        }
         debug_assert_eq!(self.mapping[from.index()], NO_VAR_IDX);
-        self.mapping[from.index()] = into.index() as LitIdx
+        self.mapping[from.index()] = into.index() as LitIdx;
     }
 
     /// Remove a mapping.
     ///
     /// Does nothing if `from` is not mapped.
     pub fn remove(&mut self, from: Var) {
-        self.ensure_mapping(from);
-        self.mapping[from.index()] = NO_VAR_IDX;
+        if self.mapping.len() > from.index() {
+            self.mapping[from.index()] = NO_VAR_IDX;
+        }
     }
 
-    /// Resize the internal mapping to cover `from`.
-    fn ensure_mapping(&mut self, from: Var) {
-        if self.mapping.len() <= from.index() {
-            if self.default_identity {
-                let range = (self.mapping.len() as LitIdx)..((from.index() + 1) as LitIdx);
-                self.mapping.extend(range);
-            } else {
-                self.mapping.resize(from.index() + 1, NO_VAR_IDX);
-            }
-        }
+    /// One above the largest index that is mapped.
+    pub fn watermark(&self) -> usize {
+        self.mapping.len()
     }
 }
 
@@ -75,14 +61,6 @@ pub struct VarBiMap {
 }
 
 impl VarBiMap {
-    /// Identity mapping over all variables.
-    pub fn identity() -> VarBiMap {
-        VarBiMap {
-            fwd: VarMap::identity(),
-            bwd: VarMap::identity(),
-        }
-    }
-
     /// Access the forward mapping.
     pub fn fwd(&self) -> &VarMap {
         &self.fwd
