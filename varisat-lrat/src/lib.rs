@@ -65,6 +65,11 @@ impl<'a> ProofProcessor for WriteLrat<'a> {
                 id,
                 keep_as_redundant,
                 ..
+            }
+            | &CheckedProofStep::DeleteRatClause {
+                id,
+                keep_as_redundant,
+                ..
             } => {
                 if !keep_as_redundant {
                     self.open_delete()?;

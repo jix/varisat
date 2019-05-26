@@ -435,7 +435,10 @@ pub fn initialize_solver_var(
 /// Remove a solver var.
 ///
 /// If the variable is isolated and hidden, the global variable is also removed.
-pub fn remove_solver_var(mut ctx: partial!(Context, mut VariablesP, mut VsidsP), solver: Var) {
+pub fn remove_solver_var<'a>(
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP, mut VsidsP),
+    solver: Var,
+) {
     decision::remove_var(ctx.borrow(), solver);
 
     let variables = ctx.part_mut(VariablesP);
@@ -447,16 +450,27 @@ pub fn remove_solver_var(mut ctx: partial!(Context, mut VariablesP, mut VsidsP),
 
     let data = &mut variables.var_data[global.index()];
 
+    // TODO this check should also be done when a variable is hidden
     if data.sampling_mode == SamplingMode::Hide && data.isolated {
         data.deleted = true;
         // The user isn't interested in the variable and it cannot influence other variables
         debug_assert!(variables.user_from_global().get(global).is_none());
 
-        // TODO emit a deletion step if the variable has a unit clause.
+        proof::add_step(ctx.borrow(), false, &ProofStep::DeleteVar { var: global });
 
         // TODO deletion of unit clauses isn't supported by most DRAT checkers, needs an extra
         // variable mapping instead.
 
-        // TODO make the global variable available again by adding it to the freelist
+        ctx.part_mut(VariablesP).global_freelist.push(global);
+    } else {
+        // Remove the mapping, keep the global var
+        proof::add_step(
+            ctx.borrow(),
+            false,
+            &ProofStep::SolverVarName {
+                global,
+                solver: None,
+            },
+        );
     }
 }
