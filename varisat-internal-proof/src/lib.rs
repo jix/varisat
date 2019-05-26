@@ -72,6 +72,11 @@ pub enum ProofStep<'a> {
     ///
     /// This is only allowed for variables that are isolated and hidden.
     DeleteVar { var: Var },
+    /// Changes the sampling mode of a variable.
+    ///
+    /// This is only used to change between Sample and Witness. Hidden is managed by adding or
+    /// removing a user var name.
+    ChangeSamplingMode { var: Var, sample: bool },
     /// Add a new input clause.
     ///
     /// This is only emitted for clauses added incrementally after an initial solve call.
@@ -135,6 +140,7 @@ impl<'a> ProofStep<'a> {
             ProofStep::SolverVarName { .. }
             | ProofStep::UserVarName { .. }
             | ProofStep::DeleteVar { .. }
+            | ProofStep::ChangeSamplingMode { .. }
             | ProofStep::AddClause { .. }
             | ProofStep::DeleteClause { .. }
             | ProofStep::ChangeHashBits(..)

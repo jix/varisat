@@ -261,10 +261,27 @@ struct LitData {
     clause_count: usize,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum SamplingMode {
+    Sample,
+    Witness,
+    Hide,
+}
+
 /// Data for each variable.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct VarData {
     user_var: Option<Var>,
+    sampling_mode: SamplingMode,
+}
+
+impl Default for VarData {
+    fn default() -> VarData {
+        VarData {
+            user_var: None,
+            sampling_mode: SamplingMode::Sample,
+        }
+    }
 }
 
 /// A checker for unsatisfiability proofs in the native varisat format.
@@ -477,6 +494,18 @@ impl<'a> Checker<'a> {
         }
     }
 
+    fn var_in_use(&self, var: Var) -> bool {
+        if self.unit_clauses[var.index()].is_some() {
+            return true;
+        }
+        for &polarity in &[false, true] {
+            if self.lit_data[var.lit(polarity).code()].clause_count > 0 {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Add a user/global var mapping.
     fn add_user_mapping(&mut self, global_var: Var, user_var: Var) -> Result<(), CheckerError> {
         self.ensure_var(global_var);
@@ -488,7 +517,19 @@ impl<'a> Checker<'a> {
             ));
         }
 
-        // TODO if the global variable is already in use, we need to emit a checked step
+        if self.var_in_use(global_var) {
+            if self.var_data[global_var.index()].sampling_mode == SamplingMode::Hide {
+                return Err(CheckerError::check_failed(
+                    self.step,
+                    format!(
+                        "user name added to variable {:?} which is still hidden",
+                        global_var
+                    ),
+                ));
+            }
+
+            // TODO we need to emit a checked step
+        }
 
         let var_data = &mut self.var_data[global_var.index()];
         if var_data.user_var.is_some() {
@@ -499,8 +540,6 @@ impl<'a> Checker<'a> {
         }
 
         var_data.user_var = Some(user_var);
-
-        // TODO sampling mode to witness if in use
 
         self.used_user_vars.insert(user_var);
 
@@ -515,6 +554,7 @@ impl<'a> Checker<'a> {
         if let Some(user_var) = var_data.user_var {
             self.used_user_vars.remove(&user_var);
             var_data.user_var = None;
+            var_data.sampling_mode = SamplingMode::Hide;
         } else {
             return Err(CheckerError::check_failed(
                 self.step,
@@ -959,6 +999,9 @@ impl<'a> Checker<'a> {
                 Ok(())
             }
             ProofStep::DeleteVar { var } => self.check_delete_var_step(var),
+            ProofStep::ChangeSamplingMode { var, sample } => {
+                self.check_change_sampling_mode(var, sample)
+            }
             ProofStep::AddClause { clause } => self.add_clause(clause),
             ProofStep::AtClause {
                 redundant,
@@ -1049,6 +1092,25 @@ impl<'a> Checker<'a> {
             )?;
 
             self.unit_clauses[var.index()] = None;
+            self.var_data[var.index()] = VarData::default();
+        }
+
+        Ok(())
+    }
+
+    /// Check an ChangeSamplingMode step
+    fn check_change_sampling_mode(&mut self, var: Var, sample: bool) -> Result<(), CheckerError> {
+        self.ensure_var(var);
+        let var_data = &mut self.var_data[var.index()];
+        let sampling_mode = if sample {
+            SamplingMode::Sample
+        } else {
+            SamplingMode::Witness
+        };
+
+        if var_data.sampling_mode != sampling_mode {
+            var_data.sampling_mode = sampling_mode;
+            // TODO emit checked step
         }
 
         Ok(())

@@ -26,6 +26,8 @@ step_codes!(
     CODE_USER_VAR_NAME_UPDATE,
     CODE_USER_VAR_NAME_REMOVE,
     CODE_DELETE_VAR,
+    CODE_CHANGE_SAMPLING_MODE_SAMPLE,
+    CODE_CHANGE_SAMPLING_MODE_WITNESS,
     CODE_AT_CLAUSE_RED,
     CODE_AT_CLAUSE_IRRED,
     CODE_UNIT_CLAUSES,
@@ -70,6 +72,15 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
 
         ProofStep::DeleteVar { var } => {
             write_u64(&mut *target, CODE_DELETE_VAR)?;
+            write_u64(&mut *target, var.index() as u64)?;
+        }
+
+        ProofStep::ChangeSamplingMode { var, sample } => {
+            if sample {
+                write_u64(&mut *target, CODE_CHANGE_SAMPLING_MODE_SAMPLE)?;
+            } else {
+                write_u64(&mut *target, CODE_CHANGE_SAMPLING_MODE_WITNESS)?;
+            }
             write_u64(&mut *target, var.index() as u64)?;
         }
 
@@ -180,6 +191,13 @@ impl Parser {
             CODE_DELETE_VAR => {
                 let var = Var::from_index(read_u64(&mut *source)? as usize);
                 Ok(ProofStep::DeleteVar { var })
+            }
+            CODE_CHANGE_SAMPLING_MODE_SAMPLE | CODE_CHANGE_SAMPLING_MODE_WITNESS => {
+                let var = Var::from_index(read_u64(&mut *source)? as usize);
+                Ok(ProofStep::ChangeSamplingMode {
+                    var,
+                    sample: code == CODE_CHANGE_SAMPLING_MODE_SAMPLE,
+                })
             }
             CODE_ADD_CLAUSE => {
                 read_literals(&mut *source, &mut self.lit_buf)?;
