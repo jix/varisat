@@ -111,9 +111,10 @@ impl MapStep {
 
             ProofStep::SolverVarName { .. }
             | ProofStep::UserVarName { .. }
-            | ProofStep::DeleteVar { .. } => {
+            | ProofStep::DeleteVar { .. }
+            | ProofStep::ChangeSamplingMode { .. } => {
                 // while these steps do contain variables, they are used to update the mapping, so
-                // it shouldn't be mapped itself.
+                // they shouldn't be mapped themselves.
                 step.clone()
             }
         }

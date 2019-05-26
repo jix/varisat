@@ -381,20 +381,58 @@ pub fn solver_from_user_lits<'a>(
 /// Changes the sampling mode of a global variable.
 ///
 /// If the mode is changed to hidden, an existing user mapping is automatically removed.
+///
+/// If the mode is changed from hidden, a new user mapping is allocated and the user variable is
+/// returned.
 pub fn set_sampling_mode<'a>(
     mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
     global: Var,
     mode: SamplingMode,
-) {
+) -> Option<Var> {
     let variables = ctx.part_mut(VariablesP);
 
-    if variables.var_data[global.index()].sampling_mode == mode {
-        return;
+    let var_data = &mut variables.var_data[global.index()];
+
+    assert!(!var_data.deleted);
+
+    let previous_mode = var_data.sampling_mode;
+
+    if previous_mode == mode {
+        return None;
     }
 
-    variables.var_data[global.index()].sampling_mode = mode;
+    var_data.sampling_mode = mode;
 
-    if mode == SamplingMode::Hide {
+    let mut result = None;
+
+    if mode != SamplingMode::Hide {
+        proof::add_step(
+            ctx.borrow(),
+            false,
+            &ProofStep::ChangeSamplingMode {
+                var: global,
+                sample: mode == SamplingMode::Sample,
+            },
+        );
+    }
+    let variables = ctx.part_mut(VariablesP);
+
+    if previous_mode == SamplingMode::Hide {
+        let user = variables.next_unmapped_user();
+        variables.user_from_global_mut().insert(user, global);
+        variables.user_freelist.remove(&user);
+
+        proof::add_step(
+            ctx.borrow(),
+            false,
+            &ProofStep::UserVarName {
+                global,
+                user: Some(user),
+            },
+        );
+
+        result = Some(user);
+    } else if mode == SamplingMode::Hide {
         if let Some(user) = variables.user_from_global_mut().remove(global) {
             variables.user_freelist.insert(user);
         }
@@ -408,8 +446,7 @@ pub fn set_sampling_mode<'a>(
         delete_global_if_unused(ctx.borrow(), global);
     }
 
-    // TODO this also needs to inform Proof when changing between witness and sample
-    // TODO this needs to allocate a user var when a hidden variable is made user visible
+    result
 }
 
 /// Initialize a newly allocated solver variable
