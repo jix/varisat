@@ -68,6 +68,10 @@ pub enum ProofStep<'a> {
     /// Clause additions and assumptions are only allowed to use variables with user mappings (and a
     /// non-witness sampling mode).
     UserVarName { global: Var, user: Option<Var> },
+    /// Delete a variable.
+    ///
+    /// This is only allowed for variables that are isolated and hidden.
+    DeleteVar { var: Var },
     /// Add a new input clause.
     ///
     /// This is only emitted for clauses added incrementally after an initial solve call.
@@ -130,6 +134,7 @@ impl<'a> ProofStep<'a> {
 
             ProofStep::SolverVarName { .. }
             | ProofStep::UserVarName { .. }
+            | ProofStep::DeleteVar { .. }
             | ProofStep::AddClause { .. }
             | ProofStep::DeleteClause { .. }
             | ProofStep::ChangeHashBits(..)

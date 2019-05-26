@@ -25,6 +25,7 @@ step_codes!(
     CODE_SOLVER_VAR_NAME_REMOVE,
     CODE_USER_VAR_NAME_UPDATE,
     CODE_USER_VAR_NAME_REMOVE,
+    CODE_DELETE_VAR,
     CODE_AT_CLAUSE_RED,
     CODE_AT_CLAUSE_IRRED,
     CODE_UNIT_CLAUSES,
@@ -65,6 +66,11 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
                 write_u64(&mut *target, CODE_USER_VAR_NAME_REMOVE)?;
                 write_u64(&mut *target, global.index() as u64)?;
             }
+        }
+
+        ProofStep::DeleteVar { var } => {
+            write_u64(&mut *target, CODE_DELETE_VAR)?;
+            write_u64(&mut *target, var.index() as u64)?;
         }
 
         ProofStep::AddClause { clause } => {
@@ -170,6 +176,10 @@ impl Parser {
             CODE_USER_VAR_NAME_REMOVE => {
                 let global = Var::from_index(read_u64(&mut *source)? as usize);
                 Ok(ProofStep::UserVarName { global, user: None })
+            }
+            CODE_DELETE_VAR => {
+                let var = Var::from_index(read_u64(&mut *source)? as usize);
+                Ok(ProofStep::DeleteVar { var })
             }
             CODE_ADD_CLAUSE => {
                 read_literals(&mut *source, &mut self.lit_buf)?;

@@ -41,6 +41,7 @@ pub fn clause_count_delta(step: &ProofStep) -> isize {
         }
         ProofStep::SolverVarName { .. }
         | ProofStep::UserVarName { .. }
+        | ProofStep::DeleteVar { .. }
         | ProofStep::UnitClauses(..)
         | ProofStep::ChangeHashBits(..)
         | ProofStep::Model(..)

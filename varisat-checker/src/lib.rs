@@ -107,6 +107,16 @@ pub enum CheckedProofStep<'a> {
         clause: &'a [Lit],
         propagations: &'a [u64],
     },
+    /// Deletion of a resolution asymmetric tautology w.r.t the remaining irredundant caluses.
+    ///
+    /// The pivot is always a hidden variable.
+    DeleteRatClause {
+        id: u64,
+        keep_as_redundant: bool,
+        clause: &'a [Lit],
+        pivot: Lit,
+        propagations: &'a ResolutionPropagations,
+    },
     /// Make a redundant clause irredundant.
     MakeIrredundant { id: u64, clause: &'a [Lit] },
     /// A (partial) assignment that satisfies all clauses and assumptions.
@@ -121,6 +131,12 @@ pub enum CheckedProofStep<'a> {
         failed_core: &'a [Lit],
         propagations: &'a [u64],
     },
+}
+
+/// A list of clauses to resolve and propagations to show that the resolvent is an AT.
+#[derive(Debug)]
+pub struct ResolutionPropagations {
+    // TODO implement ResolutionPropagations
 }
 
 /// Implement to process proof steps.
@@ -294,6 +310,10 @@ pub struct Checker<'a> {
     hash_bits: u32,
     /// Changed solver names that are not yet reflected in the checkers current clause hashes.
     buffered_solver_var_names: Vec<(Var, Option<Var>)>,
+    /// Does buffered_solver_var_names contain a new name?
+    ///
+    /// If it contains only deletes, there is no need to rehash
+    rename_in_buffered_solver_var_names: bool,
     /// Last added irredundant clause id.
     ///
     /// Sorted and free of duplicates.
@@ -332,6 +352,7 @@ impl<'a> Default for Checker<'a> {
             tmp: vec![],
             hash_bits: 64,
             buffered_solver_var_names: vec![],
+            rename_in_buffered_solver_var_names: false,
             previous_irred_clause_id: None,
             previous_irred_clause_lits: vec![],
             assumptions: vec![],
@@ -462,7 +483,8 @@ impl<'a> Checker<'a> {
                 self.var_data.push(var_data);
             }
             self.lit_data
-                .resize((var.index() + 1) * 2, LitData::default())
+                .resize((var.index() + 1) * 2, LitData::default());
+            self.unit_clauses.resize(var.index() + 1, None);
         }
     }
 
@@ -528,9 +550,7 @@ impl<'a> Checker<'a> {
 
     /// Value of a literal if known from unit clauses.
     fn lit_value(&self, lit: Lit) -> Option<(bool, UnitClause)> {
-        self.unit_clauses
-            .get(lit.index())
-            .and_then(|&value| value)
+        self.unit_clauses[lit.index()]
             .map(|unit_clause| (unit_clause.value ^ lit.is_negative(), unit_clause))
     }
 
@@ -541,6 +561,10 @@ impl<'a> Checker<'a> {
     /// Returns the id of the added clause and indicates whether the clause is new or changed from
     /// redundant to irredundant.
     fn store_clause(&mut self, lits: &[Lit], redundant: bool) -> (u64, StoreClauseResult) {
+        for &lit in lits.iter() {
+            self.ensure_var(lit.var());
+        }
+
         match lits[..] {
             [] => {
                 let id = self.next_clause_id;
@@ -584,7 +608,6 @@ impl<'a> Checker<'a> {
                 self.next_clause_id += 1;
 
                 for &lit in lits.iter() {
-                    self.ensure_var(lit.var());
                     self.lit_data[lit.code()].clause_count += 1;
                 }
 
@@ -621,10 +644,6 @@ impl<'a> Checker<'a> {
             }
             Some(_) => unreachable!(),
             None => {
-                if self.unit_clauses.len() <= lit.index() {
-                    self.unit_clauses.resize(lit.index() + 1, None);
-                }
-
                 let id = self.next_clause_id;
 
                 self.unit_clauses[lit.index()] = Some(UnitClause {
@@ -750,6 +769,7 @@ impl<'a> Checker<'a> {
                 self.solver_var_names.remove(&global);
             }
         }
+        self.rename_in_buffered_solver_var_names = false;
 
         let mut old_clauses = replace(&mut self.clauses, Default::default());
 
@@ -770,7 +790,7 @@ impl<'a> Checker<'a> {
         lits: &[Lit],
         propagation_hashes: &[ClauseHash],
     ) -> Result<(), CheckerError> {
-        if !self.buffered_solver_var_names.is_empty() {
+        if self.rename_in_buffered_solver_var_names {
             // TODO partial rehashing?
             self.rehash();
         }
@@ -781,6 +801,10 @@ impl<'a> Checker<'a> {
         let mut rup_is_unsat = false;
 
         assert!(self.trail.is_empty());
+
+        for &lit in lits.iter() {
+            self.ensure_var(lit.var());
+        }
 
         for &lit in lits.iter() {
             if let Some((true, unit)) = self.lit_value(lit) {
@@ -796,10 +820,6 @@ impl<'a> Checker<'a> {
 
         // Set all lits to false
         for &lit in lits.iter() {
-            if self.unit_clauses.len() <= lit.index() {
-                self.unit_clauses.resize(lit.index() + 1, None);
-            }
-
             self.trail.push((lit, self.unit_clauses[lit.index()]));
 
             self.unit_clauses[lit.index()] = Some(UnitClause {
@@ -873,10 +893,6 @@ impl<'a> Checker<'a> {
                         break 'hashes;
                     }
                     Some(lit) if unassigned_count == 1 => {
-                        if self.unit_clauses.len() <= lit.index() {
-                            self.unit_clauses.resize(lit.index() + 1, None);
-                        }
-
                         self.trail.push((lit, self.unit_clauses[lit.index()]));
 
                         self.unit_clauses[lit.index()] = Some(UnitClause {
@@ -939,6 +955,9 @@ impl<'a> Checker<'a> {
         let mut result = match step {
             ProofStep::SolverVarName { global, solver } => {
                 self.buffered_solver_var_names.push((global, solver));
+                if solver.is_some() {
+                    self.rename_in_buffered_solver_var_names = true;
+                }
                 Ok(())
             }
             ProofStep::UserVarName { global, user } => {
@@ -949,6 +968,7 @@ impl<'a> Checker<'a> {
                 }
                 Ok(())
             }
+            ProofStep::DeleteVar { var } => self.check_delete_var_step(var),
             ProofStep::AddClause { clause } => self.add_clause(clause),
             ProofStep::AtClause {
                 redundant,
@@ -995,6 +1015,53 @@ impl<'a> Checker<'a> {
             *debug_step = format!("{:?}", step)
         }
         result
+    }
+
+    /// Check an DeleteVar step
+    fn check_delete_var_step(&mut self, var: Var) -> Result<(), CheckerError> {
+        self.ensure_var(var);
+        if let Some(user_var) = self.var_data[var.index()].user_var {
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!(
+                    "deleted variable {:?} corresponds to user variable {:?}",
+                    var, user_var
+                ),
+            ));
+        }
+
+        for &polarity in &[false, true] {
+            if self.lit_data[var.lit(polarity).code()].clause_count > 0 {
+                return Err(CheckerError::check_failed(
+                    self.step,
+                    format!("deleted variable {:?} still has clauses", var),
+                ));
+            }
+        }
+
+        if let Some(unit_clause) = self.unit_clauses[var.index()] {
+            let clause = [var.lit(unit_clause.value)];
+
+            let id = match unit_clause.id {
+                UnitId::Global(id) => id,
+                _ => unreachable!(),
+            };
+
+            Self::process_step(
+                &mut self.processors,
+                &CheckedProofStep::DeleteRatClause {
+                    id,
+                    keep_as_redundant: false,
+                    clause: &clause[..],
+                    pivot: clause[0],
+                    propagations: &ResolutionPropagations {},
+                },
+            )?;
+
+            self.unit_clauses[var.index()] = None;
+        }
+
+        Ok(())
     }
 
     /// Check an AtClause step
@@ -1149,6 +1216,8 @@ impl<'a> Checker<'a> {
     /// Check a UnitClauses step
     fn check_unit_clauses_step(&mut self, units: &[(Lit, ClauseHash)]) -> Result<(), CheckerError> {
         for &(lit, hash) in units.iter() {
+            self.ensure_var(lit.var());
+
             let clause = [lit];
             let propagation_hashes = [hash];
             self.check_clause_with_hashes(&clause[..], &propagation_hashes[..])?;
