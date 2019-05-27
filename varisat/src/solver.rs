@@ -123,6 +123,18 @@ impl<'a> Solver<'a> {
         variables::set_sampling_mode(ctx.borrow(), global, variables::data::SamplingMode::Hide);
     }
 
+    /// Observe solver internal variables.
+    ///
+    /// This turns solver internal variables into witness variables. There is no guarantee that the
+    /// newly visible variables correspond to previously hidden variables.
+    ///
+    /// Returns a list of newly visible variables.
+    pub fn observe_internal_vars(&mut self) -> Vec<Var> {
+        // TODO add link to sampling mode section of the manual when written
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        variables::observe_internal_vars(ctx.borrow())
+    }
+
     /// Check the satisfiability of the current formula.
     pub fn solve(&mut self) -> Result<bool, SolverError> {
         self.ctx.solver_state.solver_invoked = true;
