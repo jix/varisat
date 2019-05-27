@@ -67,6 +67,11 @@ impl CheckerError {
 /// of a clause are included in a step, they are sorted and free of duplicates.
 #[derive(Debug)]
 pub enum CheckedProofStep<'a> {
+    /// Updates the corresponding user variable for a proof variable.
+    UserVar {
+        var: Var,
+        user_var: Option<CheckedUserVar>,
+    },
     /// A clause of the input formula.
     AddClause { id: u64, clause: &'a [Lit] },
     /// A duplicated clause of the input formula.
@@ -131,6 +136,21 @@ pub enum CheckedProofStep<'a> {
         failed_core: &'a [Lit],
         propagations: &'a [u64],
     },
+}
+
+/// Sampling mode of a user variable.
+#[derive(Debug)]
+pub enum CheckedSamplingMode {
+    Sample,
+    Witness,
+}
+
+/// Corresponding user variable for a proof variable.
+#[derive(Debug)]
+pub struct CheckedUserVar {
+    user_var: Var,
+    sampling_mode: CheckedSamplingMode,
+    new_var: bool,
 }
 
 /// A list of clauses to resolve and propagations to show that the resolvent is an AT.
@@ -522,21 +542,19 @@ impl<'a> Checker<'a> {
             ));
         }
 
-        if self.var_in_use(global_var) {
-            if self.var_data[global_var.index()].sampling_mode == SamplingMode::Hide {
-                return Err(CheckerError::check_failed(
-                    self.step,
-                    format!(
-                        "user name added to variable {:?} which is still hidden",
-                        global_var
-                    ),
-                ));
-            }
+        let in_use = self.var_in_use(global_var);
+        let var_data = &mut self.var_data[global_var.index()];
 
-            // TODO we need to emit a checked step
+        if var_data.sampling_mode == SamplingMode::Hide {
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!(
+                    "user name added to variable {:?} which is still hidden",
+                    global_var
+                ),
+            ));
         }
 
-        let var_data = &mut self.var_data[global_var.index()];
         if var_data.user_var.is_some() {
             return Err(CheckerError::check_failed(
                 self.step,
@@ -547,6 +565,22 @@ impl<'a> Checker<'a> {
         var_data.user_var = Some(user_var);
 
         self.used_user_vars.insert(user_var);
+
+        Self::process_step(
+            &mut self.processors,
+            &CheckedProofStep::UserVar {
+                var: global_var,
+                user_var: Some(CheckedUserVar {
+                    user_var,
+                    sampling_mode: if var_data.sampling_mode == SamplingMode::Witness {
+                        CheckedSamplingMode::Witness
+                    } else {
+                        CheckedSamplingMode::Sample
+                    },
+                    new_var: !in_use,
+                }),
+            },
+        )?;
 
         Ok(())
     }
@@ -566,6 +600,14 @@ impl<'a> Checker<'a> {
                 format!("no user name to remove for variable {:?}", global_var),
             ));
         }
+
+        Self::process_step(
+            &mut self.processors,
+            &CheckedProofStep::UserVar {
+                var: global_var,
+                user_var: None,
+            },
+        )?;
 
         Ok(())
     }
@@ -1115,7 +1157,24 @@ impl<'a> Checker<'a> {
 
         if var_data.sampling_mode != sampling_mode {
             var_data.sampling_mode = sampling_mode;
-            // TODO emit checked step
+
+            if let Some(user_var) = var_data.user_var {
+                Self::process_step(
+                    &mut self.processors,
+                    &CheckedProofStep::UserVar {
+                        var,
+                        user_var: Some(CheckedUserVar {
+                            user_var,
+                            sampling_mode: if var_data.sampling_mode == SamplingMode::Witness {
+                                CheckedSamplingMode::Witness
+                            } else {
+                                CheckedSamplingMode::Sample
+                            },
+                            new_var: false,
+                        }),
+                    },
+                )?;
+            }
         }
 
         Ok(())
