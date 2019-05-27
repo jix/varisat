@@ -91,6 +91,7 @@ pub fn set_assumptions<'a>(
         ctx_2.borrow(),
         &mut incremental.assumptions,
         user_assumptions,
+        true,
     );
 
     proof::add_step(
