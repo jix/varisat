@@ -480,7 +480,12 @@ impl<'a> Checker<'a> {
     /// Check that var is a sampling user var and create new variables as necessary.
     fn ensure_sampling_var(&mut self, var: Var) -> Result<(), CheckerError> {
         self.ensure_var(var);
-        // TODO actually check the sampling mode too
+        if self.var_data[var.index()].sampling_mode != SamplingMode::Sample {
+            return Err(CheckerError::check_failed(
+                self.step,
+                format!("variable {:?} is not a sampling variable", var),
+            ));
+        }
         Ok(())
     }
 

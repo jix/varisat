@@ -218,20 +218,28 @@ impl Variables {
 pub fn global_from_user<'a>(
     mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, mut VariablesP),
     user: Var,
+    require_sampling: bool,
 ) -> Var {
     let variables = ctx.part_mut(VariablesP);
 
     if user.index() > variables.user_watermark() {
         // TODO use a batch proof step for this?
         for index in variables.user_watermark()..user.index() {
-            global_from_user(ctx.borrow(), Var::from_index(index));
+            global_from_user(ctx.borrow(), Var::from_index(index), false);
         }
     }
 
     let variables = ctx.part_mut(VariablesP);
 
     match variables.global_from_user().get(user) {
-        Some(global) => global,
+        Some(global) => {
+            if require_sampling
+                && variables.var_data[global.index()].sampling_mode != SamplingMode::Sample
+            {
+                panic!("witness variables cannot be constrained");
+            }
+            global
+        }
         None => {
             // Can we add an identity mapping?
             let global = if variables.user_from_global().get(user).is_none() {
@@ -333,8 +341,9 @@ pub fn solver_from_user<'a>(
         mut WatchlistsP,
     ),
     user: Var,
+    require_sampling: bool,
 ) -> Var {
-    let global = global_from_user(ctx.borrow(), user);
+    let global = global_from_user(ctx.borrow(), user, require_sampling);
     let solver = solver_from_global(ctx.borrow(), global);
     solver
 }
@@ -348,7 +357,7 @@ pub fn new_user_var<'a>(
 ) -> Var {
     let variables = ctx.part_mut(VariablesP);
     let user_var = variables.next_unmapped_user();
-    global_from_user(ctx.borrow(), user_var);
+    global_from_user(ctx.borrow(), user_var, false);
     user_var
 }
 
@@ -369,13 +378,12 @@ pub fn solver_from_user_lits<'a>(
     ),
     solver_lits: &mut Vec<Lit>,
     user_lits: &[Lit],
+    require_sampling: bool,
 ) {
     solver_lits.clear();
-    solver_lits.extend(
-        user_lits
-            .iter()
-            .map(|user_lit| user_lit.map_var(|user_var| solver_from_user(ctx.borrow(), user_var))),
-    )
+    solver_lits.extend(user_lits.iter().map(|user_lit| {
+        user_lit.map_var(|user_var| solver_from_user(ctx.borrow(), user_var, require_sampling))
+    }))
 }
 
 /// Changes the sampling mode of a global variable.

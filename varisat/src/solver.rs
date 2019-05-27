@@ -99,7 +99,7 @@ impl<'a> Solver<'a> {
     pub fn witness_var(&mut self, var: Var) {
         // TODO add link to sampling mode section of the manual when written
         let mut ctx = self.ctx.into_partial_ref_mut();
-        let global = variables::global_from_user(ctx.borrow(), var);
+        let global = variables::global_from_user(ctx.borrow(), var, false);
         variables::set_sampling_mode(ctx.borrow(), global, variables::data::SamplingMode::Witness);
     }
 
@@ -108,7 +108,7 @@ impl<'a> Solver<'a> {
         // TODO add link to sampling mode section of the manual when written
         // TODO add warning about constrainig variables that previously were witness variables
         let mut ctx = self.ctx.into_partial_ref_mut();
-        let global = variables::global_from_user(ctx.borrow(), var);
+        let global = variables::global_from_user(ctx.borrow(), var, false);
         variables::set_sampling_mode(ctx.borrow(), global, variables::data::SamplingMode::Sample);
     }
 
@@ -119,7 +119,7 @@ impl<'a> Solver<'a> {
     pub fn hide_var(&mut self, var: Var) {
         // TODO add link to sampling mode section of the manual when written
         let mut ctx = self.ctx.into_partial_ref_mut();
-        let global = variables::global_from_user(ctx.borrow(), var);
+        let global = variables::global_from_user(ctx.borrow(), var, false);
         variables::set_sampling_mode(ctx.borrow(), global, variables::data::SamplingMode::Hide);
     }
 

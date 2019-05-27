@@ -56,7 +56,7 @@ pub fn load_clause<'a>(
 
     // Convert the clause from user to solver literals.
     let (tmp_data, mut ctx_variables) = ctx.split_part_mut(TmpDataP);
-    variables::solver_from_user_lits(ctx_variables.borrow(), &mut tmp_data.lits, user_lits);
+    variables::solver_from_user_lits(ctx_variables.borrow(), &mut tmp_data.lits, user_lits, true);
 
     let (tmp_data, mut ctx) = ctx.split_part_mut(TmpDataP);
 
