@@ -176,7 +176,6 @@ impl<'a> Solver<'a> {
     pub fn model(&self) -> Option<Vec<Lit>> {
         let ctx = self.ctx.into_partial_ref();
         if ctx.part(SolverStateP).sat_state == SatState::Sat {
-            // TODO we need to extend the model to cover hidden solver vars
             Some(
                 ctx.part(VariablesP)
                     .user_var_iter()
