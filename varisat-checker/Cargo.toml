@@ -29,3 +29,8 @@ log = "0.4.6"
 
 [dev-dependencies]
 proptest = "0.9.3"
+
+    [dev-dependencies.varisat-formula]
+    path = "../varisat-formula"
+    version = "=0.2.1"
+    features = ["internal-testing"]

@@ -598,6 +598,8 @@ impl<'a> Checker<'a> {
     fn add_user_mapping(&mut self, global_var: Var, user_var: Var) -> Result<(), CheckerError> {
         self.ensure_var(global_var);
 
+        // TODO will the first check cause problems when observing solver added variables?
+        // That check is required for the workaround in CheckerData's user from proof method
         if user_var.index() >= self.var_data.len() || self.used_user_vars.contains(&user_var) {
             return Err(CheckerError::check_failed(
                 self.step,
@@ -607,6 +609,8 @@ impl<'a> Checker<'a> {
 
         let var_data = &mut self.var_data[global_var.index()];
 
+        // sampling_mode will be Witness for a newly observed internal variable and Sample for a a
+        // fresh variable
         if var_data.sampling_mode == SamplingMode::Hide {
             return Err(CheckerError::check_failed(
                 self.step,
@@ -1805,6 +1809,61 @@ mod tests {
     }
 
     #[test]
+    fn add_derived_tautology() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                1, 2, 3;
+            ])
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::AtClause {
+                redundant: false,
+                clause: &lits![-3, 3],
+                propagation_hashes: &[],
+            }),
+            "tautology",
+        )
+    }
+
+    #[test]
+    fn delete_derived_tautology() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                -3, 3;
+            ])
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::DeleteClause {
+                clause: &lits![-3, 3],
+                proof: DeleteClauseProof::Redundant,
+            }),
+            "tautology",
+        )
+    }
+
+    #[test]
+    fn delete_unit_clause() {
+        let mut checker = Checker::new();
+        checker
+            .add_formula(&cnf_formula![
+                1;
+            ])
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::DeleteClause {
+                clause: &lits![1],
+                proof: DeleteClauseProof::Redundant,
+            }),
+            "delete of unit or empty clause",
+        )
+    }
+
+    #[test]
     fn delete_clause_not_redundant() {
         let mut checker = Checker::new();
         checker
@@ -2029,5 +2088,202 @@ mod tests {
                 propagation_hashes: &[],
             })
             .unwrap();
+    }
+
+    #[test]
+    fn add_clause_to_non_sampling_var() {
+        let mut checker = Checker::new();
+
+        checker
+            .check_step(ProofStep::ChangeSamplingMode {
+                var: Var::from_dimacs(1),
+                sample: false,
+            })
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::AddClause {
+                clause: &lits![1, 2, 3],
+            }),
+            "not a sampling variable",
+        )
+    }
+
+    #[test]
+    fn add_clause_to_hidden_var() {
+        let mut checker = Checker::new();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: Some(Var::from_dimacs(1)),
+            })
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: None,
+            })
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::AddClause {
+                clause: &lits![1, 2, 3],
+            }),
+            "not a sampling variable",
+        )
+    }
+
+    #[test]
+    fn colloding_user_vars() {
+        let mut checker = Checker::new();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: Some(Var::from_dimacs(1)),
+            })
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(2),
+                user: Some(Var::from_dimacs(1)),
+            }),
+            "used for two different variables",
+        )
+    }
+
+    #[test]
+    fn observe_without_setting_mode() {
+        let mut checker = Checker::new();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: Some(Var::from_dimacs(1)),
+            })
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: None,
+            })
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: Some(Var::from_dimacs(1)),
+            }),
+            "still hidden",
+        )
+    }
+
+    #[test]
+    fn hide_hidden_var() {
+        let mut checker = Checker::new();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: Some(Var::from_dimacs(1)),
+            })
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: None,
+            })
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: None,
+            }),
+            "no user name to remove",
+        )
+    }
+
+    #[test]
+    fn delete_user_var() {
+        let mut checker = Checker::new();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: Some(Var::from_dimacs(1)),
+            })
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::DeleteVar {
+                var: Var::from_dimacs(1),
+            }),
+            "corresponds to user variable",
+        )
+    }
+
+    #[test]
+    fn delete_in_use_var() {
+        let mut checker = Checker::new();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: Some(Var::from_dimacs(1)),
+            })
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::AddClause {
+                clause: &lits![1, 2, 3],
+            })
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: None,
+            })
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::DeleteVar {
+                var: Var::from_dimacs(1),
+            }),
+            "still has clauses",
+        )
+    }
+
+    #[test]
+    fn invalid_hidden_to_sample() {
+        let mut checker = Checker::new();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: Some(Var::from_dimacs(1)),
+            })
+            .unwrap();
+
+        checker
+            .check_step(ProofStep::UserVarName {
+                global: Var::from_dimacs(1),
+                user: None,
+            })
+            .unwrap();
+
+        expect_check_failed(
+            checker.check_step(ProofStep::ChangeSamplingMode {
+                var: Var::from_dimacs(1),
+                sample: true,
+            }),
+            "cannot sample hidden variable",
+        )
     }
 }
