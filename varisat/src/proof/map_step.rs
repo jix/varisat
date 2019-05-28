@@ -1,6 +1,6 @@
 //! Maps literals and hashes of clause steps between the solver and the checker.
 
-use varisat_formula::Lit;
+use varisat_formula::{Lit, Var};
 
 use super::{ClauseHash, ProofStep};
 
@@ -13,16 +13,26 @@ pub struct MapStep {
 }
 
 impl MapStep {
+    pub fn map_lits(&mut self, lits: &[Lit], map_var: impl Fn(Var) -> Var) -> &[Lit] {
+        let map_var_ref = &map_var;
+        self.lit_buf.clear();
+        self.lit_buf
+            .extend(lits.iter().map(|lit| lit.map_var(map_var_ref)));
+        &self.lit_buf
+    }
+
     pub fn map<'s, 'a, 'b>(
         &'a mut self,
         step: &ProofStep<'b>,
-        map_lit: impl Fn(Lit) -> Lit,
+        map_var: impl Fn(Var) -> Var,
         map_hash: impl Fn(ClauseHash) -> ClauseHash,
     ) -> ProofStep<'s>
     where
         'a: 's,
         'b: 's,
     {
+        let map_var_ref = &map_var;
+        let map_lit = |lit: Lit| lit.map_var(map_var_ref);
         match *step {
             ProofStep::AddClause { clause } => {
                 self.lit_buf.clear();
@@ -98,6 +108,15 @@ impl MapStep {
             }
 
             ProofStep::ChangeHashBits(..) | ProofStep::End => step.clone(),
+
+            ProofStep::SolverVarName { .. }
+            | ProofStep::UserVarName { .. }
+            | ProofStep::DeleteVar { .. }
+            | ProofStep::ChangeSamplingMode { .. } => {
+                // while these steps do contain variables, they are used to update the mapping, so
+                // they shouldn't be mapped themselves.
+                step.clone()
+            }
         }
     }
 }

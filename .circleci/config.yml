@@ -26,7 +26,7 @@ jobs:
           at: /tmp/workspace
       - run: |
           for TEST_BIN in /tmp/workspace/tests/*/*; do
-            kcov coverage --include-path=varisat/src $TEST_BIN
+            kcov coverage --include-path=. $TEST_BIN
           done
       - run: bash <(curl -s https://codecov.io/bash)
 

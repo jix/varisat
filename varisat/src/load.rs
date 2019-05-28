@@ -12,18 +12,19 @@ use crate::proof;
 use crate::prop::{assignment, full_restart, Reason};
 use crate::simplify::resurrect_unit;
 use crate::state::SatState;
+use crate::variables;
 
 /// Adds a clause to the current formula.
 ///
+/// The input uses user variable names.
+///
 /// Removes duplicated literals, ignores tautological clauses (eg. x v -x v y), handles empty
 /// clauses and dispatches among unit, binary and long clauses.
-///
-/// Does not adjust the solvers variable count. If necessary that has to be done before calling
-/// this.
 pub fn load_clause<'a>(
     mut ctx: partial!(
         Context<'a>,
         mut AssignmentP,
+        mut AnalyzeConflictP,
         mut BinaryClausesP,
         mut ClauseAllocP,
         mut ClauseDbP,
@@ -32,11 +33,13 @@ pub fn load_clause<'a>(
         mut ProofP<'a>,
         mut SolverStateP,
         mut TmpDataP,
+        mut TmpFlagsP,
         mut TrailP,
+        mut VariablesP,
         mut VsidsP,
         mut WatchlistsP,
     ),
-    lits: &[Lit],
+    user_lits: &[Lit],
 ) {
     match ctx.part(SolverStateP).sat_state {
         SatState::Unsat => return,
@@ -51,10 +54,12 @@ pub fn load_clause<'a>(
     // Restart the search when the user adds new clauses.
     full_restart(ctx.borrow());
 
+    // Convert the clause from user to solver literals.
+    let (tmp_data, mut ctx_variables) = ctx.split_part_mut(TmpDataP);
+    variables::solver_from_user_lits(ctx_variables.borrow(), &mut tmp_data.lits, user_lits, true);
+
     let (tmp_data, mut ctx) = ctx.split_part_mut(TmpDataP);
 
-    tmp_data.lits.clear();
-    tmp_data.lits.extend_from_slice(lits);
     let lits = &mut tmp_data.lits;
     let false_lits = &mut tmp_data.lits_2;
 
@@ -71,6 +76,15 @@ pub fn load_clause<'a>(
             return;
         }
         last = Some(lit);
+    }
+
+    // If we're not a unit clause the contained variables are not isolated anymore.
+    if lits.len() > 1 {
+        for &lit in lits.iter() {
+            ctx.part_mut(VariablesP)
+                .var_data_solver_mut(lit.var())
+                .isolated = false;
+        }
     }
 
     // Remove satisfied clauses and handle false literals.
@@ -119,6 +133,7 @@ pub fn load_clause<'a>(
         if lits.len() > 1 {
             proof::add_step(
                 ctx.borrow(),
+                true,
                 &ProofStep::DeleteClause {
                     clause: lits,
                     proof: DeleteClauseProof::Satisfied,
@@ -159,14 +174,11 @@ mod tests {
     use varisat_formula::lits;
 
     use crate::clause::Tier;
-    use crate::context::set_var_count;
 
     #[test]
     fn unsat_on_empty_clause() {
         let mut ctx = Context::default();
         let mut ctx = ctx.into_partial_ref_mut();
-
-        set_var_count(ctx.borrow(), 10);
 
         load_clause(ctx.borrow(), &[]);
 
@@ -177,8 +189,6 @@ mod tests {
     fn unit_clauses() {
         let mut ctx = Context::default();
         let mut ctx = ctx.into_partial_ref_mut();
-
-        set_var_count(ctx.borrow(), 10);
 
         load_clause(ctx.borrow(), &lits![1]);
 
@@ -210,8 +220,6 @@ mod tests {
         let mut ctx = Context::default();
         let mut ctx = ctx.into_partial_ref_mut();
 
-        set_var_count(ctx.borrow(), 10);
-
         load_clause(ctx.borrow(), &lits![1, 2]);
 
         assert_eq!(ctx.part(BinaryClausesP).count(), 1);
@@ -231,8 +239,6 @@ mod tests {
     fn long_clauses() {
         let mut ctx = Context::default();
         let mut ctx = ctx.into_partial_ref_mut();
-
-        set_var_count(ctx.borrow(), 10);
 
         load_clause(ctx.borrow(), &lits![1, 2, 3]);
 

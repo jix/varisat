@@ -6,16 +6,17 @@ use partial_ref::{IntoPartialRef, IntoPartialRefMut, PartialRef};
 use failure::{Error, Fail};
 
 use varisat_checker::ProofProcessor;
+use varisat_dimacs::DimacsParser;
 use varisat_formula::{CnfFormula, ExtendFormula, Lit, Var};
 
 use crate::config::SolverConfigUpdate;
-use crate::context::{config_changed, ensure_var_count, parts::*, Context};
+use crate::context::{config_changed, parts::*, Context};
 use crate::incremental::set_assumptions;
 use crate::load::load_clause;
 use crate::proof;
 use crate::schedule::schedule_step;
 use crate::state::SatState;
-use varisat_dimacs::DimacsParser;
+use crate::variables;
 
 pub use crate::proof::ProofFormat;
 
@@ -72,17 +73,8 @@ impl<'a> Solver<'a> {
     /// Add a formula to the solver.
     pub fn add_formula(&mut self, formula: &CnfFormula) {
         let mut ctx = self.ctx.into_partial_ref_mut();
-        ensure_var_count(ctx.borrow(), formula.var_count());
         for clause in formula.iter() {
             load_clause(ctx.borrow(), clause);
-        }
-    }
-
-    /// Increases the variable count to handle all literals in the given slice.
-    fn ensure_var_count_from_slice(&mut self, lits: &[Lit]) {
-        if let Some(index) = lits.iter().map(|&lit| lit.index()).max() {
-            let mut ctx = self.ctx.into_partial_ref_mut();
-            ensure_var_count(ctx.borrow(), index + 1);
         }
     }
 
@@ -101,6 +93,46 @@ impl<'a> Solver<'a> {
         );
 
         Ok(())
+    }
+
+    /// Sets the "witness" sampling mode for a variable.
+    pub fn witness_var(&mut self, var: Var) {
+        // TODO add link to sampling mode section of the manual when written
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        let global = variables::global_from_user(ctx.borrow(), var, false);
+        variables::set_sampling_mode(ctx.borrow(), global, variables::data::SamplingMode::Witness);
+    }
+
+    /// Sets the "sample" sampling mode for a variable.
+    pub fn sample_var(&mut self, var: Var) {
+        // TODO add link to sampling mode section of the manual when written
+        // TODO add warning about constrainig variables that previously were witness variables
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        let global = variables::global_from_user(ctx.borrow(), var, false);
+        variables::set_sampling_mode(ctx.borrow(), global, variables::data::SamplingMode::Sample);
+    }
+
+    /// Hide a variable.
+    ///
+    /// Turns a free variable into an existentially quantified variable. If the passed `Var` is used
+    /// again after this call, it refers to a new variable not the previously hidden variable.
+    pub fn hide_var(&mut self, var: Var) {
+        // TODO add link to sampling mode section of the manual when written
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        let global = variables::global_from_user(ctx.borrow(), var, false);
+        variables::set_sampling_mode(ctx.borrow(), global, variables::data::SamplingMode::Hide);
+    }
+
+    /// Observe solver internal variables.
+    ///
+    /// This turns solver internal variables into witness variables. There is no guarantee that the
+    /// newly visible variables correspond to previously hidden variables.
+    ///
+    /// Returns a list of newly visible variables.
+    pub fn observe_internal_vars(&mut self) -> Vec<Var> {
+        // TODO add link to sampling mode section of the manual when written
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        variables::observe_internal_vars(ctx.borrow())
     }
 
     /// Check the satisfiability of the current formula.
@@ -148,7 +180,6 @@ impl<'a> Solver<'a> {
     ///
     /// This replaces the current set of assumed literals.
     pub fn assume(&mut self, assumptions: &[Lit]) {
-        self.ensure_var_count_from_slice(assumptions);
         let mut ctx = self.ctx.into_partial_ref_mut();
         set_assumptions(ctx.borrow(), assumptions);
     }
@@ -158,12 +189,16 @@ impl<'a> Solver<'a> {
         let ctx = self.ctx.into_partial_ref();
         if ctx.part(SolverStateP).sat_state == SatState::Sat {
             Some(
-                ctx.part(AssignmentP)
-                    .assignment()
-                    .iter()
-                    .enumerate()
-                    .flat_map(|(index, assignment)| {
-                        assignment.map(|polarity| Lit::from_index(index, polarity))
+                ctx.part(VariablesP)
+                    .user_var_iter()
+                    .flat_map(|user_var| {
+                        let global_var = ctx
+                            .part(VariablesP)
+                            .global_from_user()
+                            .get(user_var)
+                            .expect("no existing global var for user var");
+                        ctx.part(ModelP).assignment()[global_var.index()]
+                            .map(|value| user_var.lit(value))
                     })
                     .collect(),
             )
@@ -177,7 +212,7 @@ impl<'a> Solver<'a> {
     /// This is not guaranteed to be minimal and may just return all assumptions every time.
     pub fn failed_core(&self) -> Option<&[Lit]> {
         match self.ctx.solver_state.sat_state {
-            SatState::UnsatUnderAssumptions => Some(self.ctx.incremental.failed_core()),
+            SatState::UnsatUnderAssumptions => Some(self.ctx.incremental.user_failed_core()),
             SatState::Unsat => Some(&[]),
             SatState::Unknown | SatState::Sat => None,
         }
@@ -237,17 +272,15 @@ impl<'a> Drop for Solver<'a> {
 impl<'a> ExtendFormula for Solver<'a> {
     /// Add a clause to the solver.
     fn add_clause(&mut self, clause: &[Lit]) {
-        self.ensure_var_count_from_slice(clause);
         let mut ctx = self.ctx.into_partial_ref_mut();
         load_clause(ctx.borrow(), clause);
     }
 
     /// Add a new variable to the solver.
     fn new_var(&mut self) -> Var {
-        let var_count = self.ctx.assignment.assignment().len();
+        self.ctx.solver_state.formula_is_empty = false;
         let mut ctx = self.ctx.into_partial_ref_mut();
-        ensure_var_count(ctx.borrow(), var_count + 1);
-        Var::from_index(var_count)
+        variables::new_user_var(ctx.borrow())
     }
 }
 
@@ -257,10 +290,10 @@ mod tests {
 
     use proptest::prelude::*;
 
+    use varisat_checker::{CheckedProofStep, CheckerData};
     use varisat_formula::test::{conditional_pigeon_hole, sat_formula, sgen_unsat_formula};
-    use varisat_formula::{cnf_formula, lits, CnfFormula, Var};
+    use varisat_formula::{cnf_formula, lits, Var};
 
-    use crate::checker::CheckedProofStep;
     use varisat_dimacs::write_dimacs;
 
     fn enable_test_schedule(solver: &mut Solver) {
@@ -299,7 +332,11 @@ mod tests {
     struct FailingProcessor;
 
     impl ProofProcessor for FailingProcessor {
-        fn process_step(&mut self, _step: &CheckedProofStep) -> Result<(), Error> {
+        fn process_step(
+            &mut self,
+            _step: &CheckedProofStep,
+            _data: CheckerData,
+        ) -> Result<(), Error> {
             failure::bail!("failing processor");
         }
     }
@@ -499,8 +536,8 @@ mod tests {
                         let skipped = *candidates.last().unwrap();
                         core.push(skipped);
 
-                        let single_clause = CnfFormula::from(Some([skipped]));
-                        solver.add_formula(&single_clause);
+                        solver.add_clause(&[skipped]);
+                        solver.hide_var(skipped.var());
                     },
                     Ok(false) => {
                         candidates = solver.failed_core().unwrap().to_owned();
@@ -511,5 +548,4 @@ mod tests {
             prop_assert_eq!(core.len(), columns + 1);
         }
     }
-
 }

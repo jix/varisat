@@ -20,12 +20,14 @@ mod decision;
 mod glue;
 mod incremental;
 mod load;
+mod model;
 mod proof;
 mod prop;
 mod schedule;
 mod simplify;
 mod state;
 mod tmp;
+mod variables;
 
 pub use solver::{ProofFormat, Solver};
 pub use varisat_formula::{cnf, lit, CnfFormula, ExtendFormula, Lit, Var};
@@ -37,5 +39,8 @@ pub mod dimacs {
 
 pub mod checker {
     //! Proof checker for Varisat proofs.
-    pub use varisat_checker::{CheckedProofStep, Checker, CheckerError, ProofProcessor};
+    pub use varisat_checker::{
+        CheckedProofStep, Checker, CheckerData, CheckerError, ProofProcessor,
+        ProofTranscriptProcessor, ProofTranscriptStep,
+    };
 }

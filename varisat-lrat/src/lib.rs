@@ -4,7 +4,7 @@ use std::mem::replace;
 
 use failure::Error;
 
-use varisat_checker::{CheckedProofStep, ProofProcessor};
+use varisat_checker::{CheckedProofStep, CheckerData, ProofProcessor};
 use varisat_formula::Lit;
 
 /// Proof processor that generates an LRAT proof.
@@ -17,7 +17,7 @@ pub struct WriteLrat<'a> {
 }
 
 impl<'a> ProofProcessor for WriteLrat<'a> {
-    fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error> {
+    fn process_step(&mut self, step: &CheckedProofStep, _data: CheckerData) -> Result<(), Error> {
         match step {
             &CheckedProofStep::AddClause { .. } => (),
             &CheckedProofStep::DuplicatedClause { .. } => (),
@@ -65,6 +65,11 @@ impl<'a> ProofProcessor for WriteLrat<'a> {
                 id,
                 keep_as_redundant,
                 ..
+            }
+            | &CheckedProofStep::DeleteRatClause {
+                id,
+                keep_as_redundant,
+                ..
             } => {
                 if !keep_as_redundant {
                     self.open_delete()?;
@@ -75,7 +80,8 @@ impl<'a> ProofProcessor for WriteLrat<'a> {
                 self.open_delete()?;
                 self.write_ids(&[id])?;
             }
-            &CheckedProofStep::MakeIrredundant { .. }
+            &CheckedProofStep::UserVar { .. }
+            | &CheckedProofStep::MakeIrredundant { .. }
             | &CheckedProofStep::Model { .. }
             | &CheckedProofStep::Assumptions { .. }
             | &CheckedProofStep::FailedAssumptions { .. } => (),
