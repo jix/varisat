@@ -4,7 +4,7 @@ use std::mem::replace;
 
 use failure::Error;
 
-use varisat_checker::{CheckedProofStep, ProofProcessor};
+use varisat_checker::{CheckedProofStep, CheckerData, ProofProcessor};
 use varisat_formula::Lit;
 
 /// Proof processor that generates an LRAT proof.
@@ -17,7 +17,7 @@ pub struct WriteLrat<'a> {
 }
 
 impl<'a> ProofProcessor for WriteLrat<'a> {
-    fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error> {
+    fn process_step(&mut self, step: &CheckedProofStep, _data: CheckerData) -> Result<(), Error> {
         match step {
             &CheckedProofStep::AddClause { .. } => (),
             &CheckedProofStep::DuplicatedClause { .. } => (),

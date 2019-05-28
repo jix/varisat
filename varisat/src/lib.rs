@@ -39,5 +39,8 @@ pub mod dimacs {
 
 pub mod checker {
     //! Proof checker for Varisat proofs.
-    pub use varisat_checker::{CheckedProofStep, Checker, CheckerError, ProofProcessor};
+    pub use varisat_checker::{
+        CheckedProofStep, Checker, CheckerData, CheckerError, ProofProcessor,
+        ProofTranscriptProcessor, ProofTranscriptStep,
+    };
 }

@@ -290,10 +290,10 @@ mod tests {
 
     use proptest::prelude::*;
 
+    use varisat_checker::{CheckedProofStep, CheckerData};
     use varisat_formula::test::{conditional_pigeon_hole, sat_formula, sgen_unsat_formula};
     use varisat_formula::{cnf_formula, lits, Var};
 
-    use crate::checker::CheckedProofStep;
     use varisat_dimacs::write_dimacs;
 
     fn enable_test_schedule(solver: &mut Solver) {
@@ -332,7 +332,11 @@ mod tests {
     struct FailingProcessor;
 
     impl ProofProcessor for FailingProcessor {
-        fn process_step(&mut self, _step: &CheckedProofStep) -> Result<(), Error> {
+        fn process_step(
+            &mut self,
+            _step: &CheckedProofStep,
+            _data: CheckerData,
+        ) -> Result<(), Error> {
             failure::bail!("failing processor");
         }
     }
