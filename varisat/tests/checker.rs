@@ -5,7 +5,7 @@ use failure::{Error, Fail};
 
 use proptest::prelude::*;
 
-use varisat::checker::{CheckedProofStep, Checker, CheckerData, ProofProcessor};
+use varisat::checker::{Checker, ProofTranscriptProcessor, ProofTranscriptStep};
 use varisat::{dimacs::write_dimacs, CnfFormula, ExtendFormula, Lit, ProofFormat, Solver, Var};
 use varisat_formula::test::{conditional_pigeon_hole, sgen_unsat_formula};
 
@@ -75,15 +75,14 @@ proptest! {
             unsat: bool,
         }
 
-        impl ProofProcessor for FoundModels {
+        impl ProofTranscriptProcessor for FoundModels {
             fn process_step(
                 &mut self,
-                step: &CheckedProofStep,
-                _data: CheckerData,
+                step: &ProofTranscriptStep,
             ) -> Result<(), Error> {
-                if let CheckedProofStep::Model { .. } = step {
+                if let ProofTranscriptStep::Model { .. } = step {
                     self.counter += 1;
-                } else if let CheckedProofStep::AtClause { clause: &[], .. } = step {
+                } else if let ProofTranscriptStep::Unsat = step {
                     self.unsat = true;
                 }
                 Ok(())
@@ -92,7 +91,7 @@ proptest! {
 
         let mut found_models = FoundModels::default();
         let mut checker = Checker::new();
-        checker.add_processor(&mut found_models);
+        checker.add_transcript(&mut found_models);
         checker.check_proof(&mut &proof[..]).unwrap();
 
         prop_assert_eq!(found_models.counter, expected_models);
@@ -161,18 +160,17 @@ proptest! {
             unsat: usize,
         }
 
-        impl ProofProcessor for CountResults {
+        impl ProofTranscriptProcessor for CountResults {
             fn process_step(
                 &mut self,
-                step: &CheckedProofStep,
-                _data: CheckerData,
+                step: &ProofTranscriptStep,
             ) -> Result<(), Error> {
                 match step {
-                    CheckedProofStep::Model { .. } => {
+                    ProofTranscriptStep::Model { .. } => {
                         self.sat += 1;
                     }
-                    CheckedProofStep::AtClause { clause: &[], .. }
-                    | CheckedProofStep::FailedAssumptions { .. } => {
+                    ProofTranscriptStep::Unsat
+                    | ProofTranscriptStep::FailedAssumptions { .. } => {
                         self.unsat += 1;
                     }
                     _ => (),
@@ -183,7 +181,7 @@ proptest! {
 
         let mut count_results = CountResults::default();
         let mut checker = Checker::new();
-        checker.add_processor(&mut count_results);
+        checker.add_transcript(&mut count_results);
         checker.check_proof(&mut &proof[..]).unwrap();
 
         prop_assert_eq!(count_results.sat, expected_sat);

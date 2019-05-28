@@ -242,10 +242,10 @@ pub fn global_from_user<'a>(
         }
         None => {
             // Can we add an identity mapping?
-            let global = if variables.user_from_global().get(user).is_none() {
-                user
-            } else {
-                variables.next_unmapped_user()
+            let global = match variables.var_data.get(user.index()) {
+                Some(var_data) if var_data.deleted => user,
+                None => user,
+                _ => variables.next_unmapped_global(),
             };
 
             *variables.var_data_global_mut(global) = VarData::user_default();
