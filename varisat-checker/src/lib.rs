@@ -1214,10 +1214,10 @@ impl<'a> Checker<'a> {
                     var_data: &self.var_data,
                 },
             )?;
-
             self.unit_clauses[var.index()] = None;
-            self.var_data[var.index()] = VarData::default();
         }
+
+        self.var_data[var.index()] = VarData::default();
 
         Ok(())
     }

@@ -547,40 +547,5 @@ mod tests {
 
             prop_assert_eq!(core.len(), columns + 1);
         }
-
-        #[test]
-        fn sgen_unsat_hidden_with_sat(
-            unsat_formula in sgen_unsat_formula(1..7usize),
-            sat_formula in sat_formula(4..20usize, 10..100usize, 0.05..0.2, 0.9..1.0),
-        ) {
-            use std::cmp::max;
-
-            let mut solver = Solver::new();
-
-            solver.enable_self_checking();
-
-            let cond = Var::from_index(max(unsat_formula.var_count(), sat_formula.var_count()));
-
-            let mut tmp = vec![];
-
-            for clause in unsat_formula.iter() {
-                tmp.clear();
-                tmp.extend_from_slice(&clause);
-                tmp.push(cond.negative());
-                solver.add_clause(&tmp);
-            }
-
-            for i in 0..unsat_formula.var_count() {
-                solver.hide_var(Var::from_index(i));
-            }
-
-            solver.add_formula(&sat_formula);
-
-            prop_assert_eq!(solver.solve().ok(), Some(true));
-
-            solver.add_clause(&[cond.positive()]);
-
-            prop_assert_eq!(solver.solve().ok(), Some(false));
-        }
     }
 }

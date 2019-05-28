@@ -17,7 +17,7 @@
 /// This ensures that the solver will be able to find and extend each satisfiable assignment of the
 /// sampling variables to an assignment that covers the witness variables.
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum SamplingMode {
     Sample,
     Witness,
