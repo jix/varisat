@@ -87,12 +87,26 @@ pub fn set_assumptions<'a>(
 
     let (incremental, mut ctx_2) = ctx.split_part_mut(IncrementalP);
 
+    for lit in incremental.assumptions.iter() {
+        ctx_2
+            .part_mut(VariablesP)
+            .var_data_solver_mut(lit.var())
+            .assumed = false;
+    }
+
     variables::solver_from_user_lits(
         ctx_2.borrow(),
         &mut incremental.assumptions,
         user_assumptions,
         true,
     );
+
+    for lit in incremental.assumptions.iter() {
+        ctx_2
+            .part_mut(VariablesP)
+            .var_data_solver_mut(lit.var())
+            .assumed = true;
+    }
 
     proof::add_step(
         ctx_2.borrow(),

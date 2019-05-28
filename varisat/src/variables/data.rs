@@ -40,6 +40,8 @@ pub struct VarData {
     /// This is the case if there are no clauses containing this variable or just a unit clause with
     /// this variable.
     pub isolated: bool,
+    /// True if this variable is part of the current assumptions.
+    pub assumed: bool,
     /// Whether the global variable was deleted.
     pub deleted: bool,
 }
@@ -50,6 +52,7 @@ impl Default for VarData {
             sampling_mode: SamplingMode::Hide,
             unit: None,
             isolated: true,
+            assumed: false,
             deleted: true,
         }
     }
@@ -60,9 +63,8 @@ impl VarData {
     pub fn user_default() -> VarData {
         VarData {
             sampling_mode: SamplingMode::Sample,
-            unit: None,
-            isolated: true,
             deleted: false,
+            ..VarData::default()
         }
     }
 }

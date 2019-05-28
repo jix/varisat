@@ -403,6 +403,10 @@ pub fn set_sampling_mode<'a>(
 
     assert!(!var_data.deleted);
 
+    if var_data.assumed {
+        panic!("cannot change sampling mode of assumption variable")
+    }
+
     let previous_mode = var_data.sampling_mode;
 
     if previous_mode == mode {
@@ -573,6 +577,28 @@ mod tests {
     use varisat_formula::{ExtendFormula, Var};
 
     use crate::solver::Solver;
+
+    #[test]
+    #[should_panic(expected = "cannot change sampling mode of assumption variable")]
+    fn cannot_hide_assumed_vars() {
+        let mut solver = Solver::new();
+
+        let (x, y, z) = solver.new_lits();
+
+        solver.assume(&[x, y, z]);
+        solver.hide_var(x.var());
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot change sampling mode of assumption variable")]
+    fn cannot_witness_assumed_vars() {
+        let mut solver = Solver::new();
+
+        let (x, y, z) = solver.new_lits();
+
+        solver.assume(&[x, y, z]);
+        solver.witness_var(x.var());
+    }
 
     proptest! {
         #[test]

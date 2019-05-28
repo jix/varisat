@@ -177,39 +177,20 @@ pub fn simplify<'a>(
         });
     }
 
+    // TODO detect vars that became isolated without being having a unit clause
+
     for (var_index, &value) in assignment.assignment().iter().enumerate() {
         let var = Var::from_index(var_index);
         if !ctx.part(VariablesP).solver_var_present(var) {
             continue;
         }
+        let var_data = ctx.part_mut(VariablesP).var_data_solver_mut(var);
         if let Some(value) = value {
-            let var_data = ctx.part_mut(VariablesP).var_data_solver_mut(var);
             var_data.unit = Some(value);
             var_data.isolated = true;
         }
-    }
-
-    // TODO use a better way to protect assumptions
-
-    let (incremental, mut ctx) = ctx.split_part(IncrementalP);
-
-    for &lit in incremental.assumptions() {
-        let var_data = ctx.part_mut(VariablesP).var_data_solver_mut(lit.var());
-        if var_data.unit.is_some() {
-            var_data.isolated = false;
-        }
-    }
-
-    for (var_index, &value) in assignment.assignment().iter().enumerate() {
-        let var = Var::from_index(var_index);
-        if !ctx.part(VariablesP).solver_var_present(var) {
-            continue;
-        }
-        if value.is_some() {
-            let var_data = ctx.part_mut(VariablesP).var_data_solver_mut(var);
-            if var_data.isolated == true {
-                variables::remove_solver_var(ctx.borrow(), var);
-            }
+        if var_data.isolated && !var_data.assumed {
+            variables::remove_solver_var(ctx.borrow(), var);
         }
     }
 }
