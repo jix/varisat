@@ -1,5 +1,5 @@
 //! Internal proof format for the Varisat SAT solver.
-use varisat_formula::Lit;
+use varisat_formula::{Lit, Var};
 
 pub mod binary_format;
 
@@ -12,8 +12,15 @@ pub type ClauseHash = u64;
 ///
 /// Multiple literals can be combined with xor, as done in [`clause_hash`].
 pub fn lit_hash(lit: Lit) -> ClauseHash {
+    lit_code_hash(lit.code())
+}
+
+/// Hash a single literal from a code.
+///
+/// This doesn't require the code to correspond a valid literal.
+pub fn lit_code_hash(lit_code: usize) -> ClauseHash {
     // Constant based on the golden ratio provides good mixing for the resulting upper bits
-    (!(lit.code() as u64)).wrapping_mul(0x61c8864680b583ebu64)
+    (!(lit_code as u64)).wrapping_mul(0x61c8864680b583ebu64)
 }
 
 /// A fast hash function for clauses (or other *sets* of literals).
@@ -46,6 +53,30 @@ pub enum DeleteClauseProof {
 /// Represents a mutation of the current formula and a justification for the mutation's validity.
 #[derive(Copy, Clone, Debug)]
 pub enum ProofStep<'a> {
+    /// Update the global to solver var mapping.
+    ///
+    /// For proof checking, the solver variable names are only used for hash computations.
+    SolverVarName { global: Var, solver: Option<Var> },
+    /// Update the global to user var mapping.
+    ///
+    /// A variable without user mapping is considered hidden by the checker. When a variable without
+    /// user mapping gets a user mapping, the sampling mode is initialized to witness.
+    ///
+    /// It's not allowed to change a variable from one user name to another when the variable is in
+    /// use.
+    ///
+    /// Clause additions and assumptions are only allowed to use variables with user mappings (and a
+    /// non-witness sampling mode).
+    UserVarName { global: Var, user: Option<Var> },
+    /// Delete a variable.
+    ///
+    /// This is only allowed for variables that are isolated and hidden.
+    DeleteVar { var: Var },
+    /// Changes the sampling mode of a variable.
+    ///
+    /// This is only used to change between Sample and Witness. Hidden is managed by adding or
+    /// removing a user var name.
+    ChangeSamplingMode { var: Var, sample: bool },
     /// Add a new input clause.
     ///
     /// This is only emitted for clauses added incrementally after an initial solve call.
@@ -96,4 +127,26 @@ pub enum ProofStep<'a> {
     /// A varisat proof must end with this command or else the checker will complain about an
     /// incomplete proof.
     End,
+}
+
+impl<'a> ProofStep<'a> {
+    /// Does this proof step use clause hashes?
+    pub fn contains_hashes(&self) -> bool {
+        match self {
+            ProofStep::AtClause { .. }
+            | ProofStep::UnitClauses(..)
+            | ProofStep::FailedAssumptions { .. } => true,
+
+            ProofStep::SolverVarName { .. }
+            | ProofStep::UserVarName { .. }
+            | ProofStep::DeleteVar { .. }
+            | ProofStep::ChangeSamplingMode { .. }
+            | ProofStep::AddClause { .. }
+            | ProofStep::DeleteClause { .. }
+            | ProofStep::ChangeHashBits(..)
+            | ProofStep::Model(..)
+            | ProofStep::Assumptions(..)
+            | ProofStep::End => false,
+        }
+    }
 }

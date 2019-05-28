@@ -45,8 +45,6 @@ pub fn propagate(
 mod tests {
     use super::*;
 
-    use std::cmp::max;
-
     use proptest::{prelude::*, *};
 
     use rand::distributions::Bernoulli;
@@ -57,7 +55,6 @@ mod tests {
     use varisat_formula::{cnf::strategy::*, CnfFormula, Lit};
 
     use crate::clause::{db, gc};
-    use crate::context::set_var_count;
     use crate::load::load_clause;
     use crate::state::SatState;
 
@@ -137,8 +134,6 @@ mod tests {
             let mut ctx = Context::default();
             let mut ctx = ctx.into_partial_ref_mut();
 
-            set_var_count(ctx.borrow(), formula.var_count());
-
             for clause in formula.iter() {
                 load_clause(ctx.borrow(), clause);
             }
@@ -152,6 +147,13 @@ mod tests {
             lits.sort();
 
             let mut prop_lits = ctx.part(TrailP).trail().to_owned();
+
+            // Remap vars
+            for lit in prop_lits.iter_mut() {
+                *lit = lit.map_var(|solver_var| {
+                    ctx.part(VariablesP).existing_user_from_solver(solver_var)
+                });
+            }
 
             prop_lits.sort();
 
@@ -170,8 +172,6 @@ mod tests {
         ) {
             let mut ctx = Context::default();
             let mut ctx = ctx.into_partial_ref_mut();
-
-            set_var_count(ctx.borrow(), formula.var_count());
 
             // We add the conflict clause first to make sure that it isn't simplified during loading
 
@@ -213,8 +213,6 @@ mod tests {
             let mut ctx = Context::default();
             let mut ctx = ctx.into_partial_ref_mut();
 
-            set_var_count(ctx.borrow(), max(tmp_formula.var_count(), formula.var_count()));
-
             for clause in tmp_formula.iter() {
                 // Only add long clauses here
                 let mut lits = clause.to_owned();
@@ -246,6 +244,13 @@ mod tests {
             lits.sort();
 
             let mut prop_lits = ctx.part(TrailP).trail().to_owned();
+
+            // Remap vars
+            for lit in prop_lits.iter_mut() {
+                *lit = lit.map_var(|solver_var| {
+                    ctx.part(VariablesP).existing_user_from_solver(solver_var)
+                });
+            }
 
             prop_lits.sort();
 

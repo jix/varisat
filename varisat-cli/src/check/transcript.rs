@@ -1,54 +1,91 @@
-use varisat::checker::{CheckedProofStep, ProofProcessor};
+use varisat::checker::{ProofTranscriptProcessor, ProofTranscriptStep};
 
 use failure::Error;
 
+/// Steps that will be summarized
+#[derive(Copy, Clone, Eq, PartialEq)]
+enum SummaryStep {
+    WitnessVar,
+    SampleVar,
+    HideVar,
+    ObserveInternalVar,
+    AddClause,
+}
+
 /// Prints a simple transcript of the proof.
 ///
-/// This shows whether the formula was proven unsatisfiable or whether a model is found. It also
+/// This shows whether the formula was proven unsatisfiable or whether a model is found.
 #[derive(Default)]
 pub struct Transcript {
-    new_clauses: usize,
+    last_step: Option<SummaryStep>,
+    counter: usize,
 }
 
 impl Transcript {
-    /// Print how many new claues were loaded since the last transcript line
-    fn print_loaded_clauses(&mut self) {
-        if self.new_clauses > 0 {
-            println!("t LOADED {} CLAUSES", self.new_clauses);
-            self.new_clauses = 0;
+    /// Print a summary of steps that appear repeatedly.
+    fn print_summary(&mut self, step: Option<SummaryStep>) {
+        if self.last_step == step {
+            self.counter += 1;
+        } else {
+            match self.last_step {
+                None => (),
+                Some(SummaryStep::WitnessVar) => {
+                    println!("t WITNESS {} VARIABLES ", self.counter);
+                }
+                Some(SummaryStep::SampleVar) => {
+                    println!("t SAMPLE {} VARIABLES ", self.counter);
+                }
+                Some(SummaryStep::HideVar) => {
+                    println!("t HIDE {} VARIABLES ", self.counter);
+                }
+                Some(SummaryStep::ObserveInternalVar) => {
+                    println!("t OBSERVE {} INTERNAL VARIABLES ", self.counter);
+                }
+                Some(SummaryStep::AddClause) => {
+                    println!("t ADD {} CLAUSES ", self.counter);
+                }
+            }
+
+            self.counter = 1;
+            self.last_step = step;
         }
     }
 }
 
-impl ProofProcessor for Transcript {
-    fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error> {
+impl ProofTranscriptProcessor for Transcript {
+    fn process_step(&mut self, step: &ProofTranscriptStep) -> Result<(), Error> {
         match &step {
-            CheckedProofStep::AddClause { .. } | CheckedProofStep::DuplicatedClause { .. } => {
-                self.new_clauses += 1;
-                return Ok(());
+            ProofTranscriptStep::WitnessVar { .. } => {
+                self.print_summary(Some(SummaryStep::WitnessVar));
             }
-            _ => (),
-        }
-        match step {
-            CheckedProofStep::AtClause { clause, .. } => {
-                if clause.is_empty() {
-                    self.print_loaded_clauses();
-                    println!("t UNSAT");
-                }
+            ProofTranscriptStep::SampleVar { .. } => {
+                self.print_summary(Some(SummaryStep::SampleVar));
             }
-            CheckedProofStep::Assumptions { assumptions } => {
-                self.print_loaded_clauses();
-                println!("t ASSUME {} LITERALS", assumptions.len());
+            ProofTranscriptStep::HideVar { .. } => {
+                self.print_summary(Some(SummaryStep::HideVar));
             }
-            CheckedProofStep::FailedAssumptions { failed_core, .. } => {
-                self.print_loaded_clauses();
-                println!("t UNSAT WITH {} ASSUMPTIONS", failed_core.len());
+            ProofTranscriptStep::ObserveInternalVar { .. } => {
+                self.print_summary(Some(SummaryStep::ObserveInternalVar));
             }
-            CheckedProofStep::Model { .. } => {
-                self.print_loaded_clauses();
+            ProofTranscriptStep::AddClause { .. } => {
+                self.print_summary(Some(SummaryStep::AddClause));
+            }
+            ProofTranscriptStep::Unsat => {
+                self.print_summary(None);
+                println!("t UNSAT");
+            }
+            ProofTranscriptStep::Model { .. } => {
+                self.print_summary(None);
                 println!("t SAT");
             }
-            _ => (),
+            ProofTranscriptStep::Assume { assumptions } => {
+                self.print_summary(None);
+                println!("t ASSUME {} LITERALS", assumptions.len());
+            }
+            ProofTranscriptStep::FailedAssumptions { failed_core, .. } => {
+                self.print_summary(None);
+                println!("t UNSAT WITH {} ASSUMPTIONS", failed_core.len());
+            }
         }
         Ok(())
     }

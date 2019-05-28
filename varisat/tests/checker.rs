@@ -5,7 +5,7 @@ use failure::{Error, Fail};
 
 use proptest::prelude::*;
 
-use varisat::checker::{CheckedProofStep, Checker, ProofProcessor};
+use varisat::checker::{CheckedProofStep, Checker, CheckerData, ProofProcessor};
 use varisat::{dimacs::write_dimacs, CnfFormula, ExtendFormula, Lit, ProofFormat, Solver, Var};
 use varisat_formula::test::{conditional_pigeon_hole, sgen_unsat_formula};
 
@@ -76,7 +76,11 @@ proptest! {
         }
 
         impl ProofProcessor for FoundModels {
-            fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error> {
+            fn process_step(
+                &mut self,
+                step: &CheckedProofStep,
+                _data: CheckerData,
+            ) -> Result<(), Error> {
                 if let CheckedProofStep::Model { .. } = step {
                     self.counter += 1;
                 } else if let CheckedProofStep::AtClause { clause: &[], .. } = step {
@@ -158,7 +162,11 @@ proptest! {
         }
 
         impl ProofProcessor for CountResults {
-            fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error> {
+            fn process_step(
+                &mut self,
+                step: &CheckedProofStep,
+                _data: CheckerData,
+            ) -> Result<(), Error> {
                 match step {
                     CheckedProofStep::Model { .. } => {
                         self.sat += 1;

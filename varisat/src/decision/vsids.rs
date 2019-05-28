@@ -53,14 +53,8 @@ impl Default for Vsids {
 impl Vsids {
     /// Update structures for a new variable count.
     pub fn set_var_count(&mut self, count: usize) {
-        let old_count = self.activity.len();
-        debug_assert!(!self.heap.iter().any(|&v| v.index() >= count));
         self.activity.resize(count, OrderedFloat(0.0));
         self.position.resize(count, None);
-
-        for i in old_count..count {
-            self.make_available(Var::from_index(i));
-        }
     }
 
     /// Rescale activities if any value exceeds this value.
@@ -105,6 +99,27 @@ impl Vsids {
             activity.0 *= rescale_factor;
         }
         self.bump *= rescale_factor;
+    }
+
+    /// Reset the activity of an unavailable variable to zero.
+    ///
+    /// Panics if the variable is still available.
+    pub fn reset(&mut self, var: Var) {
+        assert!(self.position[var.index()].is_none());
+        self.activity[var.index()] = OrderedFloat(0.0);
+    }
+
+    /// Remove a variable from the heap if present.
+    pub fn make_unavailable(&mut self, var: Var) {
+        if let Some(position) = self.position[var.index()] {
+            self.heap.swap_remove(position);
+            if self.heap.len() > position {
+                let moved_var = self.heap[position];
+                self.position[moved_var.index()] = Some(position);
+                self.sift_down(position);
+            }
+            self.position[var.index()] = None;
+        }
     }
 
     /// Insert a variable into the heap if not already present.

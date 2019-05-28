@@ -5,7 +5,7 @@ use std::io::{self, sink, BufWriter, Write};
 use partial_ref::{partial, PartialRef};
 
 use varisat_checker::{internal::SelfChecker, Checker, CheckerError, ProofProcessor};
-use varisat_formula::Lit;
+use varisat_formula::{Lit, Var};
 use varisat_internal_proof::{ClauseHash, ProofStep};
 
 use crate::context::{parts::*, Context};
@@ -39,7 +39,11 @@ pub fn clause_count_delta(step: &ProofStep) -> isize {
                 0
             }
         }
-        ProofStep::UnitClauses(..)
+        ProofStep::SolverVarName { .. }
+        | ProofStep::UserVarName { .. }
+        | ProofStep::DeleteVar { .. }
+        | ProofStep::ChangeSamplingMode { .. }
+        | ProofStep::UnitClauses(..)
         | ProofStep::ChangeHashBits(..)
         | ProofStep::Model(..)
         | ProofStep::Assumptions(..)
@@ -60,8 +64,6 @@ pub struct Proof<'a> {
     ///
     /// This is used to pick a good number of hash_bits
     clause_count: isize,
-    /// Whether we're finished with the initial loading of clauses.
-    initial_load_complete: bool,
 }
 
 impl<'a> Default for Proof<'a> {
@@ -73,7 +75,6 @@ impl<'a> Default for Proof<'a> {
             map_step: Default::default(),
             hash_bits: 64,
             clause_count: 0,
-            initial_load_complete: false,
         }
     }
 }
@@ -133,14 +134,25 @@ impl<'a> Proof<'a> {
 /// Call when adding an external clause.
 ///
 /// This is required for on the fly checking and checking of incremental solving.
+///
+/// *Note:* this function expects the clause to use solver var names.
 pub fn add_clause<'a>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP),
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, VariablesP),
     clause: &[Lit],
 ) {
     if ctx.part(SolverStateP).solver_invoked {
-        add_step(ctx.borrow(), &ProofStep::AddClause { clause })
+        add_step(ctx.borrow(), true, &ProofStep::AddClause { clause })
     } else {
-        if let Some(checker) = &mut ctx.part_mut(ProofP).checker {
+        let (variables, mut ctx) = ctx.split_part(VariablesP);
+        let proof = ctx.part_mut(ProofP);
+        if let Some(checker) = &mut proof.checker {
+            let clause = proof.map_step.map_lits(clause, |var| {
+                variables
+                    .global_from_solver()
+                    .get(var)
+                    .expect("no existing global var for solver var")
+            });
+
             let result = checker.add_clause(clause);
             handle_self_check_result(ctx.borrow(), result);
         }
@@ -153,29 +165,44 @@ pub fn add_clause<'a>(
 /// Add a step to the proof.
 ///
 /// Ignored when proof generation is disabled.
+///
+/// When `solver_vars` is true, all variables and literals will be converted from solver to global
+/// vars. Otherwise the proof step needs to use global vars.
 pub fn add_step<'a, 's>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP),
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, VariablesP),
+    solver_vars: bool,
     step: &'s ProofStep<'s>,
 ) {
-    let proof = ctx.part_mut(ProofP);
-
-    // This is a crude hack, as delete steps are the only ones emitted during loading. We need this
-    // to avoid triggering a hash size adjustment during the initial load. The checker has already
-    // loaded the complete formula, so our clause count doesn't match the checker's and we could
-    // cause way too many collisions, causing the checker to have quadratic runtime.
-    match step {
-        ProofStep::DeleteClause { .. } => {}
-        _ => proof.initial_load_complete = true,
+    if ctx.part(SolverStateP).solver_error.is_some() {
+        return;
     }
 
+    if ctx.part(SolverStateP).solver_error.is_some() {
+        return;
+    }
+
+    let (variables, mut ctx) = ctx.split_part(VariablesP);
+    let proof = ctx.part_mut(ProofP);
+
+    let map_vars = |var| {
+        if solver_vars {
+            variables
+                .global_from_solver()
+                .get(var)
+                .expect("no existing global var for solver var")
+        } else {
+            var
+        }
+    };
+
     let io_result = match proof.format {
-        Some(ProofFormat::Varisat) => write_varisat_step(ctx.borrow(), step),
+        Some(ProofFormat::Varisat) => write_varisat_step(ctx.borrow(), map_vars, step),
         Some(ProofFormat::Drat) => {
-            let step = proof.map_step.map(step, |lit| lit, |hash| hash);
+            let step = proof.map_step.map(step, map_vars, |hash| hash);
             drat::write_step(&mut proof.target, &step)
         }
         Some(ProofFormat::BinaryDrat) => {
-            let step = proof.map_step.map(step, |lit| lit, |hash| hash);
+            let step = proof.map_step.map(step, map_vars, |hash| hash);
             drat::write_binary_step(&mut proof.target, &step)
         }
         None => Ok(()),
@@ -184,7 +211,7 @@ pub fn add_step<'a, 's>(
     if io_result.is_ok() {
         let proof = ctx.part_mut(ProofP);
         if let Some(checker) = &mut proof.checker {
-            let step = proof.map_step.map(step, |lit| lit, |hash| hash);
+            let step = proof.map_step.map(step, map_vars, |hash| hash);
             let result = checker.self_check_step(step);
             handle_self_check_result(ctx.borrow(), result);
         }
@@ -195,10 +222,11 @@ pub fn add_step<'a, 's>(
 
 /// Write a step using our native format
 fn write_varisat_step<'a, 's>(
-    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP),
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, SolverStateP),
+    map_vars: impl Fn(Var) -> Var,
     step: &'s ProofStep<'s>,
 ) -> io::Result<()> {
-    let proof = ctx.part_mut(ProofP);
+    let (proof, ctx) = ctx.split_part_mut(ProofP);
 
     proof.clause_count += clause_count_delta(step);
 
@@ -208,7 +236,7 @@ fn write_varisat_step<'a, 's>(
         proof.hash_bits += 2;
         rehash = true;
     }
-    if proof.initial_load_complete {
+    if ctx.part(SolverStateP).solver_invoked {
         while proof.hash_bits > 6 && proof.clause_count * 4 < (1 << (proof.hash_bits / 2)) {
             proof.hash_bits -= 2;
             rehash = true;
@@ -225,7 +253,7 @@ fn write_varisat_step<'a, 's>(
     let shift_bits = ClauseHash::max_value().count_ones() - proof.hash_bits;
 
     let map_hash = |hash| hash >> shift_bits;
-    let step = proof.map_step.map(step, |lit| lit, map_hash);
+    let step = proof.map_step.map(step, map_vars, map_hash);
 
     if proof.format == Some(ProofFormat::Varisat) {
         varisat_internal_proof::binary_format::write_step(&mut proof.target, &step)?;
@@ -242,8 +270,10 @@ pub fn flush_proof<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut Solver
 }
 
 /// Stop writing proof steps.
-pub fn close_proof<'a>(mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP)) {
-    add_step(ctx.borrow(), &ProofStep::End);
+pub fn close_proof<'a>(
+    mut ctx: partial!(Context<'a>, mut ProofP<'a>, mut SolverStateP, VariablesP),
+) {
+    add_step(ctx.borrow(), true, &ProofStep::End);
     flush_proof(ctx.borrow());
     ctx.part_mut(ProofP).format = None;
     ctx.part_mut(ProofP).target = BufWriter::new(Box::new(sink()));

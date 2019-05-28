@@ -11,10 +11,10 @@ use varisat_formula::Lit;
 use crate::context::{parts::*, Context};
 
 /// Compute the glue level of a clause.
-pub fn compute_glue(mut ctx: partial!(Context, mut TmpDataP, ImplGraphP), lits: &[Lit]) -> usize {
-    let (tmp_data, ctx) = ctx.split_part_mut(TmpDataP);
+pub fn compute_glue(mut ctx: partial!(Context, mut TmpFlagsP, ImplGraphP), lits: &[Lit]) -> usize {
+    let (tmp_flags, ctx) = ctx.split_part_mut(TmpFlagsP);
     let impl_graph = ctx.part(ImplGraphP);
-    let flags = &mut tmp_data.flags;
+    let flags = &mut tmp_flags.flags;
 
     let mut glue = 0;
 
