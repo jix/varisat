@@ -47,7 +47,7 @@ pub fn check_main(matches: &ArgMatches) -> Result<i32, Error> {
 
     let mut transcript = transcript::Transcript::default();
 
-    checker.add_processor(&mut transcript);
+    checker.add_transcript(&mut transcript);
 
     let mut lrat_processor;
 

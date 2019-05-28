@@ -17,6 +17,10 @@ use varisat_internal_proof::{
 
 pub mod internal;
 
+mod transcript;
+
+pub use transcript::{ProofTranscriptProcessor, ProofTranscriptStep};
+
 /// Possible errors while checking a varisat proof.
 #[derive(Debug, Fail)]
 pub enum CheckerError {
@@ -159,9 +163,35 @@ pub struct ResolutionPropagations {
     // TODO implement ResolutionPropagations
 }
 
+/// Checker data available to proof processors.
+#[derive(Copy, Clone)]
+pub struct CheckerData<'a> {
+    var_data: &'a [VarData],
+}
+
+impl<'a> CheckerData<'a> {
+    /// User variable corresponding to proof variable.
+    ///
+    /// Returns `None` if the proof variable is an internal or hidden variable.
+    pub fn user_from_proof_var(&self, proof_var: Var) -> Option<Var> {
+        self.var_data.get(proof_var.index()).and_then(|var_data| {
+            var_data.user_var.or_else(|| {
+                // This is needed as yet another workaround to enable independently loading the
+                // initial formula and proof.
+                // TODO can this be solved in a better way?
+                if var_data.sampling_mode == SamplingMode::Sample {
+                    Some(proof_var)
+                } else {
+                    None
+                }
+            })
+        })
+    }
+}
+
 /// Implement to process proof steps.
 pub trait ProofProcessor {
-    fn process_step(&mut self, step: &CheckedProofStep) -> Result<(), Error>;
+    fn process_step(&mut self, step: &CheckedProofStep, data: CheckerData) -> Result<(), Error>;
 }
 
 const INLINE_LITS: usize = 3;
@@ -304,6 +334,43 @@ impl Default for VarData {
     }
 }
 
+/// Registry of proof and transcript processors.
+#[derive(Default)]
+struct Processing<'a> {
+    /// Registered proof processors.
+    processors: Vec<&'a mut dyn ProofProcessor>,
+    /// Registered transcript processors.
+    transcript_processors: Vec<&'a mut dyn ProofTranscriptProcessor>,
+    /// Proof step to transcript step conversion.
+    transcript: transcript::Transcript,
+}
+
+impl<'a> Processing<'a> {
+    /// Process a single step
+    pub fn step<'b>(
+        &mut self,
+        step: &CheckedProofStep<'b>,
+        data: CheckerData,
+    ) -> Result<(), CheckerError> {
+        for processor in self.processors.iter_mut() {
+            if let Err(err) = processor.process_step(step, data) {
+                return Err(CheckerError::ProofProcessorError { cause: err });
+            }
+        }
+        if !self.transcript_processors.is_empty() {
+            if let Some(transcript_step) = self.transcript.transcript_step(step, data) {
+                for processor in self.transcript_processors.iter_mut() {
+                    if let Err(err) = processor.process_step(&transcript_step) {
+                        return Err(CheckerError::ProofProcessorError { cause: err });
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 /// A checker for unsatisfiability proofs in the native varisat format.
 pub struct Checker<'a> {
     /// Current step number.
@@ -335,7 +402,7 @@ pub struct Checker<'a> {
     /// Just the ids of `trace`.
     trace_ids: Vec<u64>,
     /// Registered proof processors.
-    processors: Vec<&'a mut dyn ProofProcessor>,
+    processing: Processing<'a>,
     /// This stores a conflict of input unit clauses.
     ///
     /// Our representation for unit clauses doesn't support conflicting units so this is used as a
@@ -384,7 +451,7 @@ impl<'a> Default for Checker<'a> {
             trace: vec![],
             trace_edges: vec![],
             trace_ids: vec![],
-            processors: vec![],
+            processing: Default::default(),
             unit_conflict: None,
             tmp: vec![],
             hash_bits: 64,
@@ -423,11 +490,13 @@ impl<'a> Checker<'a> {
         let mut tmp = replace(&mut self.tmp, vec![]);
 
         if copy_canonical(&mut tmp, clause) {
-            Self::process_step(
-                &mut self.processors,
+            self.processing.step(
                 &CheckedProofStep::TautologicalClause {
                     id: self.next_clause_id,
                     clause: &self.tmp,
+                },
+                CheckerData {
+                    var_data: &self.var_data,
                 },
             )?;
             self.next_clause_id += 1;
@@ -444,31 +513,37 @@ impl<'a> Checker<'a> {
 
         match added {
             StoreClauseResult::New => {
-                Self::process_step(
-                    &mut self.processors,
+                self.processing.step(
                     &CheckedProofStep::AddClause {
                         id: id,
                         clause: &self.tmp,
+                    },
+                    CheckerData {
+                        var_data: &self.var_data,
                     },
                 )?;
             }
             StoreClauseResult::NewlyIrredundant | StoreClauseResult::Duplicate => {
                 if let StoreClauseResult::NewlyIrredundant = added {
-                    Self::process_step(
-                        &mut self.processors,
+                    self.processing.step(
                         &CheckedProofStep::MakeIrredundant {
                             id,
                             clause: &self.tmp,
                         },
+                        CheckerData {
+                            var_data: &self.var_data,
+                        },
                     )?;
                 }
 
-                Self::process_step(
-                    &mut self.processors,
+                self.processing.step(
                     &CheckedProofStep::DuplicatedClause {
                         id: self.next_clause_id,
                         same_as_id: id,
                         clause: &self.tmp,
+                    },
+                    CheckerData {
+                        var_data: &self.var_data,
                     },
                 )?;
                 // This is a duplicated clause. We want to ensure that the clause ids match the input
@@ -519,18 +594,6 @@ impl<'a> Checker<'a> {
         }
     }
 
-    fn var_in_use(&self, var: Var) -> bool {
-        if self.unit_clauses[var.index()].is_some() {
-            return true;
-        }
-        for &polarity in &[false, true] {
-            if self.lit_data[var.lit(polarity).code()].clause_count > 0 {
-                return true;
-            }
-        }
-        false
-    }
-
     /// Add a user/global var mapping.
     fn add_user_mapping(&mut self, global_var: Var, user_var: Var) -> Result<(), CheckerError> {
         self.ensure_var(global_var);
@@ -542,7 +605,6 @@ impl<'a> Checker<'a> {
             ));
         }
 
-        let in_use = self.var_in_use(global_var);
         let var_data = &mut self.var_data[global_var.index()];
 
         if var_data.sampling_mode == SamplingMode::Hide {
@@ -566,8 +628,7 @@ impl<'a> Checker<'a> {
 
         self.used_user_vars.insert(user_var);
 
-        Self::process_step(
-            &mut self.processors,
+        self.processing.step(
             &CheckedProofStep::UserVar {
                 var: global_var,
                 user_var: Some(CheckedUserVar {
@@ -577,8 +638,11 @@ impl<'a> Checker<'a> {
                     } else {
                         CheckedSamplingMode::Sample
                     },
-                    new_var: !in_use,
+                    new_var: true,
                 }),
+            },
+            CheckerData {
+                var_data: &self.var_data,
             },
         )?;
 
@@ -589,11 +653,21 @@ impl<'a> Checker<'a> {
     fn remove_user_mapping(&mut self, global_var: Var) -> Result<(), CheckerError> {
         self.ensure_var(global_var);
 
-        let var_data = &mut self.var_data[global_var.index()];
-        if let Some(user_var) = var_data.user_var {
-            self.used_user_vars.remove(&user_var);
-            var_data.user_var = None;
-            var_data.sampling_mode = SamplingMode::Hide;
+        let var_data = &self.var_data[global_var.index()];
+
+        // We process this step before removing the mapping, so the processor can still look up the
+        // mapping.
+
+        if var_data.user_var.is_some() {
+            self.processing.step(
+                &CheckedProofStep::UserVar {
+                    var: global_var,
+                    user_var: None,
+                },
+                CheckerData {
+                    var_data: &self.var_data,
+                },
+            )?;
         } else {
             return Err(CheckerError::check_failed(
                 self.step,
@@ -601,13 +675,12 @@ impl<'a> Checker<'a> {
             ));
         }
 
-        Self::process_step(
-            &mut self.processors,
-            &CheckedProofStep::UserVar {
-                var: global_var,
-                user_var: None,
-            },
-        )?;
+        let var_data = &mut self.var_data[global_var.index()];
+        if let Some(user_var) = var_data.user_var {
+            self.used_user_vars.remove(&user_var);
+            var_data.user_var = None;
+            var_data.sampling_mode = SamplingMode::Hide;
+        }
 
         Ok(())
     }
@@ -988,7 +1061,7 @@ impl<'a> Checker<'a> {
             }
         }
 
-        if rup_is_unsat && !self.processors.is_empty() {
+        if rup_is_unsat && !self.processing.processors.is_empty() {
             for i in (0..self.trace.len()).rev() {
                 if !self.trace[i].unused {
                     let edges = self.trace[i].edges.clone();
@@ -1070,10 +1143,12 @@ impl<'a> Checker<'a> {
                     self.ensure_sampling_var(lit.var())?;
                 }
                 copy_canonical(&mut self.assumptions, assumptions);
-                Self::process_step(
-                    &mut self.processors,
+                self.processing.step(
                     &CheckedProofStep::Assumptions {
                         assumptions: &self.assumptions,
+                    },
+                    CheckerData {
+                        var_data: &self.var_data,
                     },
                 )?;
                 Ok(())
@@ -1127,14 +1202,16 @@ impl<'a> Checker<'a> {
                 _ => unreachable!(),
             };
 
-            Self::process_step(
-                &mut self.processors,
+            self.processing.step(
                 &CheckedProofStep::DeleteRatClause {
                     id,
                     keep_as_redundant: false,
                     clause: &clause[..],
                     pivot: clause[0],
                     propagations: &ResolutionPropagations {},
+                },
+                CheckerData {
+                    var_data: &self.var_data,
                 },
             )?;
 
@@ -1159,8 +1236,7 @@ impl<'a> Checker<'a> {
             var_data.sampling_mode = sampling_mode;
 
             if let Some(user_var) = var_data.user_var {
-                Self::process_step(
-                    &mut self.processors,
+                self.processing.step(
                     &CheckedProofStep::UserVar {
                         var,
                         user_var: Some(CheckedUserVar {
@@ -1173,7 +1249,15 @@ impl<'a> Checker<'a> {
                             new_var: false,
                         }),
                     },
+                    CheckerData {
+                        var_data: &self.var_data,
+                    },
                 )?;
+            } else if sampling_mode == SamplingMode::Sample {
+                return Err(CheckerError::check_failed(
+                    self.step,
+                    format!("cannot sample hidden variable {:?}", var),
+                ));
             }
         }
 
@@ -1208,20 +1292,24 @@ impl<'a> Checker<'a> {
 
         match added {
             StoreClauseResult::New => {
-                Self::process_step(
-                    &mut self.processors,
+                self.processing.step(
                     &CheckedProofStep::AtClause {
                         id,
                         redundant: redundant,
                         clause: &tmp,
                         propagations: &self.trace_ids,
                     },
+                    CheckerData {
+                        var_data: &self.var_data,
+                    },
                 )?;
             }
             StoreClauseResult::NewlyIrredundant => {
-                Self::process_step(
-                    &mut self.processors,
+                self.processing.step(
                     &CheckedProofStep::MakeIrredundant { id, clause: &tmp },
+                    CheckerData {
+                        var_data: &self.var_data,
+                    },
                 )?;
             }
             StoreClauseResult::Duplicate => (),
@@ -1297,11 +1385,13 @@ impl<'a> Checker<'a> {
         if redundant {
             match deleted {
                 DeleteClauseResult::Removed => {
-                    Self::process_step(
-                        &mut self.processors,
+                    self.processing.step(
                         &CheckedProofStep::DeleteClause {
                             id: id,
                             clause: &tmp,
+                        },
+                        CheckerData {
+                            var_data: &self.var_data,
                         },
                     )?;
                 }
@@ -1311,13 +1401,15 @@ impl<'a> Checker<'a> {
         } else {
             match deleted {
                 DeleteClauseResult::Removed | DeleteClauseResult::NewlyRedundant => {
-                    Self::process_step(
-                        &mut self.processors,
+                    self.processing.step(
                         &CheckedProofStep::DeleteAtClause {
                             id: id,
                             keep_as_redundant: deleted == DeleteClauseResult::NewlyRedundant,
                             clause: &tmp,
                             propagations: &[subsumed_by.unwrap()],
+                        },
+                        CheckerData {
+                            var_data: &self.var_data,
                         },
                     )?;
                 }
@@ -1342,13 +1434,15 @@ impl<'a> Checker<'a> {
 
             match added {
                 StoreClauseResult::New => {
-                    Self::process_step(
-                        &mut self.processors,
+                    self.processing.step(
                         &CheckedProofStep::AtClause {
                             id,
                             redundant: false,
                             clause: &clause,
                             propagations: &self.trace_ids,
+                        },
+                        CheckerData {
+                            var_data: &self.var_data,
                         },
                     )?;
                 }
@@ -1400,9 +1494,11 @@ impl<'a> Checker<'a> {
             }
         }
 
-        Self::process_step(
-            &mut self.processors,
+        self.processing.step(
             &CheckedProofStep::Model { assignment: model },
+            CheckerData {
+                var_data: &self.var_data,
+            },
         )?;
 
         Ok(())
@@ -1441,29 +1537,17 @@ impl<'a> Checker<'a> {
             }
         }
 
-        Self::process_step(
-            &mut self.processors,
+        self.processing.step(
             &CheckedProofStep::FailedAssumptions {
                 failed_core: &tmp,
                 propagations: &self.trace_ids,
             },
+            CheckerData {
+                var_data: &self.var_data,
+            },
         )?;
 
         self.tmp = tmp;
-
-        Ok(())
-    }
-
-    /// Invoke all proof processors for a CheckedProofStep
-    fn process_step<'b>(
-        processors: &'b mut [&'a mut dyn ProofProcessor],
-        step: &CheckedProofStep<'b>,
-    ) -> Result<(), CheckerError> {
-        for processor in processors.iter_mut() {
-            if let Err(err) = processor.process_step(step) {
-                return Err(CheckerError::ProofProcessorError { cause: err });
-            }
-        }
 
         Ok(())
     }
@@ -1510,13 +1594,15 @@ impl<'a> Checker<'a> {
     fn process_unit_conflicts(&mut self) -> Result<(), CheckerError> {
         if let Some(ids) = &self.unit_conflict {
             let clause = &[];
-            Self::process_step(
-                &mut self.processors,
+            self.processing.step(
                 &CheckedProofStep::AtClause {
                     id: self.next_clause_id,
                     redundant: false,
                     clause,
                     propagations: ids,
+                },
+                CheckerData {
+                    var_data: &self.var_data,
                 },
             )?;
         }
@@ -1528,7 +1614,14 @@ impl<'a> Checker<'a> {
     ///
     /// This has to be called before loading any clauses or checking any proofs.
     pub fn add_processor(&mut self, processor: &'a mut dyn ProofProcessor) {
-        self.processors.push(processor);
+        self.processing.processors.push(processor);
+    }
+
+    /// Add a [`ProofTranscriptProcessor`].
+    ///
+    /// This has to be called before loading any clauses or checking any proofs.
+    pub fn add_transcript(&mut self, processor: &'a mut dyn ProofTranscriptProcessor) {
+        self.processing.transcript_processors.push(processor);
     }
 }
 
