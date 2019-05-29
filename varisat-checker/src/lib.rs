@@ -1176,7 +1176,7 @@ impl<'a> Checker<'a> {
         result
     }
 
-    /// Check an DeleteVar step
+    /// Check a DeleteVar step
     fn check_delete_var_step(&mut self, var: Var) -> Result<(), CheckerError> {
         self.ensure_var(var);
         if let Some(user_var) = self.var_data[var.index()].user_var {
@@ -1226,7 +1226,7 @@ impl<'a> Checker<'a> {
         Ok(())
     }
 
-    /// Check an ChangeSamplingMode step
+    /// Check a ChangeSamplingMode step
     fn check_change_sampling_mode(&mut self, var: Var, sample: bool) -> Result<(), CheckerError> {
         self.ensure_var(var);
         let var_data = &mut self.var_data[var.index()];
