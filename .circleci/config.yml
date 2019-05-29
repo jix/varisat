@@ -9,6 +9,7 @@ jobs:
       - run: |
           export VARISAT_HAVE_DRAT_TRIM=1
           export VARISAT_HAVE_CHECK_LRAT=1
+          export VARISAT_HAVE_RATE=1
           cargo build --verbose --all --all-targets
           python3 .circleci/save_binaries.py
       - persist_to_workspace:
