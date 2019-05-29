@@ -43,10 +43,10 @@ pub fn clause_count_delta(step: &ProofStep) -> isize {
         | ProofStep::UserVarName { .. }
         | ProofStep::DeleteVar { .. }
         | ProofStep::ChangeSamplingMode { .. }
-        | ProofStep::UnitClauses(..)
-        | ProofStep::ChangeHashBits(..)
-        | ProofStep::Model(..)
-        | ProofStep::Assumptions(..)
+        | ProofStep::UnitClauses { .. }
+        | ProofStep::ChangeHashBits { .. }
+        | ProofStep::Model { .. }
+        | ProofStep::Assumptions { .. }
         | ProofStep::FailedAssumptions { .. }
         | ProofStep::End => 0,
     }
@@ -241,7 +241,9 @@ fn write_varisat_step<'a, 's>(
     if rehash {
         varisat_internal_proof::binary_format::write_step(
             &mut proof.target,
-            &ProofStep::ChangeHashBits(proof.hash_bits),
+            &ProofStep::ChangeHashBits {
+                bits: proof.hash_bits,
+            },
         )?;
     }
 

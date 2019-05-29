@@ -13,7 +13,7 @@ use crate::variables;
 
 /// Incremental solving.
 #[derive(Default)]
-pub struct Incremental {
+pub struct Assumptions {
     assumptions: Vec<Lit>,
     failed_core: Vec<Lit>,
     user_failed_core: Vec<Lit>,
@@ -21,7 +21,7 @@ pub struct Incremental {
     failed_propagation_hashes: Vec<ClauseHash>,
 }
 
-impl Incremental {
+impl Assumptions {
     /// Current number of decision levels used for assumptions.
     pub fn assumption_levels(&self) -> usize {
         self.assumption_levels
@@ -63,9 +63,9 @@ pub fn set_assumptions<'a>(
         Context<'a>,
         mut AnalyzeConflictP,
         mut AssignmentP,
+        mut AssumptionsP,
         mut BinaryClausesP,
         mut ImplGraphP,
-        mut IncrementalP,
         mut ProofP<'a>,
         mut SolverStateP,
         mut TmpFlagsP,
@@ -85,9 +85,9 @@ pub fn set_assumptions<'a>(
         SatState::Sat | SatState::UnsatUnderAssumptions | SatState::Unknown => SatState::Unknown,
     };
 
-    let (incremental, mut ctx_2) = ctx.split_part_mut(IncrementalP);
+    let (assumptions, mut ctx_2) = ctx.split_part_mut(AssumptionsP);
 
-    for lit in incremental.assumptions.iter() {
+    for lit in assumptions.assumptions.iter() {
         ctx_2
             .part_mut(VariablesP)
             .var_data_solver_mut(lit.var())
@@ -96,12 +96,12 @@ pub fn set_assumptions<'a>(
 
     variables::solver_from_user_lits(
         ctx_2.borrow(),
-        &mut incremental.assumptions,
+        &mut assumptions.assumptions,
         user_assumptions,
         true,
     );
 
-    for lit in incremental.assumptions.iter() {
+    for lit in assumptions.assumptions.iter() {
         ctx_2
             .part_mut(VariablesP)
             .var_data_solver_mut(lit.var())
@@ -111,7 +111,9 @@ pub fn set_assumptions<'a>(
     proof::add_step(
         ctx_2.borrow(),
         true,
-        &ProofStep::Assumptions(&incremental.assumptions),
+        &ProofStep::Assumptions {
+            assumptions: &assumptions.assumptions,
+        },
     );
 }
 
@@ -123,8 +125,8 @@ pub fn enqueue_assumption<'a>(
     mut ctx: partial!(
         Context<'a>,
         mut AssignmentP,
+        mut AssumptionsP,
         mut ImplGraphP,
-        mut IncrementalP,
         mut ProofP<'a>,
         mut SolverStateP,
         mut TmpFlagsP,
@@ -134,7 +136,7 @@ pub fn enqueue_assumption<'a>(
     ),
 ) -> EnqueueAssumption {
     while let Some(&assumption) = ctx
-        .part(IncrementalP)
+        .part(AssumptionsP)
         .assumptions
         .get(ctx.part(TrailP).current_level())
     {
@@ -146,14 +148,14 @@ pub fn enqueue_assumption<'a>(
             Some(true) => {
                 // The next assumption is already implied by other assumptions so we can remove it.
                 let level = ctx.part(TrailP).current_level();
-                let incremental = ctx.part_mut(IncrementalP);
-                incremental.assumptions.swap_remove(level);
+                let assumptions = ctx.part_mut(AssumptionsP);
+                assumptions.assumptions.swap_remove(level);
             }
             None => {
                 ctx.part_mut(TrailP).new_decision_level();
                 enqueue_assignment(ctx.borrow(), assumption, Reason::Unit);
-                let (incremental, ctx) = ctx.split_part_mut(IncrementalP);
-                incremental.assumption_levels = ctx.part(TrailP).current_level();
+                let (assumptions, ctx) = ctx.split_part_mut(AssumptionsP);
+                assumptions.assumption_levels = ctx.part(TrailP).current_level();
                 return EnqueueAssumption::Enqueued;
             }
         }
@@ -168,7 +170,7 @@ pub fn enqueue_assumption<'a>(
 fn analyze_assumption_conflict<'a>(
     mut ctx: partial!(
         Context<'a>,
-        mut IncrementalP,
+        mut AssumptionsP,
         mut ProofP<'a>,
         mut SolverStateP,
         mut TmpFlagsP,
@@ -179,17 +181,17 @@ fn analyze_assumption_conflict<'a>(
     ),
     assumption: Lit,
 ) {
-    let (incremental, mut ctx) = ctx.split_part_mut(IncrementalP);
+    let (assumptions, mut ctx) = ctx.split_part_mut(AssumptionsP);
     let (tmp, mut ctx) = ctx.split_part_mut(TmpFlagsP);
     let (trail, mut ctx) = ctx.split_part(TrailP);
     let (impl_graph, mut ctx) = ctx.split_part(ImplGraphP);
 
     let flags = &mut tmp.flags;
 
-    incremental.failed_core.clear();
-    incremental.failed_core.push(assumption);
+    assumptions.failed_core.clear();
+    assumptions.failed_core.push(assumption);
 
-    incremental.failed_propagation_hashes.clear();
+    assumptions.failed_propagation_hashes.clear();
 
     flags[assumption.index()] = true;
     let mut flag_count = 1;
@@ -202,7 +204,7 @@ fn analyze_assumption_conflict<'a>(
             match impl_graph.reason(lit.var()) {
                 Reason::Unit => {
                     if impl_graph.level(lit.var()) > 0 {
-                        incremental.failed_core.push(lit);
+                        assumptions.failed_core.push(lit);
                     }
                 }
                 reason => {
@@ -211,7 +213,7 @@ fn analyze_assumption_conflict<'a>(
 
                     if ctx.part(ProofP).clause_hashes_required() {
                         let hash = clause_hash(reason_lits) ^ lit_hash(lit);
-                        incremental.failed_propagation_hashes.push(hash);
+                        assumptions.failed_propagation_hashes.push(hash);
                     }
 
                     for &reason_lit in reason_lits {
@@ -229,12 +231,12 @@ fn analyze_assumption_conflict<'a>(
         }
     }
 
-    incremental.failed_propagation_hashes.reverse();
+    assumptions.failed_propagation_hashes.reverse();
 
-    incremental.user_failed_core.clear();
-    incremental
+    assumptions.user_failed_core.clear();
+    assumptions
         .user_failed_core
-        .extend(incremental.failed_core.iter().map(|solver_lit| {
+        .extend(assumptions.failed_core.iter().map(|solver_lit| {
             let user_lit = solver_lit
                 .map_var(|solver_var| ctx.part(VariablesP).existing_user_from_solver(solver_var));
             user_lit
@@ -244,8 +246,8 @@ fn analyze_assumption_conflict<'a>(
         ctx.borrow(),
         true,
         &ProofStep::FailedAssumptions {
-            failed_core: &incremental.failed_core,
-            propagation_hashes: &incremental.failed_propagation_hashes,
+            failed_core: &assumptions.failed_core,
+            propagation_hashes: &assumptions.failed_propagation_hashes,
         },
     );
 }
@@ -258,15 +260,16 @@ mod tests {
 
     use partial_ref::IntoPartialRefMut;
 
-    use varisat_formula::test::conditional_pigeon_hole;
+    use varisat_formula::{test::conditional_pigeon_hole, ExtendFormula, Var};
 
     use crate::cdcl::conflict_step;
     use crate::load::load_clause;
+    use crate::solver::Solver;
     use crate::state::SatState;
 
     proptest! {
         #[test]
-        fn pigeon_hole_unsat_assumption_core(
+        fn pigeon_hole_unsat_assumption_core_internal(
             (enable_row, columns, formula) in conditional_pigeon_hole(1..5usize, 1..5usize),
             chain in bool::ANY,
         ) {
@@ -299,7 +302,7 @@ mod tests {
 
             prop_assert_eq!(ctx.part(SolverStateP).sat_state, SatState::UnsatUnderAssumptions);
 
-            let mut candidates = ctx.part(IncrementalP).user_failed_core().to_owned();
+            let mut candidates = ctx.part(AssumptionsP).user_failed_core().to_owned();
             let mut core: Vec<Lit> = vec![];
 
             loop {
@@ -318,7 +321,7 @@ mod tests {
                         load_clause(ctx.borrow(), &[skipped]);
                     },
                     SatState::UnsatUnderAssumptions => {
-                        candidates = ctx.part(IncrementalP).user_failed_core().to_owned();
+                        candidates = ctx.part(AssumptionsP).user_failed_core().to_owned();
                     }
                 }
             }
@@ -327,6 +330,49 @@ mod tests {
             } else {
                 prop_assert_eq!(core.len(), columns + 1);
             }
+        }
+
+        #[test]
+        fn pigeon_hole_unsat_assumption_core_solver(
+            (enable_row, columns, formula) in conditional_pigeon_hole(1..5usize, 1..5usize),
+        ) {
+            let mut solver = Solver::new();
+            solver.add_formula(&formula);
+
+            prop_assert_eq!(solver.solve().ok(), Some(true));
+
+            let mut assumptions = enable_row.to_owned();
+
+            assumptions.push(Lit::positive(Var::from_index(formula.var_count() + 10)));
+
+            solver.assume(&assumptions);
+
+            prop_assert_eq!(solver.solve().ok(), Some(false));
+
+
+            let mut candidates = solver.failed_core().unwrap().to_owned();
+            let mut core: Vec<Lit> = vec![];
+
+            while !candidates.is_empty() {
+
+                solver.assume(&candidates[0..candidates.len() - 1]);
+
+                match solver.solve() {
+                    Err(_) => unreachable!(),
+                    Ok(true) => {
+                        let skipped = *candidates.last().unwrap();
+                        core.push(skipped);
+
+                        solver.add_clause(&[skipped]);
+                        solver.hide_var(skipped.var());
+                    },
+                    Ok(false) => {
+                        candidates = solver.failed_core().unwrap().to_owned();
+                    }
+                }
+            }
+
+            prop_assert_eq!(core.len(), columns + 1);
         }
     }
 }

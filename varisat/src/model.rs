@@ -73,7 +73,13 @@ pub fn reconstruct_global_model<'a>(
     }
 
     if models_in_proof {
-        proof::add_step(ctx.borrow(), false, &ProofStep::Model(&tmp.lits));
+        proof::add_step(
+            ctx.borrow(),
+            false,
+            &ProofStep::Model {
+                assignment: &tmp.lits,
+            },
+        );
     }
     ctx.part_mut(SolverStateP).sat_state = SatState::Sat;
 }

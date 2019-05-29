@@ -12,21 +12,21 @@ pub mod config;
 pub mod solver;
 
 mod analyze_conflict;
+mod assumptions;
 mod binary;
 mod cdcl;
 mod clause;
 mod context;
 mod decision;
 mod glue;
-mod incremental;
 mod load;
 mod model;
 mod proof;
 mod prop;
 mod schedule;
-mod simplify;
 mod state;
 mod tmp;
+mod unit_simplify;
 mod variables;
 
 pub use solver::{ProofFormat, Solver};

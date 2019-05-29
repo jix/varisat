@@ -10,8 +10,8 @@ use crate::clause::{db, ClauseHeader, Tier};
 use crate::context::{parts::*, Context};
 use crate::proof;
 use crate::prop::{assignment, full_restart, Reason};
-use crate::simplify::resurrect_unit;
 use crate::state::SatState;
+use crate::unit_simplify::resurrect_unit;
 use crate::variables;
 
 /// Adds a clause to the current formula.
@@ -23,13 +23,13 @@ use crate::variables;
 pub fn load_clause<'a>(
     mut ctx: partial!(
         Context<'a>,
-        mut AssignmentP,
         mut AnalyzeConflictP,
+        mut AssignmentP,
+        mut AssumptionsP,
         mut BinaryClausesP,
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ImplGraphP,
-        mut IncrementalP,
         mut ProofP<'a>,
         mut SolverStateP,
         mut TmpDataP,

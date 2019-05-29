@@ -1135,14 +1135,14 @@ impl<'a> Checker<'a> {
             ProofStep::DeleteClause { clause, proof } => {
                 self.check_delete_clause_step(clause, proof)
             }
-            ProofStep::UnitClauses(units) => self.check_unit_clauses_step(units),
-            ProofStep::ChangeHashBits(bits) => {
+            ProofStep::UnitClauses { units } => self.check_unit_clauses_step(units),
+            ProofStep::ChangeHashBits { bits } => {
                 self.hash_bits = bits;
                 self.rehash();
                 Ok(())
             }
-            ProofStep::Model(model) => self.check_model_step(model),
-            ProofStep::Assumptions(assumptions) => {
+            ProofStep::Model { assignment } => self.check_model_step(assignment),
+            ProofStep::Assumptions { assumptions } => {
                 for &lit in assumptions.iter() {
                     self.ensure_sampling_var(lit.var())?;
                 }
@@ -1176,7 +1176,7 @@ impl<'a> Checker<'a> {
         result
     }
 
-    /// Check an DeleteVar step
+    /// Check a DeleteVar step
     fn check_delete_var_step(&mut self, var: Var) -> Result<(), CheckerError> {
         self.ensure_var(var);
         if let Some(user_var) = self.var_data[var.index()].user_var {
@@ -1226,7 +1226,7 @@ impl<'a> Checker<'a> {
         Ok(())
     }
 
-    /// Check an ChangeSamplingMode step
+    /// Check a ChangeSamplingMode step
     fn check_change_sampling_mode(&mut self, var: Var, sample: bool) -> Result<(), CheckerError> {
         self.ensure_var(var);
         let var_data = &mut self.var_data[var.index()];
@@ -1944,7 +1944,9 @@ mod tests {
             .unwrap();
 
         expect_check_failed(
-            checker.check_step(ProofStep::Model(&lits![-1, 2, -3])),
+            checker.check_step(ProofStep::Model {
+                assignment: &lits![-1, 2, -3],
+            }),
             "conflicts with unit clause",
         )
     }
@@ -1959,7 +1961,9 @@ mod tests {
             .unwrap();
 
         expect_check_failed(
-            checker.check_step(ProofStep::Model(&lits![-1, 1, 2, -3])),
+            checker.check_step(ProofStep::Model {
+                assignment: &lits![-1, 1, 2, -3],
+            }),
             "conflicting assignment",
         )
     }
@@ -1976,7 +1980,9 @@ mod tests {
             .unwrap();
 
         expect_check_failed(
-            checker.check_step(ProofStep::Model(&lits![-1, 2, 3])),
+            checker.check_step(ProofStep::Model {
+                assignment: &lits![-1, 2, 3],
+            }),
             "does not satisfy clause",
         )
     }
@@ -1991,11 +1997,15 @@ mod tests {
             .unwrap();
 
         checker
-            .check_step(ProofStep::Assumptions(&lits![-2]))
+            .check_step(ProofStep::Assumptions {
+                assumptions: &lits![-2],
+            })
             .unwrap();
 
         expect_check_failed(
-            checker.check_step(ProofStep::Model(&lits![1, 2])),
+            checker.check_step(ProofStep::Model {
+                assignment: &lits![1, 2],
+            }),
             "does not contain assumption",
         )
     }
@@ -2011,11 +2021,15 @@ mod tests {
             .unwrap();
 
         checker
-            .check_step(ProofStep::Assumptions(&lits![-3]))
+            .check_step(ProofStep::Assumptions {
+                assumptions: &lits![-3],
+            })
             .unwrap();
 
         expect_check_failed(
-            checker.check_step(ProofStep::Model(&lits![1, 2])),
+            checker.check_step(ProofStep::Model {
+                assignment: &lits![1, 2],
+            }),
             "does not contain assumption",
         )
     }
@@ -2031,7 +2045,9 @@ mod tests {
             .unwrap();
 
         checker
-            .check_step(ProofStep::Assumptions(&lits![-2]))
+            .check_step(ProofStep::Assumptions {
+                assumptions: &lits![-2],
+            })
             .unwrap();
 
         expect_check_failed(
@@ -2055,7 +2071,9 @@ mod tests {
             .unwrap();
 
         checker
-            .check_step(ProofStep::Assumptions(&lits![3]))
+            .check_step(ProofStep::Assumptions {
+                assumptions: &lits![3],
+            })
             .unwrap();
 
         expect_check_failed(
@@ -2079,7 +2097,9 @@ mod tests {
             .unwrap();
 
         checker
-            .check_step(ProofStep::Assumptions(&lits![3, -3, 4]))
+            .check_step(ProofStep::Assumptions {
+                assumptions: &lits![3, -3, 4],
+            })
             .unwrap();
 
         checker

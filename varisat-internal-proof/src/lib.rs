@@ -103,20 +103,20 @@ pub enum ProofStep<'a> {
     /// for DRAT proofs.
     ///
     /// Ignored when generating DRAT proofs.
-    UnitClauses(&'a [(Lit, ClauseHash)]),
+    UnitClauses { units: &'a [(Lit, ClauseHash)] },
     /// Delete a clause consisting of the given literals.
     DeleteClause {
         clause: &'a [Lit],
         proof: DeleteClauseProof,
     },
     /// Change the number of clause hash bits used
-    ChangeHashBits(u32),
+    ChangeHashBits { bits: u32 },
     /// A (partial) assignment that satisfies all clauses and assumptions.
-    Model(&'a [Lit]),
+    Model { assignment: &'a [Lit] },
     /// Change the active set of assumptions.
     ///
     /// This is checked against future model or failed assumptions steps.
-    Assumptions(&'a [Lit]),
+    Assumptions { assumptions: &'a [Lit] },
     /// A subset of the assumptions that make the formula unsat.
     FailedAssumptions {
         failed_core: &'a [Lit],
@@ -134,7 +134,7 @@ impl<'a> ProofStep<'a> {
     pub fn contains_hashes(&self) -> bool {
         match self {
             ProofStep::AtClause { .. }
-            | ProofStep::UnitClauses(..)
+            | ProofStep::UnitClauses { .. }
             | ProofStep::FailedAssumptions { .. } => true,
 
             ProofStep::SolverVarName { .. }
@@ -143,9 +143,9 @@ impl<'a> ProofStep<'a> {
             | ProofStep::ChangeSamplingMode { .. }
             | ProofStep::AddClause { .. }
             | ProofStep::DeleteClause { .. }
-            | ProofStep::ChangeHashBits(..)
-            | ProofStep::Model(..)
-            | ProofStep::Assumptions(..)
+            | ProofStep::ChangeHashBits { .. }
+            | ProofStep::Model { .. }
+            | ProofStep::Assumptions { .. }
             | ProofStep::End => false,
         }
     }

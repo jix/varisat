@@ -121,20 +121,7 @@ fn derive_config_update(s: synstructure::Structure) -> TokenStream {
                     .expect("error parsing range expression");
                 quote! {
                     if let Some(value) = &self.#ident {
-                        use std::ops::RangeBounds;
-                        // TODO use `contains` when it becomes stable
-                        let range = #range;
-                        let start_ok = match std::ops::RangeBounds::start_bound(&range) {
-                            std::ops::Bound::Unbounded => true,
-                            std::ops::Bound::Included(bound) => value >= bound,
-                            std::ops::Bound::Excluded(bound) => value > bound,
-                        };
-                        let end_ok = match std::ops::RangeBounds::end_bound(&range) {
-                            std::ops::Bound::Unbounded => true,
-                            std::ops::Bound::Included(bound) => value <= bound,
-                            std::ops::Bound::Excluded(bound) => value < bound,
-                        };
-                        failure::ensure!(start_ok && end_ok, #error_msg, value);
+                        failure::ensure!((#range).contains(value), #error_msg, value);
                     }
                 }
             } else {
