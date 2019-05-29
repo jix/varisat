@@ -337,70 +337,96 @@ mod tests {
 
     use varisat_dimacs::write_dimacs;
     use varisat_formula::test::sgen_unsat_formula;
+    use varisat_formula::CnfFormula;
 
     use crate::solver::Solver;
 
-    proptest! {
+    enum Checker {
+        DratTrim,
+        Rate,
+    }
 
-        #[cfg_attr(not(test_drat_trim), ignore)]
-        #[test]
-        fn sgen_unsat_drat(
-            formula in sgen_unsat_formula(1..7usize),
-        ) {
-            let mut solver = Solver::new();
+    fn test_drat(checker: Checker, formula: CnfFormula, binary: bool) -> Result<(), TestCaseError> {
+        let mut solver = Solver::new();
 
-            let tmp = TempDir::new()?;
+        let tmp = TempDir::new()?;
 
-            let drat_proof = tmp.path().join("proof.drat");
-            let cnf_file = tmp.path().join("input.cnf");
+        let drat_proof = tmp.path().join("proof.drat");
+        let cnf_file = tmp.path().join("input.cnf");
 
-            write_dimacs(&mut File::create(&cnf_file)?, &formula)?;
+        write_dimacs(&mut File::create(&cnf_file)?, &formula)?;
 
-            solver.write_proof(File::create(&drat_proof)?, ProofFormat::Drat);
+        let format = if binary {
+            ProofFormat::BinaryDrat
+        } else {
+            ProofFormat::Drat
+        };
 
-            solver.add_formula(&formula);
+        solver.write_proof(File::create(&drat_proof)?, format);
 
-            prop_assert_eq!(solver.solve().ok(), Some(false));
+        solver.add_formula(&formula);
 
-            solver.close_proof().map_err(|e| e.compat())?;
+        prop_assert_eq!(solver.solve().ok(), Some(false));
 
-            let output = Command::new("drat-trim")
+        solver.close_proof().map_err(|e| e.compat())?;
+
+        let output = match checker {
+            Checker::DratTrim => {
+                if binary {
+                    Command::new("drat-trim")
+                        .arg(&cnf_file)
+                        .arg(&drat_proof)
+                        .arg("-i")
+                        .output()?
+                } else {
+                    Command::new("drat-trim")
+                        .arg(&cnf_file)
+                        .arg(&drat_proof)
+                        .output()?
+                }
+            }
+            Checker::Rate => Command::new("rate")
                 .arg(&cnf_file)
                 .arg(&drat_proof)
-                .output()?;
+                .output()?,
+        };
 
-            prop_assert!(std::str::from_utf8(&output.stdout)?.contains("s VERIFIED"));
+        prop_assert!(std::str::from_utf8(&output.stdout)?.contains("s VERIFIED"));
+
+        Ok(())
+    }
+
+    proptest! {
+        #[cfg_attr(not(test_drat_trim), ignore)]
+        #[test]
+        fn sgen_unsat_drat_trim(
+            formula in sgen_unsat_formula(1..7usize),
+        ) {
+            test_drat(Checker::DratTrim, formula, false)?;
         }
 
         #[cfg_attr(not(test_drat_trim), ignore)]
         #[test]
-        fn sgen_unsat_binary_drat(
+        fn sgen_unsat_binary_drat_trim(
             formula in sgen_unsat_formula(1..7usize),
         ) {
-            let mut solver = Solver::new();
+            test_drat(Checker::DratTrim, formula, true)?;
+        }
 
-            let tmp = TempDir::new()?;
+        #[cfg_attr(not(test_rate), ignore)]
+        #[test]
+        fn sgen_unsat_rate(
+            formula in sgen_unsat_formula(1..7usize),
+        ) {
+            test_drat(Checker::Rate, formula, false)?;
+        }
 
-            let drat_proof = tmp.path().join("proof.bdrat");
-            let cnf_file = tmp.path().join("input.cnf");
-
-            write_dimacs(&mut File::create(&cnf_file)?, &formula)?;
-
-            solver.write_proof(File::create(&drat_proof)?, ProofFormat::BinaryDrat);
-
-            solver.add_formula(&formula);
-
-            prop_assert_eq!(solver.solve().ok(), Some(false));
-
-            solver.close_proof().map_err(|e| e.compat())?;
-
-            let output = Command::new("drat-trim")
-                .arg(&cnf_file)
-                .arg(&drat_proof)
-                .arg("-i")
-                .output()?;
-
-            prop_assert!(std::str::from_utf8(&output.stdout)?.contains("s VERIFIED"));
+        #[cfg_attr(not(test_rate), ignore)]
+        #[test]
+        fn sgen_unsat_binary_rate(
+            formula in sgen_unsat_formula(1..7usize),
+        ) {
+            test_drat(Checker::Rate, formula, true)?;
         }
     }
 }

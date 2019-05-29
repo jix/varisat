@@ -20,11 +20,30 @@ fn have_drat_trim() -> Result<(), Error> {
     Ok(())
 }
 
+fn have_rate() -> Result<(), Error> {
+    println!("rerun-if-env-changed=VARISAT_HAVE_RATE");
+    if env::var("VARISAT_HAVE_RATE").is_ok() {
+        return Ok(());
+    }
+
+    let _ = Command::new("rate").arg("--version").output()?;
+
+    Ok(())
+}
+
 fn main() {
     match have_drat_trim() {
         Ok(_) => println!("cargo:rustc-cfg=test_drat_trim"),
         Err(err) => println!(
-            "cargo:warning=drat-trim utility not found, some tests will be disabled: {}",
+            "cargo:warning=drat-trim proof checker not found, some tests will be disabled: {}",
+            err
+        ),
+    }
+
+    match have_rate() {
+        Ok(_) => println!("cargo:rustc-cfg=test_rate"),
+        Err(err) => println!(
+            "cargo:warning=rate proof checker not found, some tests will be disabled: {}",
             err
         ),
     }
