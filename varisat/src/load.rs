@@ -23,13 +23,13 @@ use crate::variables;
 pub fn load_clause<'a>(
     mut ctx: partial!(
         Context<'a>,
-        mut AssignmentP,
         mut AnalyzeConflictP,
+        mut AssignmentP,
+        mut AssumptionsP,
         mut BinaryClausesP,
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ImplGraphP,
-        mut IncrementalP,
         mut ProofP<'a>,
         mut SolverStateP,
         mut TmpDataP,

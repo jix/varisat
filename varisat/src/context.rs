@@ -6,11 +6,11 @@
 use partial_ref::{part, partial, PartialRef, PartialRefTarget};
 
 use crate::analyze_conflict::AnalyzeConflict;
+use crate::assumptions::Assumptions;
 use crate::binary::BinaryClauses;
 use crate::clause::{ClauseActivity, ClauseAlloc, ClauseDb};
 use crate::config::{SolverConfig, SolverConfigUpdate};
 use crate::decision::vsids::Vsids;
-use crate::incremental::Incremental;
 use crate::model::Model;
 use crate::proof::Proof;
 use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
@@ -30,7 +30,7 @@ pub mod parts {
     part!(pub ClauseAllocP: ClauseAlloc);
     part!(pub ClauseDbP: ClauseDb);
     part!(pub ImplGraphP: ImplGraph);
-    part!(pub IncrementalP: Incremental);
+    part!(pub AssumptionsP: Assumptions);
     part!(pub ModelP: Model);
     part!(pub ProofP<'a>: Proof<'a>);
     part!(pub ScheduleP: Schedule);
@@ -68,8 +68,8 @@ pub struct Context<'a> {
     pub clause_db: ClauseDb,
     #[part(ImplGraphP)]
     pub impl_graph: ImplGraph,
-    #[part(IncrementalP)]
-    pub incremental: Incremental,
+    #[part(AssumptionsP)]
+    pub assumptions: Assumptions,
     #[part(ModelP)]
     pub model: Model,
     #[part(ProofP<'a>)]

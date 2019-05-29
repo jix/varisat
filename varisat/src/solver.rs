@@ -9,9 +9,9 @@ use varisat_checker::ProofProcessor;
 use varisat_dimacs::DimacsParser;
 use varisat_formula::{CnfFormula, ExtendFormula, Lit, Var};
 
+use crate::assumptions::set_assumptions;
 use crate::config::SolverConfigUpdate;
 use crate::context::{config_changed, parts::*, Context};
-use crate::incremental::set_assumptions;
 use crate::load::load_clause;
 use crate::proof;
 use crate::schedule::schedule_step;
@@ -212,7 +212,7 @@ impl<'a> Solver<'a> {
     /// This is not guaranteed to be minimal and may just return all assumptions every time.
     pub fn failed_core(&self) -> Option<&[Lit]> {
         match self.ctx.solver_state.sat_state {
-            SatState::UnsatUnderAssumptions => Some(self.ctx.incremental.user_failed_core()),
+            SatState::UnsatUnderAssumptions => Some(self.ctx.assumptions.user_failed_core()),
             SatState::Unsat => Some(&[]),
             SatState::Unknown | SatState::Sat => None,
         }

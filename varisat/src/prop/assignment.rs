@@ -211,12 +211,12 @@ pub fn full_restart(
     mut ctx: partial!(
         Context,
         mut AssignmentP,
-        mut IncrementalP,
+        mut AssumptionsP,
         mut TrailP,
         mut VsidsP,
     ),
 ) {
-    ctx.part_mut(IncrementalP).full_restart();
+    ctx.part_mut(AssumptionsP).full_restart();
     backtrack(ctx.borrow(), 0);
 }
 
@@ -227,9 +227,9 @@ pub fn restart(
         mut AssignmentP,
         mut TrailP,
         mut VsidsP,
-        IncrementalP
+        AssumptionsP
     ),
 ) {
-    let level = ctx.part(IncrementalP).assumption_levels();
+    let level = ctx.part(AssumptionsP).assumption_levels();
     backtrack(ctx.borrow(), level);
 }

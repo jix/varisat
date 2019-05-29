@@ -5,10 +5,10 @@ use partial_ref::{partial, PartialRef};
 use varisat_internal_proof::ProofStep;
 
 use crate::analyze_conflict::analyze_conflict;
+use crate::assumptions::{enqueue_assumption, EnqueueAssumption};
 use crate::clause::{assess_learned_clause, bump_clause, db, decay_clause_activities};
 use crate::context::{parts::*, Context};
 use crate::decision::make_decision;
-use crate::incremental::{enqueue_assumption, EnqueueAssumption};
 use crate::model::reconstruct_global_model;
 use crate::proof;
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
@@ -21,12 +21,12 @@ pub fn conflict_step<'a>(
         Context<'a>,
         mut AnalyzeConflictP,
         mut AssignmentP,
+        mut AssumptionsP,
         mut BinaryClausesP,
         mut ClauseActivityP,
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ImplGraphP,
-        mut IncrementalP,
         mut ModelP,
         mut ProofP<'a>,
         mut SolverStateP,
@@ -118,11 +118,11 @@ fn find_conflict<'a>(
     mut ctx: partial!(
         Context<'a>,
         mut AssignmentP,
+        mut AssumptionsP,
         mut BinaryClausesP,
         mut ClauseAllocP,
         mut ClauseDbP,
         mut ImplGraphP,
-        mut IncrementalP,
         mut ProofP<'a>,
         mut SolverStateP,
         mut TmpFlagsP,

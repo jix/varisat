@@ -21,7 +21,7 @@ use var_map::{VarBiMap, VarBiMapMut, VarMap};
 pub struct Variables {
     /// Bidirectional mapping from user variables to global variables.
     ///
-    /// Initially this is the identity mapping. This ensures that in the non-incremental setting the
+    /// Initially this is the identity mapping. This ensures that in the non-assumptions setting the
     /// map from used user variables to global variables is the identity. This is a requirement for
     /// generating proofs in non-native formats. Those proofs are not aware of variable renaming,
     /// but are restricted to the non-incremental setting, so this works out.

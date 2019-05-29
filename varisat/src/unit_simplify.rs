@@ -92,7 +92,7 @@ pub fn unit_simplify<'a>(
         mut VariablesP,
         mut WatchlistsP,
         mut VsidsP,
-        IncrementalP,
+        AssumptionsP,
     ),
 ) {
     simplify_binary(ctx.borrow());
