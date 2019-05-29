@@ -9,7 +9,7 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
         ProofStep::AtClause { clause, .. } => {
             write_literals(target, &clause)?;
         }
-        ProofStep::UnitClauses(units) => {
+        ProofStep::UnitClauses { units } => {
             for &(unit, _hash) in units.iter() {
                 write_literals(target, &[unit])?;
             }
@@ -22,14 +22,14 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
         | ProofStep::UserVarName { .. }
         | ProofStep::DeleteVar { .. }
         | ProofStep::ChangeSamplingMode { .. }
-        | ProofStep::ChangeHashBits(..)
-        | ProofStep::Model(..)
+        | ProofStep::ChangeHashBits { .. }
+        | ProofStep::Model { .. }
         | ProofStep::End => (),
         ProofStep::AddClause { .. } => {
             // TODO allow error handling here?
             panic!("incremental clause additions not supported by DRAT proofs");
         }
-        ProofStep::Assumptions(..) | ProofStep::FailedAssumptions { .. } => {
+        ProofStep::Assumptions { .. } | ProofStep::FailedAssumptions { .. } => {
             // TODO allow error handling here?
             panic!("assumptions not supported by DRAT proofs");
         }
@@ -45,7 +45,7 @@ pub fn write_binary_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -
             target.write_all(b"a")?;
             write_binary_literals(target, &clause)?;
         }
-        ProofStep::UnitClauses(units) => {
+        ProofStep::UnitClauses { units } => {
             for &(unit, _hash) in units.iter() {
                 target.write_all(b"a")?;
                 write_binary_literals(target, &[unit])?;
@@ -59,14 +59,14 @@ pub fn write_binary_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -
         | ProofStep::UserVarName { .. }
         | ProofStep::DeleteVar { .. }
         | ProofStep::ChangeSamplingMode { .. }
-        | ProofStep::ChangeHashBits(..)
-        | ProofStep::Model(..)
+        | ProofStep::ChangeHashBits { .. }
+        | ProofStep::Model { .. }
         | ProofStep::End => (),
         ProofStep::AddClause { .. } => {
             // TODO allow error handling here?
             panic!("incremental clause additions not supported by DRAT proofs");
         }
-        ProofStep::Assumptions(..) | ProofStep::FailedAssumptions { .. } => {
+        ProofStep::Assumptions { .. } | ProofStep::FailedAssumptions { .. } => {
             // TODO allow error handling here?
             panic!("assumptions not supported by DRAT proofs");
         }

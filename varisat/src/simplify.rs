@@ -53,7 +53,13 @@ pub fn prove_units<'a>(
         trail.clear();
 
         if !unit_proofs.is_empty() {
-            proof::add_step(ctx.borrow(), true, &ProofStep::UnitClauses(&unit_proofs));
+            proof::add_step(
+                ctx.borrow(),
+                true,
+                &ProofStep::UnitClauses {
+                    units: &unit_proofs,
+                },
+            );
         }
     }
 

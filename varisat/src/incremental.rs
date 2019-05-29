@@ -111,7 +111,9 @@ pub fn set_assumptions<'a>(
     proof::add_step(
         ctx_2.borrow(),
         true,
-        &ProofStep::Assumptions(&incremental.assumptions),
+        &ProofStep::Assumptions {
+            assumptions: &incremental.assumptions,
+        },
     );
 }
 

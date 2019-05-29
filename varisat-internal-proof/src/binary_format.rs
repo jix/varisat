@@ -103,7 +103,7 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
             write_hashes(&mut *target, propagation_hashes)?;
         }
 
-        ProofStep::UnitClauses(units) => {
+        ProofStep::UnitClauses { units } => {
             write_u64(&mut *target, CODE_UNIT_CLAUSES)?;
             write_unit_clauses(&mut *target, units)?;
         }
@@ -124,17 +124,17 @@ pub fn write_step<'s>(target: &mut impl Write, step: &'s ProofStep<'s>) -> io::R
             write_literals(&mut *target, clause)?;
         }
 
-        ProofStep::ChangeHashBits(bits) => {
+        ProofStep::ChangeHashBits { bits } => {
             write_u64(&mut *target, CODE_CHANGE_HASH_BITS)?;
             write_u64(&mut *target, bits as u64)?;
         }
 
-        ProofStep::Model(model) => {
+        ProofStep::Model { assignment } => {
             write_u64(&mut *target, CODE_MODEL)?;
-            write_literals(&mut *target, model)?;
+            write_literals(&mut *target, assignment)?;
         }
 
-        ProofStep::Assumptions(assumptions) => {
+        ProofStep::Assumptions { assumptions } => {
             write_u64(&mut *target, CODE_ASSUMPTIONS)?;
             write_literals(&mut *target, assumptions)?;
         }
@@ -216,7 +216,9 @@ impl Parser {
             }
             CODE_UNIT_CLAUSES => {
                 read_unit_clauses(&mut *source, &mut self.unit_buf)?;
-                Ok(ProofStep::UnitClauses(&self.unit_buf))
+                Ok(ProofStep::UnitClauses {
+                    units: &self.unit_buf,
+                })
             }
             CODE_DELETE_CLAUSE_REDUNDANT
             | CODE_DELETE_CLAUSE_SIMPLIFIED
@@ -235,15 +237,19 @@ impl Parser {
             }
             CODE_CHANGE_HASH_BITS => {
                 let bits = read_u64(&mut *source)? as u32;
-                Ok(ProofStep::ChangeHashBits(bits))
+                Ok(ProofStep::ChangeHashBits { bits })
             }
             CODE_MODEL => {
                 read_literals(&mut *source, &mut self.lit_buf)?;
-                Ok(ProofStep::Model(&self.lit_buf))
+                Ok(ProofStep::Model {
+                    assignment: &self.lit_buf,
+                })
             }
             CODE_ASSUMPTIONS => {
                 read_literals(&mut *source, &mut self.lit_buf)?;
-                Ok(ProofStep::Assumptions(&self.lit_buf))
+                Ok(ProofStep::Assumptions {
+                    assumptions: &self.lit_buf,
+                })
             }
             CODE_FAILED_ASSUMPTIONS => {
                 read_literals(&mut *source, &mut self.lit_buf)?;

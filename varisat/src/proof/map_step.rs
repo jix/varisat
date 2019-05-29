@@ -59,14 +59,16 @@ impl MapStep {
                 }
             }
 
-            ProofStep::UnitClauses(units) => {
+            ProofStep::UnitClauses { units } => {
                 self.unit_buf.clear();
                 self.unit_buf.extend(
                     units
                         .iter()
                         .map(|&(lit, hash)| (map_lit(lit), map_hash(hash))),
                 );
-                ProofStep::UnitClauses(&self.unit_buf)
+                ProofStep::UnitClauses {
+                    units: &self.unit_buf,
+                }
             }
 
             ProofStep::DeleteClause { clause, proof } => {
@@ -78,17 +80,21 @@ impl MapStep {
                 }
             }
 
-            ProofStep::Model(model) => {
+            ProofStep::Model { assignment } => {
                 self.lit_buf.clear();
-                self.lit_buf.extend(model.iter().cloned().map(map_lit));
-                ProofStep::Model(&self.lit_buf)
+                self.lit_buf.extend(assignment.iter().cloned().map(map_lit));
+                ProofStep::Model {
+                    assignment: &self.lit_buf,
+                }
             }
 
-            ProofStep::Assumptions(assumptions) => {
+            ProofStep::Assumptions { assumptions } => {
                 self.lit_buf.clear();
                 self.lit_buf
                     .extend(assumptions.iter().cloned().map(map_lit));
-                ProofStep::Assumptions(&self.lit_buf)
+                ProofStep::Assumptions {
+                    assumptions: &self.lit_buf,
+                }
             }
 
             ProofStep::FailedAssumptions {
@@ -107,7 +113,7 @@ impl MapStep {
                 }
             }
 
-            ProofStep::ChangeHashBits(..) | ProofStep::End => step.clone(),
+            ProofStep::ChangeHashBits { .. } | ProofStep::End => step.clone(),
 
             ProofStep::SolverVarName { .. }
             | ProofStep::UserVarName { .. }
