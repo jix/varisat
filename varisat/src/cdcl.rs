@@ -12,8 +12,8 @@ use crate::incremental::{enqueue_assumption, EnqueueAssumption};
 use crate::model::reconstruct_global_model;
 use crate::proof;
 use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
-use crate::simplify::{prove_units, simplify};
 use crate::state::SatState;
+use crate::unit_simplify::{prove_units, unit_simplify};
 
 /// Find a conflict, learn a clause and backtrack.
 pub fn conflict_step<'a>(
@@ -140,7 +140,7 @@ fn find_conflict<'a>(
         propagation_result?;
 
         if new_unit {
-            simplify(ctx.borrow());
+            unit_simplify(ctx.borrow());
         }
 
         match enqueue_assumption(ctx.borrow()) {

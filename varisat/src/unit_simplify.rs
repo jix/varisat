@@ -25,8 +25,6 @@ pub fn prove_units<'a>(
         VariablesP,
     ),
 ) -> bool {
-    // TODO move this somewhere else?
-
     let mut new_unit = false;
 
     if ctx.part(TrailP).current_level() == 0 {
@@ -71,7 +69,6 @@ pub fn resurrect_unit<'a>(
     mut ctx: partial!(Context<'a>, mut AssignmentP, mut ImplGraphP, mut TrailP),
     lit: Lit,
 ) {
-    // TODO move this somewhere else?
     if ctx.part(ImplGraphP).is_removed_unit(lit.var()) {
         debug_assert!(ctx.part(AssignmentP).lit_is_true(lit));
         ctx.part_mut(AssignmentP).unassign_var(lit.var());
@@ -83,7 +80,7 @@ pub fn resurrect_unit<'a>(
 }
 
 /// Remove satisfied clauses and false literals.
-pub fn simplify<'a>(
+pub fn unit_simplify<'a>(
     mut ctx: partial!(
         Context<'a>,
         mut AssignmentP,
