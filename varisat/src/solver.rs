@@ -291,8 +291,8 @@ mod tests {
     use proptest::prelude::*;
 
     use varisat_checker::{CheckedProofStep, CheckerData};
-    use varisat_formula::test::{conditional_pigeon_hole, sat_formula, sgen_unsat_formula};
-    use varisat_formula::{cnf_formula, lits, Var};
+    use varisat_formula::test::{sat_formula, sgen_unsat_formula};
+    use varisat_formula::{cnf_formula, lits};
 
     use varisat_dimacs::write_dimacs;
 
@@ -503,49 +503,6 @@ mod tests {
             }
 
             prop_assert_eq!(last_state, Some(false));
-        }
-
-        #[test]
-        fn pigeon_hole_unsat_assumption_core(
-            (enable_row, columns, formula) in conditional_pigeon_hole(1..5usize, 1..5usize),
-        ) {
-            let mut solver = Solver::new();
-            solver.add_formula(&formula);
-
-            prop_assert_eq!(solver.solve().ok(), Some(true));
-
-            let mut assumptions = enable_row.to_owned();
-
-            assumptions.push(Lit::positive(Var::from_index(formula.var_count() + 10)));
-
-            solver.assume(&assumptions);
-
-            prop_assert_eq!(solver.solve().ok(), Some(false));
-
-
-            let mut candidates = solver.failed_core().unwrap().to_owned();
-            let mut core: Vec<Lit> = vec![];
-
-            while !candidates.is_empty() {
-
-                solver.assume(&candidates[0..candidates.len() - 1]);
-
-                match solver.solve() {
-                    Err(_) => unreachable!(),
-                    Ok(true) => {
-                        let skipped = *candidates.last().unwrap();
-                        core.push(skipped);
-
-                        solver.add_clause(&[skipped]);
-                        solver.hide_var(skipped.var());
-                    },
-                    Ok(false) => {
-                        candidates = solver.failed_core().unwrap().to_owned();
-                    }
-                }
-            }
-
-            prop_assert_eq!(core.len(), columns + 1);
         }
     }
 }

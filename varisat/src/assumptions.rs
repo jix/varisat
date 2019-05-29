@@ -260,15 +260,16 @@ mod tests {
 
     use partial_ref::IntoPartialRefMut;
 
-    use varisat_formula::test::conditional_pigeon_hole;
+    use varisat_formula::{test::conditional_pigeon_hole, ExtendFormula, Var};
 
     use crate::cdcl::conflict_step;
     use crate::load::load_clause;
+    use crate::solver::Solver;
     use crate::state::SatState;
 
     proptest! {
         #[test]
-        fn pigeon_hole_unsat_assumption_core(
+        fn pigeon_hole_unsat_assumption_core_internal(
             (enable_row, columns, formula) in conditional_pigeon_hole(1..5usize, 1..5usize),
             chain in bool::ANY,
         ) {
@@ -329,6 +330,49 @@ mod tests {
             } else {
                 prop_assert_eq!(core.len(), columns + 1);
             }
+        }
+
+        #[test]
+        fn pigeon_hole_unsat_assumption_core_solver(
+            (enable_row, columns, formula) in conditional_pigeon_hole(1..5usize, 1..5usize),
+        ) {
+            let mut solver = Solver::new();
+            solver.add_formula(&formula);
+
+            prop_assert_eq!(solver.solve().ok(), Some(true));
+
+            let mut assumptions = enable_row.to_owned();
+
+            assumptions.push(Lit::positive(Var::from_index(formula.var_count() + 10)));
+
+            solver.assume(&assumptions);
+
+            prop_assert_eq!(solver.solve().ok(), Some(false));
+
+
+            let mut candidates = solver.failed_core().unwrap().to_owned();
+            let mut core: Vec<Lit> = vec![];
+
+            while !candidates.is_empty() {
+
+                solver.assume(&candidates[0..candidates.len() - 1]);
+
+                match solver.solve() {
+                    Err(_) => unreachable!(),
+                    Ok(true) => {
+                        let skipped = *candidates.last().unwrap();
+                        core.push(skipped);
+
+                        solver.add_clause(&[skipped]);
+                        solver.hide_var(skipped.var());
+                    },
+                    Ok(false) => {
+                        candidates = solver.failed_core().unwrap().to_owned();
+                    }
+                }
+            }
+
+            prop_assert_eq!(core.len(), columns + 1);
         }
     }
 }
