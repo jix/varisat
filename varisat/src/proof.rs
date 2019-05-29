@@ -120,11 +120,6 @@ impl<'a> Proof<'a> {
         self.native_format()
     }
 
-    /// Whether unit clauses discovered through unit propagation have to be proven.
-    pub fn prove_propagated_unit_clauses(&self) -> bool {
-        self.native_format()
-    }
-
     /// Whether found models are included in the proof.
     pub fn models_in_proof(&self) -> bool {
         self.native_format()

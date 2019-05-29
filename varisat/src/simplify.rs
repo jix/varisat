@@ -38,16 +38,13 @@ pub fn prove_units<'a>(
 
         for &lit in trail.trail() {
             new_unit = true;
-            let (proof, mut ctx) = ctx.split_part_mut(ProofP);
-            if proof.prove_propagated_unit_clauses() {
-                let ctx_lits = ctx.borrow();
-                let reason = impl_graph.reason(lit.var());
-                if !reason.is_unit() {
-                    let lits = impl_graph.reason(lit.var()).lits(&ctx_lits);
-                    let hash = clause_hash(lits) ^ lit_hash(lit);
+            let ctx_lits = ctx.borrow();
+            let reason = impl_graph.reason(lit.var());
+            if !reason.is_unit() {
+                let lits = impl_graph.reason(lit.var()).lits(&ctx_lits);
+                let hash = clause_hash(lits) ^ lit_hash(lit);
 
-                    unit_proofs.push((lit, hash));
-                }
+                unit_proofs.push((lit, hash));
             }
 
             impl_graph.update_removed_unit(lit.var());
