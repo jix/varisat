@@ -16,11 +16,11 @@ pub trait SelfChecker {
 
 impl<'a> SelfChecker for Checker<'a> {
     fn self_check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
-        self.step += 1;
-        self.check_step(step)
+        self.ctx.checker_state.step += 1;
+        self.ctx.checker_state.check_step(step)
     }
 
     fn self_check_delayed_steps(&mut self) -> Result<(), CheckerError> {
-        self.process_unit_conflicts()
+        self.ctx.checker_state.process_unit_conflicts()
     }
 }
