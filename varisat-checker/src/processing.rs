@@ -175,3 +175,12 @@ impl<'a> Processing<'a> {
         Ok(())
     }
 }
+
+/// Process a single step
+pub fn process_step<'a, 'b>(
+    mut ctx: partial!(Context<'a>, mut ProcessingP<'a>, VariablesP),
+    step: &CheckedProofStep<'b>,
+) -> Result<(), CheckerError> {
+    let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
+    processing.step(step, CheckerData(ctx.borrow()))
+}

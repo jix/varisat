@@ -16,7 +16,7 @@ use crate::clauses::{
 use crate::context::{parts::*, Context};
 use crate::hash::rehash;
 use crate::processing::{
-    CheckedProofStep, CheckedSamplingMode, CheckedUserVar, CheckerData, ResolutionPropagations,
+    process_step, CheckedProofStep, CheckedSamplingMode, CheckedUserVar, ResolutionPropagations,
 };
 use crate::rup::check_clause_with_hashes;
 use crate::sorted_lits::{copy_canonical, is_subset};
@@ -58,7 +58,16 @@ impl CheckerState {
 
 /// Check a single proof step
 pub fn check_step<'a>(
-    mut ctx: partial!(Context<'a>, mut CheckerStateP, mut ClauseHasherP, mut ClausesP, mut ProcessingP<'a>, mut RupCheckP, mut TmpDataP, mut VariablesP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut CheckerStateP,
+        mut ClauseHasherP,
+        mut ClausesP,
+        mut ProcessingP<'a>,
+        mut RupCheckP,
+        mut TmpDataP,
+        mut VariablesP,
+    ),
     step: ProofStep,
 ) -> Result<(), CheckerError> {
     let mut result = match step {
@@ -106,15 +115,13 @@ pub fn check_step<'a>(
             }
             copy_canonical(&mut ctx.part_mut(CheckerStateP).assumptions, assumptions);
 
-            let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
-
             let (state, mut ctx) = ctx.split_part(CheckerStateP);
 
-            processing.step(
+            process_step(
+                ctx.borrow(),
                 &CheckedProofStep::Assumptions {
                     assumptions: &state.assumptions,
                 },
-                CheckerData(ctx.borrow()).clone(),
             )?;
             Ok(())
         }
@@ -139,7 +146,13 @@ pub fn check_step<'a>(
 
 /// Check a DeleteVar step
 fn check_delete_var_step<'a>(
-    mut ctx: partial!(Context<'a>, mut ClausesP, mut ProcessingP<'a>, mut VariablesP, CheckerStateP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut ClausesP,
+        mut ProcessingP<'a>,
+        mut VariablesP,
+        CheckerStateP,
+    ),
     var: Var,
 ) -> Result<(), CheckerError> {
     ensure_var(ctx.borrow(), var);
@@ -170,8 +183,8 @@ fn check_delete_var_step<'a>(
             _ => unreachable!(),
         };
 
-        let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
-        processing.step(
+        process_step(
+            ctx.borrow(),
             &CheckedProofStep::DeleteRatClause {
                 id,
                 keep_as_redundant: false,
@@ -179,7 +192,6 @@ fn check_delete_var_step<'a>(
                 pivot: clause[0],
                 propagations: &ResolutionPropagations {},
             },
-            CheckerData(ctx.borrow()),
         )?;
         ctx.part_mut(ClausesP).unit_clauses[var.index()] = None;
     }
@@ -191,7 +203,13 @@ fn check_delete_var_step<'a>(
 
 /// Check a ChangeSamplingMode step
 fn check_change_sampling_mode<'a>(
-    mut ctx: partial!(Context<'a>, mut ClausesP, mut ProcessingP<'a>, mut VariablesP, CheckerStateP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut ClausesP,
+        mut ProcessingP<'a>,
+        mut VariablesP,
+        CheckerStateP,
+    ),
     var: Var,
     sample: bool,
 ) -> Result<(), CheckerError> {
@@ -214,8 +232,8 @@ fn check_change_sampling_mode<'a>(
             } else {
                 CheckedSamplingMode::Sample
             };
-            let (processing, mut ctx) = ctx_in.split_part_mut(ProcessingP);
-            processing.step(
+            process_step(
+                ctx_in.borrow(),
                 &CheckedProofStep::UserVar {
                     var,
                     user_var: Some(CheckedUserVar {
@@ -224,7 +242,6 @@ fn check_change_sampling_mode<'a>(
                         new_var: false,
                     }),
                 },
-                CheckerData(ctx.borrow()),
             )?;
         } else if sampling_mode == SamplingMode::Sample {
             return Err(CheckerError::check_failed(
@@ -239,7 +256,16 @@ fn check_change_sampling_mode<'a>(
 
 /// Check an AtClause step
 fn check_at_clause_step<'a>(
-    mut ctx: partial!(Context<'a>, mut CheckerStateP, mut ClauseHasherP, mut ClausesP, mut ProcessingP<'a>, mut RupCheckP, mut TmpDataP, mut VariablesP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut CheckerStateP,
+        mut ClauseHasherP,
+        mut ClausesP,
+        mut ProcessingP<'a>,
+        mut RupCheckP,
+        mut TmpDataP,
+        mut VariablesP,
+    ),
     redundant: bool,
     clause: &[Lit],
     propagation_hashes: &[ClauseHash],
@@ -264,25 +290,23 @@ fn check_at_clause_step<'a>(
         state.previous_irred_clause_lits.extend_from_slice(&tmp);
     }
 
-    let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
-
     match added {
         StoreClauseResult::New => {
             let (rup_check, mut ctx) = ctx.split_part(RupCheckP);
-            processing.step(
+            process_step(
+                ctx.borrow(),
                 &CheckedProofStep::AtClause {
                     id,
                     redundant: redundant,
                     clause: &tmp,
                     propagations: &rup_check.trace_ids,
                 },
-                CheckerData(ctx.borrow()),
             )?;
         }
         StoreClauseResult::NewlyIrredundant => {
-            processing.step(
+            process_step(
+                ctx.borrow(),
                 &CheckedProofStep::MakeIrredundant { id, clause: &tmp },
-                CheckerData(ctx.borrow()),
             )?;
         }
         StoreClauseResult::Duplicate => (),
@@ -295,7 +319,15 @@ fn check_at_clause_step<'a>(
 
 /// Check a DeleteClause step
 fn check_delete_clause_step<'a>(
-    mut ctx: partial!(Context<'a>, mut CheckerStateP, mut ClausesP, mut ProcessingP<'a>, mut TmpDataP, mut VariablesP, ClauseHasherP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut CheckerStateP,
+        mut ClausesP,
+        mut ProcessingP<'a>,
+        mut TmpDataP,
+        mut VariablesP,
+        ClauseHasherP,
+    ),
     clause: &[Lit],
     proof: DeleteClauseProof,
 ) -> Result<(), CheckerError> {
@@ -361,17 +393,15 @@ fn check_delete_clause_step<'a>(
 
     let (id, deleted) = delete_clause(ctx.borrow(), &tmp, redundant)?;
 
-    let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
-
     if redundant {
         match deleted {
             DeleteClauseResult::Removed => {
-                processing.step(
+                process_step(
+                    ctx.borrow(),
                     &CheckedProofStep::DeleteClause {
                         id: id,
                         clause: &tmp,
                     },
-                    CheckerData(ctx.borrow()),
                 )?;
             }
             DeleteClauseResult::Unchanged => (),
@@ -380,14 +410,14 @@ fn check_delete_clause_step<'a>(
     } else {
         match deleted {
             DeleteClauseResult::Removed | DeleteClauseResult::NewlyRedundant => {
-                processing.step(
+                process_step(
+                    ctx.borrow(),
                     &CheckedProofStep::DeleteAtClause {
                         id: id,
                         keep_as_redundant: deleted == DeleteClauseResult::NewlyRedundant,
                         clause: &tmp,
                         propagations: &[subsumed_by.unwrap()],
                     },
-                    CheckerData(ctx.borrow()),
                 )?;
             }
             DeleteClauseResult::Unchanged => (),
@@ -400,7 +430,15 @@ fn check_delete_clause_step<'a>(
 
 /// Check a UnitClauses step
 fn check_unit_clauses_step<'a>(
-    mut ctx: partial!(Context<'a>, mut CheckerStateP, mut ClauseHasherP, mut ClausesP, mut ProcessingP<'a>, mut RupCheckP, mut VariablesP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut CheckerStateP,
+        mut ClauseHasherP,
+        mut ClausesP,
+        mut ProcessingP<'a>,
+        mut RupCheckP,
+        mut VariablesP,
+    ),
     units: &[(Lit, ClauseHash)],
 ) -> Result<(), CheckerError> {
     for &(lit, hash) in units.iter() {
@@ -414,16 +452,15 @@ fn check_unit_clauses_step<'a>(
 
         match added {
             StoreClauseResult::New => {
-                let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
                 let (rup_check, mut ctx) = ctx.split_part(RupCheckP);
-                processing.step(
+                process_step(
+                    ctx.borrow(),
                     &CheckedProofStep::AtClause {
                         id,
                         redundant: false,
                         clause: &clause,
                         propagations: &rup_check.trace_ids,
                     },
-                    CheckerData(ctx.borrow()),
                 )?;
             }
             StoreClauseResult::Duplicate => (),
@@ -477,18 +514,23 @@ fn check_model_step<'a>(
         }
     }
 
-    let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
-    processing.step(
-        &CheckedProofStep::Model { assignment: model },
-        CheckerData(ctx.borrow()),
-    )?;
+    process_step(ctx.borrow(), &CheckedProofStep::Model { assignment: model })?;
 
     Ok(())
 }
 
 /// Check a FailedAssumptions step
 fn check_failed_assumptions_step<'a>(
-    mut ctx: partial!(Context<'a>, mut ClauseHasherP, mut ClausesP, mut ProcessingP<'a>, mut RupCheckP, mut TmpDataP, mut VariablesP, CheckerStateP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut ClauseHasherP,
+        mut ClausesP,
+        mut ProcessingP<'a>,
+        mut RupCheckP,
+        mut TmpDataP,
+        mut VariablesP,
+        CheckerStateP,
+    ),
     failed_core: &[Lit],
     propagation_hashes: &[ClauseHash],
 ) -> Result<(), CheckerError> {
@@ -519,14 +561,13 @@ fn check_failed_assumptions_step<'a>(
         }
     }
 
-    let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
     let (rup_check, mut ctx) = ctx.split_part(RupCheckP);
-    processing.step(
+    process_step(
+        ctx.borrow(),
         &CheckedProofStep::FailedAssumptions {
             failed_core: &tmp,
             propagations: &rup_check.trace_ids,
         },
-        CheckerData(ctx.borrow()),
     )?;
 
     ctx.part_mut(TmpDataP).tmp = tmp;
@@ -536,7 +577,16 @@ fn check_failed_assumptions_step<'a>(
 
 /// Checks a proof in the native Varisat format.
 pub fn check_proof<'a>(
-    mut ctx: partial!(Context<'a>, mut CheckerStateP, mut ClauseHasherP, mut ClausesP, mut ProcessingP<'a>, mut RupCheckP, mut TmpDataP, mut VariablesP),
+    mut ctx: partial!(
+        Context<'a>,
+        mut CheckerStateP,
+        mut ClauseHasherP,
+        mut ClausesP,
+        mut ProcessingP<'a>,
+        mut RupCheckP,
+        mut TmpDataP,
+        mut VariablesP,
+    ),
     input: impl io::Read,
 ) -> Result<(), CheckerError> {
     let mut buffer = io::BufReader::new(input);
@@ -585,15 +635,14 @@ pub fn process_unit_conflicts<'a>(
     if let Some(ids) = &clauses.unit_conflict {
         let clause = &[];
 
-        let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
-        processing.step(
+        process_step(
+            ctx.borrow(),
             &CheckedProofStep::AtClause {
                 id: clauses.next_clause_id,
                 redundant: false,
                 clause,
                 propagations: ids,
             },
-            CheckerData(ctx.borrow()),
         )?;
     }
 

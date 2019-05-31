@@ -9,7 +9,7 @@ use varisat_formula::{lit::LitIdx, Lit};
 use varisat_internal_proof::ClauseHash;
 
 use crate::context::{parts::*, Context};
-use crate::processing::{CheckedProofStep, CheckerData};
+use crate::processing::{process_step, CheckedProofStep};
 use crate::sorted_lits::copy_canonical;
 use crate::variables::{ensure_sampling_var, ensure_var};
 use crate::CheckerError;
@@ -154,19 +154,18 @@ pub fn add_clause<'a>(
         return Ok(());
     }
 
-    let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
-
     let (tmp_data, mut ctx) = ctx.split_part_mut(TmpDataP);
 
     if copy_canonical(&mut tmp_data.tmp, clause) {
-        processing.step(
+        let (clauses, mut ctx) = ctx.split_part_mut(ClausesP);
+        process_step(
+            ctx.borrow(),
             &CheckedProofStep::TautologicalClause {
-                id: ctx.part(ClausesP).next_clause_id,
+                id: clauses.next_clause_id,
                 clause: &tmp_data.tmp,
             },
-            CheckerData(ctx.borrow()),
         )?;
-        ctx.part_mut(ClausesP).next_clause_id += 1;
+        clauses.next_clause_id += 1;
         return Ok(());
     }
 
@@ -176,38 +175,40 @@ pub fn add_clause<'a>(
 
     let (id, added) = store_clause(ctx.borrow(), &tmp_data.tmp, false);
 
+    let (clauses, mut ctx) = ctx.split_part_mut(ClausesP);
+
     match added {
         StoreClauseResult::New => {
-            processing.step(
+            process_step(
+                ctx.borrow(),
                 &CheckedProofStep::AddClause {
                     id: id,
                     clause: &tmp_data.tmp,
                 },
-                CheckerData(ctx.borrow()),
             )?;
         }
         StoreClauseResult::NewlyIrredundant | StoreClauseResult::Duplicate => {
             if let StoreClauseResult::NewlyIrredundant = added {
-                processing.step(
+                process_step(
+                    ctx.borrow(),
                     &CheckedProofStep::MakeIrredundant {
                         id,
                         clause: &tmp_data.tmp,
                     },
-                    CheckerData(ctx.borrow()),
                 )?;
             }
 
-            processing.step(
+            process_step(
+                ctx.borrow(),
                 &CheckedProofStep::DuplicatedClause {
-                    id: ctx.part(ClausesP).next_clause_id,
+                    id: clauses.next_clause_id,
                     same_as_id: id,
                     clause: &tmp_data.tmp,
                 },
-                CheckerData(ctx.borrow()),
             )?;
             // This is a duplicated clause. We want to ensure that the clause ids match the input
             // order so we skip a clause id.
-            ctx.part_mut(ClausesP).next_clause_id += 1;
+            clauses.next_clause_id += 1;
         }
     }
 

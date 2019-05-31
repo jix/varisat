@@ -4,7 +4,7 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Var;
 
 use crate::context::{parts::*, Context};
-use crate::processing::{CheckedProofStep, CheckedSamplingMode, CheckedUserVar, CheckerData};
+use crate::processing::{process_step, CheckedProofStep, CheckedSamplingMode, CheckedUserVar};
 use crate::CheckerError;
 
 /// Data for each literal.
@@ -135,9 +135,8 @@ pub fn add_user_mapping<'a>(
         CheckedSamplingMode::Sample
     };
 
-    let (processing, mut ctx) = ctx_in.split_part_mut(ProcessingP);
-
-    processing.step(
+    process_step(
+        ctx_in.borrow(),
         &CheckedProofStep::UserVar {
             var: global_var,
             user_var: Some(CheckedUserVar {
@@ -146,7 +145,6 @@ pub fn add_user_mapping<'a>(
                 new_var: true,
             }),
         },
-        CheckerData(ctx.borrow()),
     )?;
 
     Ok(())
@@ -167,13 +165,12 @@ pub fn remove_user_mapping<'a>(
     // mapping.
 
     if var_data.user_var.is_some() {
-        let (processing, mut ctx) = ctx.split_part_mut(ProcessingP);
-        processing.step(
+        process_step(
+            ctx.borrow(),
             &CheckedProofStep::UserVar {
                 var: global_var,
                 user_var: None,
             },
-            CheckerData(ctx.borrow()),
         )?;
     } else {
         return Err(CheckerError::check_failed(
