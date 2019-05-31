@@ -1,3 +1,4 @@
+//! Variable metadata.
 use hashbrown::HashSet;
 use partial_ref::{partial, PartialRef};
 

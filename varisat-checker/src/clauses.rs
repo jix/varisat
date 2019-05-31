@@ -1,3 +1,4 @@
+//! Clause storage (unit and non-unit clauses).
 use std::convert::TryInto;
 use std::mem::transmute;
 

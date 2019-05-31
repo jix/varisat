@@ -1,3 +1,4 @@
+//! Reverse unit propagation redundancy checks.
 use std::ops::Range;
 
 use partial_ref::{partial, PartialRef};

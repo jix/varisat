@@ -1,3 +1,4 @@
+//! Utilities for slices of sorted literals.
 use varisat_formula::Lit;
 
 /// Sort literals, remove duplicates and check for tautologic clauses.

@@ -1,3 +1,4 @@
+//! Computation of clause hashes.
 use std::mem::replace;
 
 use hashbrown::HashMap;

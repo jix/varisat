@@ -1,4 +1,4 @@
-//! Miscellaneous checker state.
+//! Checker state and checking of proof steps.
 
 use std::io;
 use std::mem::replace;

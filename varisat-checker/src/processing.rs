@@ -1,3 +1,4 @@
+//! Processing of checked proof steps.
 use partial_ref::{partial, PartialRef};
 
 use failure::Error;

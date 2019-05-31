@@ -1,3 +1,4 @@
+//! Temporary data.
 use varisat_formula::Lit;
 
 #[derive(Default)]
