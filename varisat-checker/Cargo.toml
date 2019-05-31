@@ -11,7 +11,7 @@ readme = "README.md"
 
 [dependencies]
 failure = "0.1.5"
-hashbrown = "0.3.0"
+hashbrown = "0.4.0"
 smallvec = "0.6.9"
 log = "0.4.6"
 
