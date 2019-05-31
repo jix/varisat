@@ -1,8 +1,11 @@
 //! Varisat internal interface used for on-the-fly checking.
 
+use partial_ref::{IntoPartialRefMut, PartialRef};
+
 use varisat_internal_proof::ProofStep;
 
-use super::{Checker, CheckerError};
+use crate::state::{check_step, process_unit_conflicts};
+use crate::{Checker, CheckerError};
 
 /// Varisat internal interface used for on-the-fly checking.
 ///
@@ -16,11 +19,13 @@ pub trait SelfChecker {
 
 impl<'a> SelfChecker for Checker<'a> {
     fn self_check_step(&mut self, step: ProofStep) -> Result<(), CheckerError> {
-        self.step += 1;
-        self.check_step(step)
+        self.ctx.checker_state.step += 1;
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        check_step(ctx.borrow(), step)
     }
 
     fn self_check_delayed_steps(&mut self) -> Result<(), CheckerError> {
-        self.process_unit_conflicts()
+        let mut ctx = self.ctx.into_partial_ref_mut();
+        process_unit_conflicts(ctx.borrow())
     }
 }
