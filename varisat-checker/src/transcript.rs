@@ -3,7 +3,7 @@ use failure::Error;
 
 use varisat_formula::{Lit, Var};
 
-use super::{CheckedProofStep, CheckedSamplingMode, CheckedUserVar, CheckerData};
+use crate::processing::{CheckedProofStep, CheckedSamplingMode, CheckedUserVar, CheckerData};
 
 /// Step of a proof transcript.
 ///
