@@ -16,9 +16,9 @@ proptest-strategies = ["proptest"]
 internal-testing = ["proptest", "rand"]
 
 [dependencies]
-proptest = { version = "0.9.3", optional = true }
+proptest = { version = "0.9.4", optional = true }
 rand = { version = "0.6.5", optional = true }
 
 [dev-dependencies]
-proptest = "0.9.3"
+proptest = "0.9.4"
 rand = "0.6.5"
