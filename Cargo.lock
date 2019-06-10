@@ -252,7 +252,7 @@ dependencies = [
 
 [[package]]
 name = "proptest"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bit-set 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -591,7 +591,7 @@ dependencies = [
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "ordered-float 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "partial_ref 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.92 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -611,7 +611,7 @@ dependencies = [
  "hashbrown 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "partial_ref 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "varisat-dimacs 0.2.1",
  "varisat-formula 0.2.1",
@@ -638,7 +638,7 @@ dependencies = [
  "env_logger 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "varisat-formula 0.2.1",
@@ -648,7 +648,7 @@ dependencies = [
 name = "varisat-formula"
 version = "0.2.1"
 dependencies = [
- "proptest 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -668,7 +668,7 @@ name = "varisat-internal-proof"
 version = "0.2.1"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "varisat-formula 0.2.1",
 ]
 
@@ -679,7 +679,7 @@ dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "leb128 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "varisat 0.2.1",
  "varisat-checker 0.2.1",
@@ -785,7 +785,7 @@ dependencies = [
 "checksum partial_ref 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b2b85fa89a02abf59d36821c373b5ed38c8e075505f1a08618b000fce81229bc"
 "checksum partial_ref_derive 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "759319b785d033e4279ec98fb2d1fb767a1af5b6a8996086c07168169cff079b"
 "checksum proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)" = "cf3d2011ab5c909338f7887f4fc896d35932e29146c12c8d01da6b22a80ba759"
-"checksum proptest 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2afed8cbdc8a64b58a5c021757a782351ec1afee85be374872721c84d5da5d80"
+"checksum proptest 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)" = "cf147e022eacf0c8a054ab864914a7602618adba841d800a9a9868a5237a529f"
 "checksum quick-error 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "9274b940887ce9addde99c4eee6b5c44cc494b182b97e73dc8ffdcb3397fd3f0"
 "checksum quote 0.6.12 (registry+https://github.com/rust-lang/crates.io-index)" = "faf4799c5d274f3868a4aae320a0a182cbd2baee377b378f080e16a23e9d80db"
 "checksum rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)" = "6d71dacdc3c88c1fde3885a3be3fbab9f35724e6ce99467f7d9c5026132184ca"
