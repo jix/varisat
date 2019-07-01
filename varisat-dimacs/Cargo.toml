@@ -20,7 +20,7 @@ itoa = "0.4.4"
 proptest = "0.9.4"
 rand = "0.6.5"
 tempfile = "3.0.8"
-env_logger = "0.6.1"
+env_logger = "0.6.2"
 
     [dev-dependencies.varisat-formula]
     path = "../varisat-formula"
