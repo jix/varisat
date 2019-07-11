@@ -13,7 +13,7 @@ readme = "README.md"
 failure = "0.1.5"
 hashbrown = "0.5.0"
 smallvec = "0.6.10"
-log = "0.4.6"
+log = "0.4.7"
 partial_ref = "0.3.1"
 
     [dependencies.varisat-formula]

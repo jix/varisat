@@ -15,7 +15,7 @@ autobins = false
 clap = { version = "2.33.0", features = ["wrap_help"] }
 env_logger = "0.6.1"
 failure = "0.1.5"
-log = "0.4.6"
+log = "0.4.7"
 toml = "0.5.1"
 
     [dependencies.varisat]
