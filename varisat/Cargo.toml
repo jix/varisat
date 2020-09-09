@@ -15,12 +15,12 @@ edition = "2018"
 failure = "0.1.5"
 itoa = "0.4.4"
 log = "0.4.6"
-ordered-float = "1.0.2"
+ordered-float = "2.0.0"
 partial_ref = "0.3.1"
 serde = { version = "1.0.91", features = ["derive"] }
 leb128 = "0.2.4"
-vec_mut_scan = "0.1.0"
-hashbrown = "0.4.0"
+vec_mut_scan = "0.3.0"
+rustc-hash = "1.1.0"
 
     [dependencies.varisat-internal-macros]
     path = "../varisat-internal-macros"
@@ -43,10 +43,10 @@ hashbrown = "0.4.0"
     version = "=0.2.1"
 
 [dev-dependencies]
-proptest = "0.9.3"
-rand = "0.6.5"
+proptest = "0.10.1"
+rand = "0.7.3"
 tempfile = "3.0.8"
-env_logger = "0.6.1"
+env_logger = "0.7.1"
 
     [dev-dependencies.varisat-formula]
     path = "../varisat-formula"

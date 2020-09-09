@@ -11,10 +11,10 @@ readme = "README.md"
 
 [dependencies]
 failure = "0.1.5"
-hashbrown = "0.4.0"
-smallvec = "0.6.9"
+smallvec = "1.4.2"
 log = "0.4.6"
 partial_ref = "0.3.1"
+rustc-hash = "1.1.0"
 
     [dependencies.varisat-formula]
     path = "../varisat-formula"
@@ -29,7 +29,7 @@ partial_ref = "0.3.1"
     version = "=0.2.1"
 
 [dev-dependencies]
-proptest = "0.9.3"
+proptest = "0.10.1"
 
     [dev-dependencies.varisat-formula]
     path = "../varisat-formula"

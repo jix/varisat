@@ -16,13 +16,15 @@ fn doc_from_attrs(attrs: &[Attribute]) -> Vec<LitStr> {
 
     for attr in attrs.iter() {
         if let Ok(Meta::NameValue(MetaNameValue {
-            ident,
+            path,
             lit: Lit::Str(doc_str),
             ..
         })) = attr.parse_meta()
         {
-            if ident == "doc" {
-                lines.push(doc_str);
+            if let Some(ident) = path.get_ident() {
+                if ident == "doc" {
+                    lines.push(doc_str);
+                }
             }
         }
     }

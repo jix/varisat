@@ -3,7 +3,7 @@
 use std::io;
 use std::mem::replace;
 
-use hashbrown::HashSet;
+use rustc_hash::FxHashSet as HashSet;
 use partial_ref::{partial, PartialRef};
 
 use varisat_formula::{Lit, Var};
@@ -473,7 +473,7 @@ fn check_model_step<'a>(
     mut ctx: partial!(Context<'a>, mut ProcessingP<'a>, CheckerStateP, ClausesP, VariablesP),
     model: &[Lit],
 ) -> Result<(), CheckerError> {
-    let mut assignments = HashSet::new();
+    let mut assignments = HashSet::default();
 
     for &lit in model.iter() {
         if let Some((false, _)) = ctx.part(ClausesP).lit_value(lit) {

@@ -63,8 +63,8 @@ pub fn sat_formula(
 ) -> impl Strategy<Value = CnfFormula> {
     (vars, clause_count, density, polarity_dist).prop_flat_map(
         |(vars, clause_count, density, polarity_dist)| {
-            let density = Bernoulli::new(density);
-            let polarity_dist = Bernoulli::new(polarity_dist);
+            let density = Bernoulli::new(density).unwrap();
+            let polarity_dist = Bernoulli::new(polarity_dist).unwrap();
 
             collection::vec(bool::ANY, vars).prop_perturb(move |polarity, mut rng| {
                 let mut clauses: Vec<Vec<Lit>> = vec![];

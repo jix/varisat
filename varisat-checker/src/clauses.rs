@@ -2,7 +2,7 @@
 use std::convert::TryInto;
 use std::mem::transmute;
 
-use hashbrown::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use partial_ref::{partial, PartialRef};
 use smallvec::SmallVec;
 

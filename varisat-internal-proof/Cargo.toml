@@ -17,4 +17,4 @@ failure = "0.1.5"
     version = "=0.2.1"
 
 [dev-dependencies]
-proptest = "0.9.3"
+proptest = "0.10.1"

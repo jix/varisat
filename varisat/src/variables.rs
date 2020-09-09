@@ -1,6 +1,6 @@
 //! Variable mapping and metadata.
 
-use hashbrown::HashSet;
+use rustc_hash::FxHashSet as HashSet;
 
 use partial_ref::{partial, PartialRef};
 

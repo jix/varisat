@@ -1,7 +1,7 @@
 //! Computation of clause hashes.
 use std::mem::take;
 
-use hashbrown::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use partial_ref::{partial, PartialRef};
 
 use varisat_formula::{Lit, Var};
@@ -65,7 +65,7 @@ pub fn rehash(mut ctx: partial!(Context, mut ClauseHasherP, mut ClausesP)) {
     let mut old_clauses = take(&mut clauses.clauses);
 
     for (_, mut candidates) in old_clauses.drain() {
-        for clause in candidates.drain() {
+        for clause in candidates.drain(..) {
             let hash = hasher.clause_hash(clause.lits.slice(&clauses.literal_buffer));
             let candidates = clauses.clauses.entry(hash).or_default();
             candidates.push(clause);

@@ -69,7 +69,7 @@ mod tests {
             |(vars, extra_vars, extra_clauses, density)| {
                 let polarity = collection::vec(bool::ANY, vars + extra_vars);
 
-                let dist = Bernoulli::new(density);
+                let dist = Bernoulli::new(density).unwrap();
 
                 let lits = polarity
                     .prop_map(|polarity| {
