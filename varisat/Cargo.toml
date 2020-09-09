@@ -12,7 +12,6 @@ edition = "2018"
 
 
 [dependencies]
-failure = "0.1.5"
 itoa = "0.4.4"
 log = "0.4.6"
 ordered-float = "2.0.0"
@@ -21,6 +20,8 @@ serde = { version = "1.0.91", features = ["derive"] }
 leb128 = "0.2.4"
 vec_mut_scan = "0.3.0"
 rustc-hash = "1.1.0"
+anyhow = "1.0.32"
+thiserror = "1.0.20"
 
     [dependencies.varisat-internal-macros]
     path = "../varisat-internal-macros"
@@ -54,4 +55,5 @@ env_logger = "0.7.1"
     features = ["proptest-strategies", "internal-testing"]
 
 [build-dependencies]
-failure = "0.1.5"
+anyhow = "1.0.32"
+

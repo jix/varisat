@@ -1,7 +1,7 @@
 //! Binary format for varisat proofs.
 use std::io::{self, BufRead, Write};
 
-use failure::Error;
+use anyhow::Error;
 
 use varisat_formula::{Lit, Var};
 
@@ -260,7 +260,7 @@ impl Parser {
                 })
             }
             CODE_END => Ok(ProofStep::End),
-            _ => failure::bail!("parse error"),
+            _ => anyhow::bail!("parse error"),
         }
     }
 }

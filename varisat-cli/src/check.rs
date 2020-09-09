@@ -1,7 +1,7 @@
 use std::{fs, io};
 
+use anyhow::Error;
 use clap::{App, ArgMatches, SubCommand};
-use failure::Error;
 
 use varisat::checker::{Checker, CheckerError};
 use varisat_lrat::WriteLrat;

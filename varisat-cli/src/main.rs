@@ -3,9 +3,9 @@ use std::{
     io::{self, Read, Write},
 };
 
+use anyhow::Error;
 use clap::{values_t, App, AppSettings, Arg};
 use env_logger::{fmt, Builder, Target};
-use failure::Error;
 use log::{error, info, Level, LevelFilter, Record};
 
 use varisat::{

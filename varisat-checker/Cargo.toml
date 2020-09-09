@@ -10,11 +10,12 @@ license = "MIT/Apache-2.0"
 readme = "README.md"
 
 [dependencies]
-failure = "0.1.5"
 smallvec = "1.4.2"
 log = "0.4.6"
 partial_ref = "0.3.1"
 rustc-hash = "1.1.0"
+anyhow = "1.0.32"
+thiserror = "1.0.20"
 
     [dependencies.varisat-formula]
     path = "../varisat-formula"

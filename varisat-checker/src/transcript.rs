@@ -1,5 +1,5 @@
 //! Proof transcripts.
-use failure::Error;
+use anyhow::Error;
 
 use varisat_formula::{Lit, Var};
 

@@ -1,4 +1,4 @@
-use failure::{ensure, Error};
+use anyhow::{ensure, Error};
 use std::{env, process::Command, str::from_utf8};
 
 fn have_drat_trim() -> Result<(), Error> {

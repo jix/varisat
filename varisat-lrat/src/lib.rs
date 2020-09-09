@@ -4,7 +4,7 @@ use std::{
     mem::replace,
 };
 
-use failure::Error;
+use anyhow::Error;
 
 use varisat_checker::{CheckedProofStep, CheckerData, ProofProcessor};
 use varisat_formula::Lit;

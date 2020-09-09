@@ -1,7 +1,7 @@
 //! Checker tests, that require a Solver instance, so they cannot be unit tests of the
 //! varisat-checker crate.
 
-use failure::{Error, Fail};
+use anyhow::Error;
 
 use proptest::prelude::*;
 
@@ -28,7 +28,7 @@ proptest! {
 
         prop_assert_eq!(solver.solve().ok(), Some(false));
 
-        solver.close_proof().map_err(|e| e.compat())?;
+        solver.close_proof().map_err(|e| TestCaseError::fail(e.to_string()))?;
 
         drop(solver);
 

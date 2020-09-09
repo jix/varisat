@@ -1,4 +1,4 @@
-use failure::{ensure, Error};
+use anyhow::{ensure, Error};
 use std::{
     env,
     io::Write,

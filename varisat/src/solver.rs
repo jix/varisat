@@ -3,7 +3,8 @@ use std::io;
 
 use partial_ref::{IntoPartialRef, IntoPartialRefMut, PartialRef};
 
-use failure::{Error, Fail};
+use anyhow::Error;
+use thiserror::Error;
 
 use varisat_checker::ProofProcessor;
 use varisat_dimacs::DimacsParser;
@@ -23,19 +24,19 @@ use crate::{
 pub use crate::proof::ProofFormat;
 
 /// Possible errors while solving a formula.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum SolverError {
-    #[fail(display = "The solver was interrupted")]
+    #[error("The solver was interrupted")]
     Interrupted,
-    #[fail(display = "Error in proof processor: {}", cause)]
+    #[error("Error in proof processor: {}", cause)]
     ProofProcessorError {
-        #[cause]
+        #[source]
         cause: Error,
     },
-    #[fail(display = "Error writing proof file: {}", cause)]
+    #[error("Error writing proof file: {}", cause)]
     ProofIoError {
-        #[cause]
+        #[source]
         cause: io::Error,
     },
 }
@@ -340,7 +341,7 @@ mod tests {
             _step: &CheckedProofStep,
             _data: CheckerData,
         ) -> Result<(), Error> {
-            failure::bail!("failing processor");
+            anyhow::bail!("failing processor");
         }
     }
     #[test]

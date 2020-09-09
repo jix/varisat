@@ -4,46 +4,52 @@ use std::{borrow::Borrow, io, mem::replace};
 
 use varisat_formula::{CnfFormula, ExtendFormula, Lit, Var};
 
-use failure::{Error, Fail};
+use anyhow::Error;
+use thiserror::Error;
 
 /// Possible errors while parsing a DIMACS CNF formula.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ParserError {
-    #[fail(
-        display = "line {}: Unexpected character in DIMACS CNF input: '{}'",
-        line, unexpected
+    #[error(
+        "line {}: Unexpected character in DIMACS CNF input: '{}'",
+        line,
+        unexpected
     )]
     UnexpectedInput { line: usize, unexpected: char },
-    #[fail(
-        display = "line {}: Literal index is too large: {}{}...",
-        line, index, final_digit
+    #[error(
+        "line {}: Literal index is too large: {}{}...",
+        line,
+        index,
+        final_digit
     )]
     LiteralTooLarge {
         line: usize,
         index: usize,
         final_digit: usize,
     },
-    #[fail(display = "line {}: Invalid header syntax: {}", line, header)]
+    #[error("line {}: Invalid header syntax: {}", line, header)]
     InvalidHeader { line: usize, header: String },
-    #[fail(display = "line {}: Unterminated clause", line)]
+    #[error("line {}: Unterminated clause", line)]
     UnterminatedClause { line: usize },
-    #[fail(
-        display = "Formula has {} variables while the header specifies {} variables",
-        var_count, header_var_count
+    #[error(
+        "Formula has {} variables while the header specifies {} variables",
+        var_count,
+        header_var_count
     )]
     VarCount {
         var_count: usize,
         header_var_count: usize,
     },
-    #[fail(
-        display = "Formula has {} clauses while the header specifies {} clauses",
-        clause_count, header_clause_count
+    #[error(
+        "Formula has {} clauses while the header specifies {} clauses",
+        clause_count,
+        header_clause_count
     )]
     ClauseCount {
         clause_count: usize,
         header_clause_count: usize,
     },
-    #[fail(display = "Parser invoked after a previous error")]
+    #[error("Parser invoked after a previous error")]
     PreviousError,
 }
 
@@ -421,8 +427,8 @@ pub fn write_dimacs(target: &mut impl io::Write, formula: &CnfFormula) -> io::Re
 mod tests {
     use super::*;
 
-    use failure::{Error, ResultExt};
-    use proptest::*;
+    use anyhow::Error;
+    use proptest::{test_runner::TestCaseError, *};
 
     use varisat_formula::{cnf::strategy::*, cnf_formula};
 
@@ -559,7 +565,7 @@ mod tests {
 
             write_dimacs(&mut buf, &input)?;
 
-            let parsed = DimacsParser::parse(&buf[..]).compat()?;
+            let parsed = DimacsParser::parse(&buf[..]).map_err(|e| TestCaseError::fail(e.to_string()))?;
 
             prop_assert_eq!(parsed, input);
         }

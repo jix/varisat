@@ -334,8 +334,6 @@ mod tests {
 
     use std::{fs::File, process::Command};
 
-    use failure::Fail;
-
     use tempfile::TempDir;
 
     use varisat_dimacs::write_dimacs;
@@ -370,7 +368,9 @@ mod tests {
 
         prop_assert_eq!(solver.solve().ok(), Some(false));
 
-        solver.close_proof().map_err(|e| e.compat())?;
+        solver
+            .close_proof()
+            .map_err(|e| TestCaseError::fail(e.to_string()))?;
 
         let output = match checker {
             Checker::DratTrim => {

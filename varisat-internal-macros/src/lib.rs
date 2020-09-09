@@ -123,7 +123,7 @@ fn derive_config_update(s: synstructure::Structure) -> TokenStream {
                     .expect("error parsing range expression");
                 quote! {
                     if let Some(value) = &self.#ident {
-                        failure::ensure!((#range).contains(value), #error_msg, value);
+                        anyhow::ensure!((#range).contains(value), #error_msg, value);
                     }
                 }
             } else {
@@ -197,7 +197,7 @@ fn derive_config_update(s: synstructure::Structure) -> TokenStream {
             /// Apply the configuration update.
             ///
             /// If an error occurs, the configuration is not changed.
-            pub fn apply(&self, config: &mut #ident) -> Result<(), failure::Error> {
+            pub fn apply(&self, config: &mut #ident) -> Result<(), anyhow::Error> {
                 #check_ranges
                 #apply_updates
                 Ok(())

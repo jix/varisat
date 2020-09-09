@@ -1,6 +1,6 @@
 use varisat::checker::{ProofTranscriptProcessor, ProofTranscriptStep};
 
-use failure::Error;
+use anyhow::Error;
 
 /// Steps that will be summarized
 #[derive(Copy, Clone, Eq, PartialEq)]

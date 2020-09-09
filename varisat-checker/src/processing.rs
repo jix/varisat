@@ -1,7 +1,7 @@
 //! Processing of checked proof steps.
 use partial_ref::{partial, PartialRef};
 
-use failure::Error;
+use anyhow::Error;
 use varisat_formula::{Lit, Var};
 
 use crate::{
