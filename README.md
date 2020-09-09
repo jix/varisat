@@ -2,9 +2,6 @@
 
 [![crates.io](https://img.shields.io/crates/v/varisat.svg)](https://crates.io/crates/varisat)
 [![docs.rs](https://docs.rs/varisat/badge.svg)](https://docs.rs/varisat)
-[![CircleCI branch](https://img.shields.io/circleci/project/github/jix/varisat/master.svg)](https://circleci.com/gh/jix/varisat/tree/master)
-[![codecov](https://img.shields.io/codecov/c/gh/jix/varisat/master.svg)](https://codecov.io/gh/jix/varisat)
-[![Developer Documentation](https://img.shields.io/badge/dev%20docs-master-blue.svg)](https://jix.github.io/varisat/dev/varisat/)
 ![](https://img.shields.io/crates/l/varisat.svg)
 
 Varisat is a [CDCL][cdcl] based SAT solver written in rust. Given a boolean
@@ -33,11 +30,7 @@ for Linux and Windows.
 ## Developer Documentation
 
 The internal APIs are documented using rustdoc. It can be generated using
-`cargo doc --document-private-items --all --exclude varisat-cli` or [viewed
-online (master)][dev-docs].
-
-A version of the [user manual built from the master branch][manual-master] is
-also available.
+`cargo doc --document-private-items --all --exclude varisat-cli`.
 
 You can also read [a series of blog posts about the development of
 varisat][blog-series].
