@@ -1,5 +1,5 @@
 //! Computation of clause hashes.
-use std::mem::replace;
+use std::mem::take;
 
 use hashbrown::HashMap;
 use partial_ref::{partial, PartialRef};
@@ -62,7 +62,7 @@ pub fn rehash(mut ctx: partial!(Context, mut ClauseHasherP, mut ClausesP)) {
     }
     hasher.rename_in_buffered_solver_var_names = false;
 
-    let mut old_clauses = replace(&mut clauses.clauses, Default::default());
+    let mut old_clauses = take(&mut clauses.clauses);
 
     for (_, mut candidates) in old_clauses.drain() {
         for clause in candidates.drain() {

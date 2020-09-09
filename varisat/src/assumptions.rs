@@ -237,9 +237,8 @@ fn analyze_assumption_conflict<'a>(
     assumptions
         .user_failed_core
         .extend(assumptions.failed_core.iter().map(|solver_lit| {
-            let user_lit = solver_lit
-                .map_var(|solver_var| ctx.part(VariablesP).existing_user_from_solver(solver_var));
-            user_lit
+            solver_lit
+                .map_var(|solver_var| ctx.part(VariablesP).existing_user_from_solver(solver_var))
         }));
 
     proof::add_step(
@@ -341,7 +340,7 @@ mod tests {
 
             prop_assert_eq!(solver.solve().ok(), Some(true));
 
-            let mut assumptions = enable_row.to_owned();
+            let mut assumptions = enable_row;
 
             assumptions.push(Lit::positive(Var::from_index(formula.var_count() + 10)));
 

@@ -19,8 +19,8 @@ pub struct WriteLrat<'a> {
 impl<'a> ProofProcessor for WriteLrat<'a> {
     fn process_step(&mut self, step: &CheckedProofStep, _data: CheckerData) -> Result<(), Error> {
         match step {
-            &CheckedProofStep::AddClause { .. } => (),
-            &CheckedProofStep::DuplicatedClause { .. } => (),
+            CheckedProofStep::AddClause { .. } => (),
+            CheckedProofStep::DuplicatedClause { .. } => (),
             _ => {
                 if !self.buffered_deletes.is_empty() {
                     let buffered_deletes = replace(&mut self.buffered_deletes, vec![]);

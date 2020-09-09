@@ -80,14 +80,14 @@ impl Variables {
     pub fn user_var_iter<'a>(&'a self) -> impl Iterator<Item = Var> + 'a {
         let global_from_user = self.global_from_user.fwd();
         (0..self.global_from_user().watermark())
-            .map(|user_index| Var::from_index(user_index))
+            .map(Var::from_index)
             .filter(move |&user_var| global_from_user.get(user_var).is_some())
     }
 
     /// Iterator over all global variables that are in use.
     pub fn global_var_iter<'a>(&'a self) -> impl Iterator<Item = Var> + 'a {
         (0..self.global_watermark())
-            .map(|global_index| Var::from_index(global_index))
+            .map(Var::from_index)
             .filter(move |&global_var| !self.var_data[global_var.index()].deleted)
     }
 
@@ -344,8 +344,7 @@ pub fn solver_from_user<'a>(
     require_sampling: bool,
 ) -> Var {
     let global = global_from_user(ctx.borrow(), user, require_sampling);
-    let solver = solver_from_global(ctx.borrow(), global);
-    solver
+    solver_from_global(ctx.borrow(), global)
 }
 
 /// Allocates a currently unused user variable.

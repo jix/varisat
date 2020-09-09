@@ -242,9 +242,12 @@ mod tests {
         }
 
         // Decay is a power of two so these values are exact
-        assert_eq!(vsids.activity[0].0, 0.0);
-        assert_eq!(vsids.activity[2].0, vsids.activity[1].0 * 2.0);
-        assert!(vsids.activity[3] > vsids.activity[2]);
+        #[allow(clippy::float_cmp)]
+        {
+            assert_eq!(vsids.activity[0].0, 0.0);
+            assert_eq!(vsids.activity[2].0, vsids.activity[1].0 * 2.0);
+            assert!(vsids.activity[3] > vsids.activity[2]);
+        }
     }
 
     #[test]
@@ -268,9 +271,12 @@ mod tests {
         }
 
         // Decay is a power of two so these values are exact
-        assert_eq!(vsids.activity[0].0, 0.0);
-        assert_eq!(vsids.activity[2].0, vsids.activity[1].0 * 2.0);
-        assert_eq!(vsids.activity[3].0, vsids.activity[1].0 * 3.0);
+        #[allow(clippy::float_cmp)]
+        {
+            assert_eq!(vsids.activity[0].0, 0.0);
+            assert_eq!(vsids.activity[2].0, vsids.activity[1].0 * 2.0);
+            assert_eq!(vsids.activity[3].0, vsids.activity[1].0 * 3.0);
+        }
     }
 
     #[test]

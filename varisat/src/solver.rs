@@ -22,6 +22,7 @@ pub use crate::proof::ProofFormat;
 
 /// Possible errors while solving a formula.
 #[derive(Debug, Fail)]
+#[non_exhaustive]
 pub enum SolverError {
     #[fail(display = "The solver was interrupted")]
     Interrupted,
@@ -35,9 +36,6 @@ pub enum SolverError {
         #[cause]
         cause: io::Error,
     },
-    #[doc(hidden)]
-    #[fail(display = "__Nonexhaustive")]
-    __Nonexhaustive,
 }
 
 impl SolverError {
@@ -83,7 +81,8 @@ impl<'a> Solver<'a> {
     /// Using this avoids creating a temporary [`CnfFormula`].
     pub fn add_dimacs_cnf(&mut self, input: impl io::Read) -> Result<(), Error> {
         let parser = DimacsParser::parse_incremental(input, |parser| {
-            Ok(self.add_formula(&parser.take_formula()))
+            self.add_formula(&parser.take_formula());
+            Ok(())
         })?;
 
         log::info!(

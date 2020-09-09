@@ -33,6 +33,7 @@ use state::check_proof;
 
 /// Possible errors while checking a varisat proof.
 #[derive(Debug, Fail)]
+#[non_exhaustive]
 pub enum CheckerError {
     #[fail(display = "step {}: Unexpected end of proof file", step)]
     ProofIncomplete { step: u64 },
@@ -58,10 +59,7 @@ pub enum CheckerError {
     ProofProcessorError {
         #[cause]
         cause: Error,
-    },
-    #[doc(hidden)]
-    #[fail(display = "__Nonexhaustive")]
-    __Nonexhaustive,
+    }
 }
 
 impl CheckerError {

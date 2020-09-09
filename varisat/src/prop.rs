@@ -223,7 +223,7 @@ mod tests {
                 }
             }
 
-            let tmp_crefs: Vec<_> = db::clauses_iter(&mut ctx.borrow()).collect();
+            let tmp_crefs: Vec<_> = db::clauses_iter(&ctx.borrow()).collect();
 
             for clause in formula.iter() {
                 load_clause(ctx.borrow(), clause);

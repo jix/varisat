@@ -297,7 +297,7 @@ fn check_at_clause_step<'a>(
                 ctx.borrow(),
                 &CheckedProofStep::AtClause {
                     id,
-                    redundant: redundant,
+                    redundant,
                     clause: &tmp,
                     propagations: &rup_check.trace_ids,
                 },
@@ -347,7 +347,7 @@ fn check_delete_clause_step<'a>(
     match proof {
         DeleteClauseProof::Redundant => (),
         DeleteClauseProof::Satisfied => {
-            if !tmp.iter().any(|&lit| {
+            let is_subsumed = tmp.iter().any(|&lit| {
                 if let Some((
                     true,
                     UnitClause {
@@ -361,7 +361,8 @@ fn check_delete_clause_step<'a>(
                 } else {
                     false
                 }
-            }) {
+            });
+            if !is_subsumed {
                 return Err(CheckerError::check_failed(
                     ctx.part(CheckerStateP).step,
                     format!("deleted clause {:?} is not satisfied", clause),
@@ -398,10 +399,7 @@ fn check_delete_clause_step<'a>(
             DeleteClauseResult::Removed => {
                 process_step(
                     ctx.borrow(),
-                    &CheckedProofStep::DeleteClause {
-                        id: id,
-                        clause: &tmp,
-                    },
+                    &CheckedProofStep::DeleteClause { id, clause: &tmp },
                 )?;
             }
             DeleteClauseResult::Unchanged => (),
@@ -413,7 +411,7 @@ fn check_delete_clause_step<'a>(
                 process_step(
                     ctx.borrow(),
                     &CheckedProofStep::DeleteAtClause {
-                        id: id,
+                        id,
                         keep_as_redundant: deleted == DeleteClauseResult::NewlyRedundant,
                         clause: &tmp,
                         propagations: &[subsumed_by.unwrap()],
@@ -541,7 +539,7 @@ fn check_failed_assumptions_step<'a>(
     if !is_subset(&tmp, &ctx.part(CheckerStateP).assumptions, false) {
         return Err(CheckerError::check_failed(
             ctx.part(CheckerStateP).step,
-            format!("failed core contains non-assumed variables"),
+            "failed core contains non-assumed variables".to_string(),
         ));
     }
 
@@ -614,12 +612,7 @@ pub fn check_proof<'a>(
                         });
                     }
                 }
-                Err(err) => {
-                    return Err(CheckerError::ParseError {
-                        step,
-                        cause: err.into(),
-                    })
-                }
+                Err(err) => return Err(CheckerError::ParseError { step, cause: err }),
             },
         }
     }

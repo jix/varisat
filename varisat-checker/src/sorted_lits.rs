@@ -1,4 +1,6 @@
 //! Utilities for slices of sorted literals.
+use std::cmp::Ordering;
+
 use varisat_formula::Lit;
 
 /// Sort literals, remove duplicates and check for tautologic clauses.
@@ -28,17 +30,21 @@ pub fn is_subset(mut subset: &[Lit], mut superset: &[Lit], strict: bool) -> bool
 
     while let Some((&sub_min, sub_rest)) = subset.split_first() {
         if let Some((&super_min, super_rest)) = superset.split_first() {
-            if sub_min < super_min {
-                // sub_min is not in superset
-                return false;
-            } else if sub_min > super_min {
-                // super_min is not in subset, skip it
-                superset = super_rest;
-                is_strict = true;
-            } else {
-                // sub_min == super_min, go to next element
-                superset = super_rest;
-                subset = sub_rest;
+            match sub_min.cmp(&super_min) {
+                Ordering::Less => {
+                    // sub_min is not in superset
+                    return false;
+                }
+                Ordering::Greater => {
+                    // super_min is not in subset, skip it
+                    superset = super_rest;
+                    is_strict = true;
+                }
+                Ordering::Equal => {
+                    // sub_min == super_min, go to next element
+                    superset = super_rest;
+                    subset = sub_rest;
+                }
             }
         } else {
             // sub_min is not in superset

@@ -71,7 +71,7 @@ pub fn conflict_step<'a>(
         true,
         &ProofStep::AtClause {
             redundant: clause.len() > 2,
-            clause: clause.into(),
+            clause,
             propagation_hashes: analyze.clause_hashes(),
         },
     );

@@ -65,7 +65,7 @@ fn collect_garbage_now(
 
     db.clauses.retain(|&cref| {
         let clause = alloc.clause(cref);
-        let mut header = clause.header().clone();
+        let mut header = *clause.header();
         if header.deleted() {
             false
         } else {
@@ -100,8 +100,8 @@ fn mark_asserting_clauses(mut ctx: partial!(Context, mut ClauseAllocP, ImplGraph
     let impl_graph = ctx.part(ImplGraphP);
 
     for &lit in trail.trail().iter() {
-        if let &Reason::Long(cref) = impl_graph.reason(lit.var()) {
-            alloc.header_mut(cref).set_mark(true);
+        if let Reason::Long(cref) = impl_graph.reason(lit.var()) {
+            alloc.header_mut(*cref).set_mark(true);
         }
     }
 }
@@ -180,12 +180,12 @@ mod tests {
                     continue;
                 }
                 prop_assert!(!clause.header().mark());
-                output_clauses.push(clause.lits().iter().cloned().collect());
+                output_clauses.push(clause.lits().to_vec());
             }
 
             let mut input_clauses: Vec<Vec<Lit>> = input_b
                 .iter()
-                .map(|c| c.iter().cloned().collect())
+                .map(|c| c.to_vec())
                 .collect();
 
             output_clauses.sort();
@@ -194,8 +194,8 @@ mod tests {
             prop_assert_eq!(input_clauses, output_clauses);
 
             for &lit in ctx.part(TrailP).trail() {
-                if let &Reason::Long(cref) = ctx.part(ImplGraphP).reason(lit.var()) {
-                    prop_assert_eq!(ctx.part(ClauseAllocP).clause(cref).lits()[0], lit)
+                if let Reason::Long(cref) = ctx.part(ImplGraphP).reason(lit.var()) {
+                    prop_assert_eq!(ctx.part(ClauseAllocP).clause(*cref).lits()[0], lit)
                 }
             }
         }

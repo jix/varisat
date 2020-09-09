@@ -81,7 +81,7 @@ impl Watchlists {
 
         for i in 0..2 {
             let watch = Watch {
-                cref: cref,
+                cref,
                 blocking: lits[i ^ 1],
             };
             self.add_watch(!lits[i], watch);

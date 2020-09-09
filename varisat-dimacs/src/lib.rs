@@ -171,7 +171,7 @@ impl DimacsParser {
                         self.header_line.push(byte);
                     }
                 }
-                b'0'...b'9' => {
+                b'0'..=b'9' => {
                     self.in_lit = true;
                     let digit = (byte - b'0') as usize;
 
@@ -201,7 +201,7 @@ impl DimacsParser {
                     self.negate_next_lit = true;
                     self.start_of_line = false
                 }
-                b' ' | b'\n' | b'\r' if !(self.negate_next_lit && !self.in_lit) => {
+                b' ' | b'\n' | b'\r' if !self.negate_next_lit || self.in_lit => {
                     self.finish_literal();
                     self.negate_next_lit = false;
                     self.in_lit = false;

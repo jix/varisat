@@ -94,7 +94,7 @@ pub fn propagate_long(
             // either replace the currently processed watch or be added to another literals watch
             // list.
             let new_watch = Watch {
-                cref: cref,
+                cref,
                 blocking: first,
             };
 

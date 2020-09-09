@@ -22,7 +22,7 @@ fn doc_from_attrs(attrs: &[Attribute]) -> Vec<LitStr> {
         })) = attr.parse_meta()
         {
             if ident == "doc" {
-                lines.push(doc_str);;
+                lines.push(doc_str);
             }
         }
     }
@@ -59,7 +59,7 @@ fn derive_doc_default(s: synstructure::Structure) -> TokenStream {
                     .parse::<TokenStream>()
                     .expect("error parsing default expression")
             })
-            .unwrap_or(parse_quote!(Default::default()))
+            .unwrap_or_else(|| parse_quote!(Default::default()))
     });
 
     s.gen_impl(quote! {
@@ -161,12 +161,12 @@ fn derive_config_update(s: synstructure::Structure) -> TokenStream {
         writeln!(&mut help_str, "{}:", quote!(#ident)).unwrap();
         for line in doc_from_attrs(&field.attrs).iter() {
             if line.value().is_empty() {
-                writeln!(&mut help_str, "").unwrap();
+                writeln!(&mut help_str).unwrap();
             } else {
                 writeln!(&mut help_str, "   {}", line.value()).unwrap();
             }
         }
-        writeln!(&mut help_str, "").unwrap();
+        writeln!(&mut help_str).unwrap();
     }
 
     let doc = format!("Updates configuration values of [`{}`].", ident);

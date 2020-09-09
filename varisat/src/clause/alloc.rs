@@ -155,6 +155,7 @@ impl ClauseAlloc {
 
     unsafe fn clause_with_len_unchecked(&self, cref: ClauseRef, len: usize) -> &Clause {
         let offset = cref.offset as usize;
+        #[allow(clippy::transmute_ptr_to_ptr)]
         transmute::<&[LitIdx], &Clause>(slice::from_raw_parts(
             self.buffer.as_ptr().add(offset),
             len + HEADER_LEN,
@@ -163,6 +164,7 @@ impl ClauseAlloc {
 
     unsafe fn clause_with_len_unchecked_mut(&mut self, cref: ClauseRef, len: usize) -> &mut Clause {
         let offset = cref.offset as usize;
+        #[allow(clippy::transmute_ptr_to_ptr)]
         transmute::<&mut [LitIdx], &mut Clause>(slice::from_raw_parts_mut(
             self.buffer.as_mut_ptr().add(offset),
             len + HEADER_LEN,

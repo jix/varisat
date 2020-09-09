@@ -23,10 +23,7 @@ pub fn make_decision(
 ) -> bool {
     let (vsids, mut ctx) = ctx.split_part_mut(VsidsP);
 
-    if let Some(decision_var) = vsids
-        .filter(|&var| ctx.part(AssignmentP).var_value(var).is_none())
-        .next()
-    {
+    if let Some(decision_var) = vsids.find(|&var| ctx.part(AssignmentP).var_value(var).is_none()) {
         let decision = decision_var.lit(ctx.part(AssignmentP).last_var_value(decision_var));
 
         ctx.part_mut(TrailP).new_decision_level();

@@ -113,7 +113,7 @@ impl MapStep {
                 }
             }
 
-            ProofStep::ChangeHashBits { .. } | ProofStep::End => step.clone(),
+            ProofStep::ChangeHashBits { .. } | ProofStep::End => *step,
 
             ProofStep::SolverVarName { .. }
             | ProofStep::UserVarName { .. }
@@ -121,7 +121,7 @@ impl MapStep {
             | ProofStep::ChangeSamplingMode { .. } => {
                 // while these steps do contain variables, they are used to update the mapping, so
                 // they shouldn't be mapped themselves.
-                step.clone()
+                *step
             }
         }
     }

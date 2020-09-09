@@ -41,6 +41,11 @@ impl CnfFormula {
         self.clause_ranges.len()
     }
 
+    /// Whether the set of clauses is empty.
+    pub fn is_empty(&self) -> bool {
+        self.clause_ranges.is_empty()
+    }
+
     /// Iterator over all clauses.
     pub fn iter(&self) -> impl Iterator<Item = &[Lit]> {
         let literals = &self.literals;

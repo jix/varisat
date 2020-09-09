@@ -38,6 +38,7 @@ impl ClauseLits {
         } else {
             let lits = unsafe {
                 // Lit is a repr(transparent) wrapper of LitIdx
+                #[allow(clippy::transmute_ptr_to_ptr)]
                 transmute::<&[Lit], &[LitIdx]>(lits)
             };
             inline[..length].copy_from_slice(lits);
@@ -60,6 +61,7 @@ impl ClauseLits {
         } else {
             unsafe {
                 // Lit is a repr(transparent) wrapper of LitIdx
+                #[allow(clippy::transmute_ptr_to_ptr)]
                 transmute::<&[LitIdx], &[Lit]>(&self.inline[..self.length as usize])
             }
         }
@@ -183,7 +185,7 @@ pub fn add_clause<'a>(
             process_step(
                 ctx.borrow(),
                 &CheckedProofStep::AddClause {
-                    id: id,
+                    id,
                     clause: &tmp_data.tmp,
                 },
             )?;
@@ -420,10 +422,10 @@ pub fn delete_clause(
         (_, true) => format!("delete of redundant clause {:?} which is irredundant", lits),
         (_, false) => format!("delete of irredundant clause {:?} which is redundant", lits),
     };
-    return Err(CheckerError::check_failed(
+    Err(CheckerError::check_failed(
         ctx.part(CheckerStateP).step,
         msg,
-    ));
+    ))
 }
 
 /// Perform a garbage collection if required

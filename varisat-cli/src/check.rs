@@ -36,12 +36,12 @@ pub fn check_main(matches: &ArgMatches) -> Result<i32, Error> {
         Some(path) => {
             log::info!("Reading file '{}'", path);
             opened_file = fs::File::open(path)?;
-            &mut opened_file as &mut io::Read
+            &mut opened_file as &mut dyn io::Read
         }
         None => {
             log::info!("Reading from stdin");
             locked_stdin = stdin.lock();
-            &mut locked_stdin as &mut io::Read
+            &mut locked_stdin as &mut dyn io::Read
         }
     };
 

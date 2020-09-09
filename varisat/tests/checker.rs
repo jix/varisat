@@ -117,7 +117,7 @@ proptest! {
         prop_assert_eq!(solver.solve().ok(), Some(true));
         expected_sat += 1;
 
-        let mut assumptions = enable_row.to_owned();
+        let mut assumptions = enable_row;
 
         assumptions.push(Lit::positive(Var::from_index(formula.var_count() + 10)));
 

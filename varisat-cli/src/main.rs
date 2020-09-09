@@ -93,7 +93,7 @@ fn main_with_err() -> Result<i32, Error> {
     }
 
     if values_t!(matches, "config-option", String)
-        .unwrap_or(vec![])
+        .unwrap_or_default()
         .iter()
         .any(|option| option == "help")
     {
@@ -113,7 +113,7 @@ fn main_with_err() -> Result<i32, Error> {
         config_update.merge(toml::from_str(&config_contents)?);
     }
 
-    for config_option in values_t!(matches, "config-option", String).unwrap_or(vec![]) {
+    for config_option in values_t!(matches, "config-option", String).unwrap_or_default() {
         config_update.merge(toml::from_str(&config_option)?);
     }
 
@@ -132,12 +132,12 @@ fn main_with_err() -> Result<i32, Error> {
         Some(path) => {
             info!("Reading file '{}'", path);
             opened_file = fs::File::open(path)?;
-            &mut opened_file as &mut io::Read
+            &mut opened_file as &mut dyn io::Read
         }
         None => {
             info!("Reading from stdin");
             locked_stdin = stdin.lock();
-            &mut locked_stdin as &mut io::Read
+            &mut locked_stdin as &mut dyn io::Read
         }
     };
 

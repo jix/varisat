@@ -144,8 +144,8 @@ pub fn analyze_conflict<'a>(
                     add_literal(ctx.borrow(), lit);
                 }
 
-                if let &Reason::Long(cref) = reason {
-                    ctx.part_mut(AnalyzeConflictP).involved.push(cref);
+                if let Reason::Long(cref) = reason {
+                    ctx.part_mut(AnalyzeConflictP).involved.push(*cref);
                 }
             }
         }

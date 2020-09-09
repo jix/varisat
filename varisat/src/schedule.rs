@@ -53,9 +53,9 @@ pub fn schedule_step<'a>(
     let (schedule, mut ctx) = ctx.split_part_mut(ScheduleP);
     let (config, mut ctx) = ctx.split_part(SolverConfigP);
 
-    if ctx.part(SolverStateP).sat_state != SatState::Unknown {
-        false
-    } else if ctx.part(SolverStateP).solver_error.is_some() {
+    if ctx.part(SolverStateP).sat_state != SatState::Unknown
+        || ctx.part(SolverStateP).solver_error.is_some()
+    {
         false
     } else {
         if schedule.conflicts > 0 && schedule.conflicts % 5000 == 0 {

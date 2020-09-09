@@ -279,7 +279,7 @@ pub mod strategy {
     use proptest::{prelude::*, *};
 
     pub fn var(index: impl Strategy<Value = usize>) -> impl Strategy<Value = Var> {
-        index.prop_map(|index| Var::from_index(index))
+        index.prop_map(Var::from_index)
     }
 
     pub fn lit(index: impl Strategy<Value = usize>) -> impl Strategy<Value = Lit> {
