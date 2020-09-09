@@ -1,7 +1,6 @@
 //! Mappings between variable names
 
-use varisat_formula::lit::LitIdx;
-use varisat_formula::Var;
+use varisat_formula::{lit::LitIdx, Var};
 
 const NO_VAR_IDX: LitIdx = Var::max_count() as LitIdx;
 

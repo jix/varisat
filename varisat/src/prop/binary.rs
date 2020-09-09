@@ -5,8 +5,7 @@ use varisat_formula::Lit;
 
 use crate::context::{parts::*, Context};
 
-use super::enqueue_assignment;
-use super::{Conflict, Reason};
+use super::{enqueue_assignment, Conflict, Reason};
 
 /// Propagate all literals implied by the given literal via binary clauses.
 ///

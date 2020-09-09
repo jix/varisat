@@ -1,10 +1,8 @@
 use proptest::{prelude::*, *};
 
-use rand::distributions::Bernoulli;
-use rand::seq::SliceRandom;
+use rand::{distributions::Bernoulli, seq::SliceRandom};
 
-use crate::cnf::CnfFormula;
-use crate::lit::Lit;
+use crate::{cnf::CnfFormula, lit::Lit};
 
 /// Generate small hard unsat instances.
 ///

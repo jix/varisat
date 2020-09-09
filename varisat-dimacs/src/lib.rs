@@ -1,8 +1,6 @@
 //! DIMCAS CNF parser and writer for the Varisat SAT solver.
 
-use std::borrow::Borrow;
-use std::io;
-use std::mem::replace;
+use std::{borrow::Borrow, io, mem::replace};
 
 use varisat_formula::{CnfFormula, ExtendFormula, Lit, Var};
 
@@ -566,5 +564,4 @@ mod tests {
             prop_assert_eq!(parsed, input);
         }
     }
-
 }

@@ -1,29 +1,31 @@
 //! Checker state and checking of proof steps.
 
-use std::io;
-use std::mem::replace;
+use std::{io, mem::replace};
 
-use rustc_hash::FxHashSet as HashSet;
 use partial_ref::{partial, PartialRef};
+use rustc_hash::FxHashSet as HashSet;
 
 use varisat_formula::{Lit, Var};
 use varisat_internal_proof::{binary_format::Parser, ClauseHash, DeleteClauseProof, ProofStep};
 
-use crate::clauses::{
-    add_clause, delete_clause, store_clause, store_unit_clause, DeleteClauseResult,
-    StoreClauseResult, UnitClause, UnitId,
+use crate::{
+    clauses::{
+        add_clause, delete_clause, store_clause, store_unit_clause, DeleteClauseResult,
+        StoreClauseResult, UnitClause, UnitId,
+    },
+    context::{parts::*, Context},
+    hash::rehash,
+    processing::{
+        process_step, CheckedProofStep, CheckedSamplingMode, CheckedUserVar, ResolutionPropagations,
+    },
+    rup::check_clause_with_hashes,
+    sorted_lits::{copy_canonical, is_subset},
+    variables::{
+        add_user_mapping, ensure_sampling_var, ensure_var, remove_user_mapping, SamplingMode,
+        VarData,
+    },
+    CheckerError,
 };
-use crate::context::{parts::*, Context};
-use crate::hash::rehash;
-use crate::processing::{
-    process_step, CheckedProofStep, CheckedSamplingMode, CheckedUserVar, ResolutionPropagations,
-};
-use crate::rup::check_clause_with_hashes;
-use crate::sorted_lits::{copy_canonical, is_subset};
-use crate::variables::{
-    add_user_mapping, ensure_sampling_var, ensure_var, remove_user_mapping, SamplingMode, VarData,
-};
-use crate::CheckerError;
 
 /// A checker for unsatisfiability proofs in the native varisat format.
 #[derive(Default)]

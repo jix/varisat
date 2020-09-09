@@ -1,6 +1,5 @@
 //! Clause allocator.
-use std::mem::transmute;
-use std::slice;
+use std::{mem::transmute, slice};
 
 use varisat_formula::{lit::LitIdx, Lit};
 

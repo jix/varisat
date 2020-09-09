@@ -1,7 +1,4 @@
-use std::env;
-use std::path::Path;
-use std::process::Command;
-use std::str::from_utf8;
+use std::{env, path::Path, process::Command, str::from_utf8};
 
 fn main() {
     let rustc = env::var("RUSTC").unwrap();

@@ -5,8 +5,11 @@ use failure::{Error, Fail};
 
 use proptest::prelude::*;
 
-use varisat::checker::{Checker, ProofTranscriptProcessor, ProofTranscriptStep};
-use varisat::{dimacs::write_dimacs, CnfFormula, ExtendFormula, Lit, ProofFormat, Solver, Var};
+use varisat::{
+    checker::{Checker, ProofTranscriptProcessor, ProofTranscriptStep},
+    dimacs::write_dimacs,
+    CnfFormula, ExtendFormula, Lit, ProofFormat, Solver, Var,
+};
 use varisat_formula::test::{conditional_pigeon_hole, sgen_unsat_formula};
 
 proptest! {

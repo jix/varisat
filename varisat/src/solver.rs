@@ -9,14 +9,16 @@ use varisat_checker::ProofProcessor;
 use varisat_dimacs::DimacsParser;
 use varisat_formula::{CnfFormula, ExtendFormula, Lit, Var};
 
-use crate::assumptions::set_assumptions;
-use crate::config::SolverConfigUpdate;
-use crate::context::{config_changed, parts::*, Context};
-use crate::load::load_clause;
-use crate::proof;
-use crate::schedule::schedule_step;
-use crate::state::SatState;
-use crate::variables;
+use crate::{
+    assumptions::set_assumptions,
+    config::SolverConfigUpdate,
+    context::{config_changed, parts::*, Context},
+    load::load_clause,
+    proof,
+    schedule::schedule_step,
+    state::SatState,
+    variables,
+};
 
 pub use crate::proof::ProofFormat;
 
@@ -290,8 +292,10 @@ mod tests {
     use proptest::prelude::*;
 
     use varisat_checker::{CheckedProofStep, CheckerData};
-    use varisat_formula::test::{sat_formula, sgen_unsat_formula};
-    use varisat_formula::{cnf_formula, lits};
+    use varisat_formula::{
+        cnf_formula, lits,
+        test::{sat_formula, sgen_unsat_formula},
+    };
 
     use varisat_dimacs::write_dimacs;
 

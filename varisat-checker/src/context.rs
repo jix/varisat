@@ -1,13 +1,10 @@
 //! Central checker data structure.
 use partial_ref::{part, PartialRefTarget};
 
-use crate::clauses::Clauses;
-use crate::hash::ClauseHasher;
-use crate::processing::Processing;
-use crate::rup::RupCheck;
-use crate::state::CheckerState;
-use crate::tmp::TmpData;
-use crate::variables::Variables;
+use crate::{
+    clauses::Clauses, hash::ClauseHasher, processing::Processing, rup::RupCheck,
+    state::CheckerState, tmp::TmpData, variables::Variables,
+};
 
 /// Part declarations for the [`Context`] struct.
 pub mod parts {

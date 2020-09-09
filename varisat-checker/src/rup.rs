@@ -6,11 +6,13 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::{lit::LitIdx, Lit};
 use varisat_internal_proof::ClauseHash;
 
-use crate::clauses::{UnitClause, UnitId};
-use crate::context::{parts::*, Context};
-use crate::hash::rehash;
-use crate::variables::ensure_var;
-use crate::CheckerError;
+use crate::{
+    clauses::{UnitClause, UnitId},
+    context::{parts::*, Context},
+    hash::rehash,
+    variables::ensure_var,
+    CheckerError,
+};
 
 /// Propagation of the RUP check.
 struct TraceItem {

@@ -1,19 +1,20 @@
 //! Clause storage (unit and non-unit clauses).
-use std::convert::TryInto;
-use std::mem::transmute;
+use std::{convert::TryInto, mem::transmute};
 
-use rustc_hash::FxHashMap as HashMap;
 use partial_ref::{partial, PartialRef};
+use rustc_hash::FxHashMap as HashMap;
 use smallvec::SmallVec;
 
 use varisat_formula::{lit::LitIdx, Lit};
 use varisat_internal_proof::ClauseHash;
 
-use crate::context::{parts::*, Context};
-use crate::processing::{process_step, CheckedProofStep};
-use crate::sorted_lits::copy_canonical;
-use crate::variables::{ensure_sampling_var, ensure_var};
-use crate::CheckerError;
+use crate::{
+    context::{parts::*, Context},
+    processing::{process_step, CheckedProofStep},
+    sorted_lits::copy_canonical,
+    variables::{ensure_sampling_var, ensure_var},
+    CheckerError,
+};
 
 const INLINE_LITS: usize = 3;
 

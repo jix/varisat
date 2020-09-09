@@ -6,13 +6,15 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Lit;
 use varisat_internal_proof::{DeleteClauseProof, ProofStep};
 
-use crate::clause::{db, ClauseHeader, Tier};
-use crate::context::{parts::*, Context};
-use crate::proof;
-use crate::prop::{assignment, full_restart, Reason};
-use crate::state::SatState;
-use crate::unit_simplify::resurrect_unit;
-use crate::variables;
+use crate::{
+    clause::{db, ClauseHeader, Tier},
+    context::{parts::*, Context},
+    proof,
+    prop::{assignment, full_restart, Reason},
+    state::SatState,
+    unit_simplify::resurrect_unit,
+    variables,
+};
 
 /// Adds a clause to the current formula.
 ///

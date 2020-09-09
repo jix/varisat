@@ -5,9 +5,7 @@ use varisat_formula::Lit;
 
 use crate::context::{parts::*, Context};
 
-use super::assignment::fast_option_eq;
-use super::enqueue_assignment;
-use super::{Conflict, Reason, Watch};
+use super::{assignment::fast_option_eq, enqueue_assignment, Conflict, Reason, Watch};
 
 /// Propagate all literals implied by long clauses watched by the given literal.
 ///

@@ -1,15 +1,17 @@
-use std::env;
-use std::fs;
-use std::io::{self, Read, Write};
+use std::{
+    env, fs,
+    io::{self, Read, Write},
+};
 
 use clap::{values_t, App, AppSettings, Arg};
 use env_logger::{fmt, Builder, Target};
 use failure::Error;
-use log::{error, info};
-use log::{Level, LevelFilter, Record};
+use log::{error, info, Level, LevelFilter, Record};
 
-use varisat::config::{SolverConfig, SolverConfigUpdate};
-use varisat::solver::{ProofFormat, Solver};
+use varisat::{
+    config::{SolverConfig, SolverConfigUpdate},
+    solver::{ProofFormat, Solver},
+};
 use varisat_lrat::WriteLrat;
 
 mod check;

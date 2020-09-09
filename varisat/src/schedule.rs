@@ -5,12 +5,17 @@ use log::info;
 
 use partial_ref::{partial, PartialRef};
 
-use crate::cdcl::conflict_step;
-use crate::clause::reduce::{reduce_locals, reduce_mids};
-use crate::clause::{collect_garbage, Tier};
-use crate::context::{parts::*, Context};
-use crate::prop::restart;
-use crate::state::SatState;
+use crate::{
+    cdcl::conflict_step,
+    clause::{
+        collect_garbage,
+        reduce::{reduce_locals, reduce_mids},
+        Tier,
+    },
+    context::{parts::*, Context},
+    prop::restart,
+    state::SatState,
+};
 
 mod luby;
 

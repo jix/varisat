@@ -36,8 +36,10 @@ use partial_ref::{partial, PartialRef};
 
 use varisat_formula::Lit;
 
-use crate::clause::{db, ClauseRef};
-use crate::context::{parts::*, Context};
+use crate::{
+    clause::{db, ClauseRef},
+    context::{parts::*, Context},
+};
 
 /// A watch on a long clause.
 #[derive(Copy, Clone)]

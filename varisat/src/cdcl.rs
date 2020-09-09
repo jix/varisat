@@ -4,16 +4,18 @@ use partial_ref::{partial, PartialRef};
 
 use varisat_internal_proof::ProofStep;
 
-use crate::analyze_conflict::analyze_conflict;
-use crate::assumptions::{enqueue_assumption, EnqueueAssumption};
-use crate::clause::{assess_learned_clause, bump_clause, db, decay_clause_activities};
-use crate::context::{parts::*, Context};
-use crate::decision::make_decision;
-use crate::model::reconstruct_global_model;
-use crate::proof;
-use crate::prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason};
-use crate::state::SatState;
-use crate::unit_simplify::{prove_units, unit_simplify};
+use crate::{
+    analyze_conflict::analyze_conflict,
+    assumptions::{enqueue_assumption, EnqueueAssumption},
+    clause::{assess_learned_clause, bump_clause, db, decay_clause_activities},
+    context::{parts::*, Context},
+    decision::make_decision,
+    model::reconstruct_global_model,
+    proof,
+    prop::{backtrack, enqueue_assignment, propagate, Conflict, Reason},
+    state::SatState,
+    unit_simplify::{prove_units, unit_simplify},
+};
 
 /// Find a conflict, learn a clause and backtrack.
 pub fn conflict_step<'a>(
@@ -163,11 +165,12 @@ mod tests {
 
     use partial_ref::IntoPartialRefMut;
 
-    use varisat_formula::cnf_formula;
-    use varisat_formula::test::{sat_formula, sgen_unsat_formula};
+    use varisat_formula::{
+        cnf_formula,
+        test::{sat_formula, sgen_unsat_formula},
+    };
 
-    use crate::load::load_clause;
-    use crate::state::SatState;
+    use crate::{load::load_clause, state::SatState};
 
     #[test]
     fn level_0_unsat() {

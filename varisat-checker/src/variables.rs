@@ -1,12 +1,14 @@
 //! Variable metadata.
-use rustc_hash::FxHashSet as HashSet;
 use partial_ref::{partial, PartialRef};
+use rustc_hash::FxHashSet as HashSet;
 
 use varisat_formula::Var;
 
-use crate::context::{parts::*, Context};
-use crate::processing::{process_step, CheckedProofStep, CheckedSamplingMode, CheckedUserVar};
-use crate::CheckerError;
+use crate::{
+    context::{parts::*, Context},
+    processing::{process_step, CheckedProofStep, CheckedSamplingMode, CheckedUserVar},
+    CheckerError,
+};
 
 /// Data for each literal.
 #[derive(Clone, Default)]

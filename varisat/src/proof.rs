@@ -8,8 +8,10 @@ use varisat_checker::{internal::SelfChecker, Checker, CheckerError, ProofProcess
 use varisat_formula::{Lit, Var};
 use varisat_internal_proof::{ClauseHash, ProofStep};
 
-use crate::context::{parts::*, Context};
-use crate::solver::SolverError;
+use crate::{
+    context::{parts::*, Context},
+    solver::SolverError,
+};
 
 mod drat;
 mod map_step;
@@ -330,16 +332,14 @@ mod tests {
 
     use proptest::prelude::*;
 
-    use std::fs::File;
-    use std::process::Command;
+    use std::{fs::File, process::Command};
 
     use failure::Fail;
 
     use tempfile::TempDir;
 
     use varisat_dimacs::write_dimacs;
-    use varisat_formula::test::sgen_unsat_formula;
-    use varisat_formula::CnfFormula;
+    use varisat_formula::{test::sgen_unsat_formula, CnfFormula};
 
     use crate::solver::Solver;
 

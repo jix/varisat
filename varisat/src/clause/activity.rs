@@ -1,8 +1,10 @@
 //! Clause activity.
 use partial_ref::{partial, PartialRef};
 
-use crate::config::SolverConfig;
-use crate::context::{parts::*, Context};
+use crate::{
+    config::SolverConfig,
+    context::{parts::*, Context},
+};
 
 use super::ClauseRef;
 

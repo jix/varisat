@@ -4,8 +4,10 @@ use partial_ref::{IntoPartialRefMut, PartialRef};
 
 use varisat_internal_proof::ProofStep;
 
-use crate::state::{check_step, process_unit_conflicts};
-use crate::{Checker, CheckerError};
+use crate::{
+    state::{check_step, process_unit_conflicts},
+    Checker, CheckerError,
+};
 
 /// Varisat internal interface used for on-the-fly checking.
 ///

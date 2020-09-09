@@ -1,8 +1,10 @@
 use failure::{ensure, Error};
-use std::env;
-use std::io::Write;
-use std::process::{Command, Stdio};
-use std::str::from_utf8;
+use std::{
+    env,
+    io::Write,
+    process::{Command, Stdio},
+    str::from_utf8,
+};
 
 fn have_check_lrat() -> Result<(), Error> {
     println!("rerun-if-env-changed=VARISAT_HAVE_CHECK_LRAT");

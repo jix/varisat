@@ -4,8 +4,10 @@ use partial_ref::{partial, PartialRef};
 
 use varisat_formula::{lit::LitIdx, Lit, Var};
 
-use crate::clause::ClauseRef;
-use crate::context::{parts::*, Context};
+use crate::{
+    clause::ClauseRef,
+    context::{parts::*, Context},
+};
 
 /// Assignments that caused a propagation.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]

@@ -4,10 +4,12 @@ use partial_ref::{partial, PartialRef};
 use failure::Error;
 use varisat_formula::{Lit, Var};
 
-use crate::context::{parts::*, Context};
-use crate::transcript::{self, ProofTranscriptProcessor};
-use crate::variables::SamplingMode;
-use crate::CheckerError;
+use crate::{
+    context::{parts::*, Context},
+    transcript::{self, ProofTranscriptProcessor},
+    variables::SamplingMode,
+    CheckerError,
+};
 
 /// A single step of a proof.
 ///

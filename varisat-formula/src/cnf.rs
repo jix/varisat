@@ -1,7 +1,5 @@
 //! CNF formulas.
-use std::cmp::max;
-use std::fmt;
-use std::ops::Range;
+use std::{cmp::max, fmt, ops::Range};
 
 use crate::lit::{Lit, Var};
 

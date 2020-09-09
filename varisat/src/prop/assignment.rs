@@ -3,8 +3,10 @@ use partial_ref::{partial, PartialRef};
 
 use varisat_formula::{lit::LitIdx, Lit, Var};
 
-use crate::context::{parts::*, Context};
-use crate::decision::make_available;
+use crate::{
+    context::{parts::*, Context},
+    decision::make_available,
+};
 
 use super::Reason;
 

@@ -47,16 +47,17 @@ mod tests {
 
     use proptest::{prelude::*, *};
 
-    use rand::distributions::Bernoulli;
-    use rand::seq::SliceRandom;
+    use rand::{distributions::Bernoulli, seq::SliceRandom};
 
     use partial_ref::IntoPartialRefMut;
 
     use varisat_formula::{cnf::strategy::*, CnfFormula, Lit};
 
-    use crate::clause::{db, gc};
-    use crate::load::load_clause;
-    use crate::state::SatState;
+    use crate::{
+        clause::{db, gc},
+        load::load_clause,
+        state::SatState,
+    };
 
     /// Generate a random formula and list of implied literals.
     pub fn prop_formula(

@@ -5,8 +5,10 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Lit;
 use varisat_internal_proof::{DeleteClauseProof, ProofStep};
 
-use crate::context::{parts::*, Context};
-use crate::proof;
+use crate::{
+    context::{parts::*, Context},
+    proof,
+};
 
 /// Binary clauses.
 #[derive(Default)]

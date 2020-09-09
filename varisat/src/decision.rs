@@ -4,8 +4,10 @@ use partial_ref::{partial, PartialRef};
 
 use varisat_formula::Var;
 
-use crate::context::{parts::*, Context};
-use crate::prop::{enqueue_assignment, Reason};
+use crate::{
+    context::{parts::*, Context},
+    prop::{enqueue_assignment, Reason},
+};
 
 pub mod vsids;
 

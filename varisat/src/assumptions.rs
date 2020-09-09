@@ -5,11 +5,13 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Lit;
 use varisat_internal_proof::{clause_hash, lit_hash, ClauseHash, ProofStep};
 
-use crate::context::{parts::*, Context};
-use crate::proof;
-use crate::prop::{enqueue_assignment, full_restart, Reason};
-use crate::state::SatState;
-use crate::variables;
+use crate::{
+    context::{parts::*, Context},
+    proof,
+    prop::{enqueue_assignment, full_restart, Reason},
+    state::SatState,
+    variables,
+};
 
 /// Incremental solving.
 #[derive(Default)]
@@ -261,10 +263,7 @@ mod tests {
 
     use varisat_formula::{test::conditional_pigeon_hole, ExtendFormula, Var};
 
-    use crate::cdcl::conflict_step;
-    use crate::load::load_clause;
-    use crate::solver::Solver;
-    use crate::state::SatState;
+    use crate::{cdcl::conflict_step, load::load_clause, solver::Solver, state::SatState};
 
     proptest! {
         #[test]

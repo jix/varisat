@@ -59,7 +59,7 @@ pub enum CheckerError {
     ProofProcessorError {
         #[cause]
         cause: Error,
-    }
+    },
 }
 
 impl CheckerError {
@@ -140,8 +140,7 @@ impl<'a> Checker<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::internal::SelfChecker;
-    use super::*;
+    use super::{internal::SelfChecker, *};
 
     use varisat_internal_proof::{DeleteClauseProof, ProofStep};
 

@@ -1,8 +1,8 @@
 //! Computation of clause hashes.
 use std::mem::take;
 
-use rustc_hash::FxHashMap as HashMap;
 use partial_ref::{partial, PartialRef};
+use rustc_hash::FxHashMap as HashMap;
 
 use varisat_formula::{Lit, Var};
 use varisat_internal_proof::{lit_code_hash, lit_hash, ClauseHash};

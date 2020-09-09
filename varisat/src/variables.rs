@@ -7,9 +7,10 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::{Lit, Var};
 use varisat_internal_proof::ProofStep;
 
-use crate::context::{parts::*, set_var_count, Context};
-use crate::decision;
-use crate::proof;
+use crate::{
+    context::{parts::*, set_var_count, Context},
+    decision, proof,
+};
 
 pub mod data;
 pub mod var_map;
@@ -572,8 +573,10 @@ fn delete_global_if_unused<'a>(
 mod tests {
     use proptest::{collection, prelude::*};
 
-    use varisat_formula::test::{sat_formula, sgen_unsat_formula};
-    use varisat_formula::{ExtendFormula, Var};
+    use varisat_formula::{
+        test::{sat_formula, sgen_unsat_formula},
+        ExtendFormula, Var,
+    };
 
     use crate::solver::Solver;
 

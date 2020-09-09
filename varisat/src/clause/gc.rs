@@ -1,8 +1,10 @@
 //! Garbage collection of long clauses.
 use partial_ref::{partial, PartialRef};
 
-use crate::context::{parts::*, Context};
-use crate::prop::Reason;
+use crate::{
+    context::{parts::*, Context},
+    prop::Reason,
+};
 
 use super::{ClauseAlloc, Tier};
 
@@ -117,9 +119,11 @@ mod tests {
 
     use varisat_formula::{cnf::strategy::*, Lit};
 
-    use crate::clause::{db, ClauseHeader};
-    use crate::context::set_var_count;
-    use crate::prop::enqueue_assignment;
+    use crate::{
+        clause::{db, ClauseHeader},
+        context::set_var_count,
+        prop::enqueue_assignment,
+    };
 
     proptest! {
         #[test]

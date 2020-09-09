@@ -1,7 +1,5 @@
 use failure::{ensure, Error};
-use std::env;
-use std::process::Command;
-use std::str::from_utf8;
+use std::{env, process::Command, str::from_utf8};
 
 fn have_drat_trim() -> Result<(), Error> {
     println!("rerun-if-env-changed=VARISAT_HAVE_DRAT_TRIM");

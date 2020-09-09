@@ -5,9 +5,11 @@ use partial_ref::{partial, PartialRef};
 use varisat_formula::Lit;
 use varisat_internal_proof::ProofStep;
 
-use crate::context::{parts::*, Context};
-use crate::proof;
-use crate::state::SatState;
+use crate::{
+    context::{parts::*, Context},
+    proof,
+    state::SatState,
+};
 
 /// Global model reconstruction
 #[derive(Default)]

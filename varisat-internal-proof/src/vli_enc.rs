@@ -17,8 +17,10 @@
 //!
 //! The current implementations are not optimal but fast enough to not be the bottleneck when
 //! checking proofs.
-use std::convert::{TryFrom, TryInto};
-use std::io::{self, BufRead, Write};
+use std::{
+    convert::{TryFrom, TryInto},
+    io::{self, BufRead, Write},
+};
 
 /// Write an encoded 64 bit number.
 pub fn write_u64(target: &mut impl Write, mut value: u64) -> Result<(), io::Error> {

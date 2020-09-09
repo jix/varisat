@@ -5,19 +5,21 @@
 //! added to the solver.
 use partial_ref::{part, partial, PartialRef, PartialRefTarget};
 
-use crate::analyze_conflict::AnalyzeConflict;
-use crate::assumptions::Assumptions;
-use crate::binary::BinaryClauses;
-use crate::clause::{ClauseActivity, ClauseAlloc, ClauseDb};
-use crate::config::{SolverConfig, SolverConfigUpdate};
-use crate::decision::vsids::Vsids;
-use crate::model::Model;
-use crate::proof::Proof;
-use crate::prop::{Assignment, ImplGraph, Trail, Watchlists};
-use crate::schedule::Schedule;
-use crate::state::SolverState;
-use crate::tmp::{TmpData, TmpFlags};
-use crate::variables::Variables;
+use crate::{
+    analyze_conflict::AnalyzeConflict,
+    assumptions::Assumptions,
+    binary::BinaryClauses,
+    clause::{ClauseActivity, ClauseAlloc, ClauseDb},
+    config::{SolverConfig, SolverConfigUpdate},
+    decision::vsids::Vsids,
+    model::Model,
+    proof::Proof,
+    prop::{Assignment, ImplGraph, Trail, Watchlists},
+    schedule::Schedule,
+    state::SolverState,
+    tmp::{TmpData, TmpFlags},
+    variables::Variables,
+};
 
 /// Part declarations for the [`Context`] struct.
 pub mod parts {

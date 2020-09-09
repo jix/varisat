@@ -1,6 +1,8 @@
 //! LRAT proof generation for the Varisat SAT solver.
-use std::io::{BufWriter, Write};
-use std::mem::replace;
+use std::{
+    io::{BufWriter, Write},
+    mem::replace,
+};
 
 use failure::Error;
 
@@ -219,17 +221,17 @@ mod tests {
 
     use proptest::prelude::*;
 
-    use std::fs::File;
-    use std::path::PathBuf;
-    use std::process::{Command, Stdio};
+    use std::{
+        fs::File,
+        path::PathBuf,
+        process::{Command, Stdio},
+    };
 
     use tempfile::TempDir;
 
-    use varisat::dimacs::write_dimacs;
-    use varisat::{ProofFormat, Solver};
+    use varisat::{dimacs::write_dimacs, ProofFormat, Solver};
     use varisat_checker::Checker;
-    use varisat_formula::test::sgen_unsat_formula;
-    use varisat_formula::{cnf_formula, CnfFormula};
+    use varisat_formula::{cnf_formula, test::sgen_unsat_formula, CnfFormula};
 
     fn check_lrat(tool: &str, cnf_file: &PathBuf, proof_file: &PathBuf) -> Result<bool, Error> {
         let mut child = Command::new(tool)

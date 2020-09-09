@@ -5,8 +5,10 @@ use partial_ref::{partial, PartialRef};
 
 use varisat_formula::Lit;
 
-use crate::context::{parts::*, Context};
-use crate::prop::Reason;
+use crate::{
+    context::{parts::*, Context},
+    prop::Reason,
+};
 
 use super::{header::HEADER_LEN, ClauseAlloc, ClauseHeader, ClauseRef};
 
