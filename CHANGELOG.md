@@ -1,3 +1,9 @@
+# 0.2.2 (2020-09-09)
+
+  * Upgrade dependencies
+  * Replace unmaintained `failure` library with `anyhow` and `thiserror`
+  * Address all clippy warnings
+
 # 0.2.1 (2019-05-18)
 
   * Improved API for constructing formulas (#54 and #55)

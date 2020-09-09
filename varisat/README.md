@@ -14,7 +14,7 @@ This is the library version. Varisat is also available as a command line solver
 ## Documentation
 
   * [User Manual](https://jix.github.io/varisat/manual/0.2.1/)
-  * [Library API Documentation](https://docs.rs/varisat/0.2.1/varisat/)
+  * [Library API Documentation](https://docs.rs/varisat/0.2.2/varisat/)
 
 ## Developer Documentation
 

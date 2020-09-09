@@ -1,6 +1,6 @@
 [package]
 name = "varisat-lrat"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Jannis Harder <me@jix.one>"]
 edition = "2018"
 description = "LRAT proof generation for the Varisat SAT solver"
@@ -17,11 +17,11 @@ anyhow = "1.0.32"
 
     [dependencies.varisat-formula]
     path = "../varisat-formula"
-    version = "=0.2.1"
+    version = "=0.2.2"
 
     [dependencies.varisat-checker]
     path = "../varisat-checker"
-    version = "=0.2.1"
+    version = "=0.2.2"
 
 
 [dev-dependencies]
@@ -30,11 +30,11 @@ tempfile = "3.0.8"
 
     [dev-dependencies.varisat]
     path = "../varisat"
-    version = "=0.2.1"
+    version = "=0.2.2"
 
     [dev-dependencies.varisat-formula]
     path = "../varisat-formula"
-    version = "=0.2.1"
+    version = "=0.2.2"
     features = ["proptest-strategies", "internal-testing"]
 
 [build-dependencies]

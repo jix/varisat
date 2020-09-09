@@ -1,6 +1,6 @@
 [package]
 name = "varisat-formula"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Jannis Harder <me@jix.one>"]
 edition = "2018"
 description = "Basic formula data types used by the Varisat SAT solver"

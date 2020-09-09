@@ -1,6 +1,6 @@
 [package]
 name = "varisat-checker"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Jannis Harder <me@jix.one>"]
 edition = "2018"
 description = "Proof checker for proofs generate by the Varisat SAT solver"
@@ -19,20 +19,20 @@ thiserror = "1.0.20"
 
     [dependencies.varisat-formula]
     path = "../varisat-formula"
-    version = "=0.2.1"
+    version = "=0.2.2"
 
     [dependencies.varisat-dimacs]
     path = "../varisat-dimacs"
-    version = "=0.2.1"
+    version = "=0.2.2"
 
     [dependencies.varisat-internal-proof]
     path = "../varisat-internal-proof"
-    version = "=0.2.1"
+    version = "=0.2.2"
 
 [dev-dependencies]
 proptest = "0.10.1"
 
     [dev-dependencies.varisat-formula]
     path = "../varisat-formula"
-    version = "=0.2.1"
+    version = "=0.2.2"
     features = ["internal-testing"]

@@ -458,7 +458,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "varisat"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -473,17 +473,17 @@ dependencies = [
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
- "varisat-checker 0.2.1",
- "varisat-dimacs 0.2.1",
- "varisat-formula 0.2.1",
- "varisat-internal-macros 0.2.1",
- "varisat-internal-proof 0.2.1",
+ "varisat-checker 0.2.2",
+ "varisat-dimacs 0.2.2",
+ "varisat-formula 0.2.2",
+ "varisat-internal-macros 0.2.2",
+ "varisat-internal-proof 0.2.2",
  "vec_mut_scan 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "varisat-checker"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -492,27 +492,27 @@ dependencies = [
  "rustc-hash 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
- "varisat-dimacs 0.2.1",
- "varisat-formula 0.2.1",
- "varisat-internal-proof 0.2.1",
+ "varisat-dimacs 0.2.2",
+ "varisat-formula 0.2.2",
+ "varisat-internal-proof 0.2.2",
 ]
 
 [[package]]
 name = "varisat-cli"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "varisat 0.2.1",
- "varisat-lrat 0.2.1",
+ "varisat 0.2.2",
+ "varisat-lrat 0.2.2",
 ]
 
 [[package]]
 name = "varisat-dimacs"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -521,12 +521,12 @@ dependencies = [
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
- "varisat-formula 0.2.1",
+ "varisat-formula 0.2.2",
 ]
 
 [[package]]
 name = "varisat-formula"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "proptest 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -534,7 +534,7 @@ dependencies = [
 
 [[package]]
 name = "varisat-internal-macros"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "proc-macro2 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -545,25 +545,25 @@ dependencies = [
 
 [[package]]
 name = "varisat-internal-proof"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "varisat-formula 0.2.1",
+ "varisat-formula 0.2.2",
 ]
 
 [[package]]
 name = "varisat-lrat"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "itoa 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "leb128 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "varisat 0.2.1",
- "varisat-checker 0.2.1",
- "varisat-formula 0.2.1",
+ "varisat 0.2.2",
+ "varisat-checker 0.2.2",
+ "varisat-formula 0.2.2",
 ]
 
 [[package]]
