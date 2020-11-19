@@ -34,10 +34,7 @@ impl Reason {
 
     /// True if a unit clause or assumption and not a propagation.
     pub fn is_unit(&self) -> bool {
-        match self {
-            Reason::Unit => true,
-            _ => false,
-        }
+        matches!(self, Reason::Unit)
     }
 }
 

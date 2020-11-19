@@ -110,11 +110,7 @@ impl<'a> Proof<'a> {
 
     /// Are we emitting or checking our native format.
     pub fn native_format(&self) -> bool {
-        self.checker.is_some()
-            || match self.format {
-                Some(ProofFormat::Varisat) => true,
-                _ => false,
-            }
+        self.checker.is_some() || matches!(self.format, Some(ProofFormat::Varisat))
     }
 
     /// Whether clause hashes are required for steps that support them.
