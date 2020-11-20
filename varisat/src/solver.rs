@@ -44,10 +44,7 @@ pub enum SolverError {
 impl SolverError {
     /// Whether a Solver instance can be used after producing such an error.
     pub fn is_recoverable(&self) -> bool {
-        match self {
-            SolverError::Interrupted => true,
-            _ => false,
-        }
+        matches!(self, SolverError::Interrupted)
     }
 }
 
