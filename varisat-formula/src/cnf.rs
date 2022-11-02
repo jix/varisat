@@ -6,7 +6,7 @@ use crate::lit::{Lit, Var};
 /// A formula in conjunctive normal form (CNF).
 ///
 /// Equivalent to Vec<Vec<Lit>> but more efficient as it uses a single buffer for all literals.
-#[derive(Default, Eq)]
+#[derive(Clone, Default, Eq)]
 pub struct CnfFormula {
     var_count: usize,
     literals: Vec<Lit>,
